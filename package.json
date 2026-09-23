@@ -4,6 +4,7 @@
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "expo": "~57.0.24",
     "expo-navigation-bar": "~57.0.2",
     "expo-splash-screen": "~57.0.9",

@@ -5,10 +5,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import FoodcoSplashScreen from './src/splash-screen/splashscreen';
 import LandingPage from './src/landing page/landingpage';
 import { AuthPage } from './src/auth-page';
+import HomePage from './src/home/homepage';
+import { AuthUser } from './src/auth-page/authService';
 
 export default function App() {
   const [appReady, setAppReady] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'auth'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'auth' | 'home'>('landing');
+  const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     const prepare = async () => {
@@ -22,15 +25,30 @@ export default function App() {
     return <FoodcoSplashScreen isReady={false} />;
   }
 
+  const handleAuthSuccess = (user: AuthUser) => {
+    setAuthenticatedUser(user);
+    setCurrentScreen('home');
+  };
+
+  const handleLogout = () => {
+    setAuthenticatedUser(null);
+    setCurrentScreen('landing');
+  };
+
   return (
     <SafeAreaProvider>
       <View style={styles.root}>
         <StatusBar style="dark" />
         <FoodcoSplashScreen isReady={true} />
-        {currentScreen === 'landing' ? (
-          <LandingPage onGetStarted={() => setCurrentScreen('auth')} />
+        {currentScreen === 'home' && authenticatedUser ? (
+          <HomePage user={authenticatedUser} onLogout={handleLogout} />
+        ) : currentScreen === 'auth' ? (
+          <AuthPage
+            onBack={() => setCurrentScreen('landing')}
+            onSuccess={handleAuthSuccess}
+          />
         ) : (
-          <AuthPage onBack={() => setCurrentScreen('landing')} />
+          <LandingPage onGetStarted={() => setCurrentScreen('auth')} />
         )}
       </View>
     </SafeAreaProvider>

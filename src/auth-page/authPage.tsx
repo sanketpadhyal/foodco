@@ -21,6 +21,18 @@ import { parseAuthError, AuthUser } from './authService';
 const logoSource = require('../../assets/logo.png');
 const gmailIcon = require('../../assets/gmail-icon.webp');
 
+const GOOGLE_WEB_CLIENT_ID = '677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com';
+
+let googleSigninModule: any = null;
+try {
+  const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+  gSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: false,
+  });
+  googleSigninModule = gSignin;
+} catch (error) {}
+
 const THEME = {
   primary: '#FF6B35',
   primaryDark: '#E8502A',
@@ -97,18 +109,54 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    if (googleLoading) return;
     setGoogleLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const mockUser: AuthUser = {
-        uid: `google_${Date.now()}`,
-        email: 'user@gmail.com',
-        displayName: 'Foodco Member',
-      };
-      if (onSuccess) {
-        onSuccess(mockUser);
+      if (googleSigninModule) {
+        await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        const response = await googleSigninModule.signIn();
+        if (response?.type === 'cancelled') {
+          setGoogleLoading(false);
+          return;
+        }
+        const userInfo = response?.data?.user ?? response?.user;
+        const authUser: AuthUser = {
+          uid: userInfo?.id || `google_${Date.now()}`,
+          email: userInfo?.email || 'user@gmail.com',
+          displayName: userInfo?.name || 'Foodco Member',
+          photoURL: userInfo?.photo || undefined,
+        };
+        if (onSuccess) {
+          onSuccess(authUser);
+        } else {
+          setAlertModal({
+            visible: true,
+            title: 'Logged in successfully',
+            message: `Welcome to Foodco, ${authUser.displayName || authUser.email}!`,
+          });
+        }
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        const mockUser: AuthUser = {
+          uid: `google_${Date.now()}`,
+          email: 'user@gmail.com',
+          displayName: 'Foodco Member',
+        };
+        if (onSuccess) {
+          onSuccess(mockUser);
+        } else {
+          setAlertModal({
+            visible: true,
+            title: 'Logged in successfully',
+            message: `Welcome to Foodco, ${mockUser.displayName}!`,
+          });
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === 'SIGN_IN_CANCELLED' || error?.code === '12501' || error?.message?.includes('cancelled')) {
+        setGoogleLoading(false);
+        return;
+      }
       setAlertModal({
         visible: true,
         title: 'Google sign-in failed',

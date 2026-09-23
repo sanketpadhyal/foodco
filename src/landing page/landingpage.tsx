@@ -272,7 +272,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 },
               ]}
             >
-              No Rushing. No Guessing. Just Mindful Nutrition.
+              {"Nutritious, delicious, and convenient."}
             </Text>
           </Animated.View>
 
