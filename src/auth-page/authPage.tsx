@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  TextInput,
   TouchableOpacity,
   Pressable,
   Animated,
@@ -12,16 +11,14 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
-  useWindowDimensions,
   Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather, FontAwesome, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
-import { sendOtpRequest, verifyOtpRequest, parseAuthError, AuthUser, AuthResponse } from './authService';
+import { Feather, FontAwesome, AntDesign } from '@expo/vector-icons';
+import { parseAuthError, AuthUser } from './authService';
 
 const logoSource = require('../../assets/logo.png');
-const groceryBagIcon = require('../../assets/baskets-icons/grocery-bag.png');
 
 const THEME = {
   primary: '#FF6B35',
@@ -55,17 +52,8 @@ interface AlertModalState {
 
 export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
 
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [emailOtpOpen, setEmailOtpOpen] = useState(false);
-  const [emailOtpMounted, setEmailOtpMounted] = useState(false);
-  const [emailOtpLoading, setEmailOtpLoading] = useState(false);
-  const [emailOtpSent, setEmailOtpSent] = useState(false);
-  const [emailOtpEmail, setEmailOtpEmail] = useState('');
-  const [emailOtpCode, setEmailOtpCode] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
-
   const [appleAlertVisible, setAppleAlertVisible] = useState(false);
   const [alertModal, setAlertModal] = useState<AlertModalState>({
     visible: false,
@@ -77,12 +65,6 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const slideAnim = useRef(new Animated.Value(20)).current;
   const backAnim = useRef(new Animated.Value(0)).current;
   const backScale = useRef(new Animated.Value(0.85)).current;
-  const emailPageAnim = useRef(new Animated.Value(0)).current;
-  const emailStepAnim = useRef(new Animated.Value(1)).current;
-
-  const emailInputRef = useRef<TextInput | null>(null);
-  const otpInputRef = useRef<TextInput | null>(null);
-  const lastAutoVerifyCodeRef = useRef('');
 
   useEffect(() => {
     Animated.parallel([
@@ -113,114 +95,6 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     ]).start();
   }, []);
 
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (resendTimer > 0) {
-      timer = setTimeout(() => setResendTimer((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [resendTimer]);
-
-  const openEmailOtpPanel = () => {
-    setEmailOtpMounted(true);
-    setEmailOtpOpen(true);
-    emailPageAnim.setValue(0);
-    Animated.timing(emailPageAnim, {
-      toValue: 1,
-      duration: 300,
-      easing: Easing.bezier(0.16, 1, 0.3, 1),
-      useNativeDriver: true,
-    }).start();
-
-    setTimeout(() => {
-      if (emailOtpSent) {
-        otpInputRef.current?.focus();
-      } else {
-        emailInputRef.current?.focus();
-      }
-    }, 320);
-  };
-
-  const closeEmailOtpPanel = () => {
-    if (emailOtpLoading) return;
-    Animated.timing(emailPageAnim, {
-      toValue: 0,
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
-      setEmailOtpOpen(false);
-      setEmailOtpMounted(false);
-    });
-  };
-
-  const requestEmailOtp = async () => {
-    const trimmed = emailOtpEmail.trim().toLowerCase();
-    if (!trimmed || !trimmed.includes('@')) {
-      setAlertModal({
-        visible: true,
-        title: 'Valid email required',
-        message: 'Please enter a valid email address to continue.',
-      });
-      return;
-    }
-
-    setEmailOtpLoading(true);
-    try {
-      await sendOtpRequest(trimmed);
-      setEmailOtpSent(true);
-      setResendTimer(60);
-      emailStepAnim.setValue(0);
-      Animated.timing(emailStepAnim, {
-        toValue: 1,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-
-      setTimeout(() => {
-        otpInputRef.current?.focus();
-      }, 260);
-    } catch (error) {
-      setAlertModal({
-        visible: true,
-        title: 'Could not send code',
-        message: parseAuthError(error),
-      });
-    } finally {
-      setEmailOtpLoading(false);
-    }
-  };
-
-  const verifyEmailOtp = async () => {
-    const code = emailOtpCode.replace(/\D/g, '').slice(0, 6);
-    if (code.length !== 6) return;
-
-    setEmailOtpLoading(true);
-    try {
-      const result: AuthResponse = await verifyOtpRequest(emailOtpEmail.trim().toLowerCase(), code);
-      if (result.user && onSuccess) {
-        onSuccess(result.user);
-      }
-    } catch (error) {
-      setAlertModal({
-        visible: true,
-        title: 'Verification failed',
-        message: parseAuthError(error),
-      });
-    } finally {
-      setEmailOtpLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!emailOtpSent || emailOtpLoading) return;
-    const code = emailOtpCode.replace(/\D/g, '');
-    if (code.length !== 6 || code === lastAutoVerifyCodeRef.current) return;
-    lastAutoVerifyCodeRef.current = code;
-    void verifyEmailOtp();
-  }, [emailOtpCode, emailOtpLoading, emailOtpSent]);
-
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
@@ -243,29 +117,6 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
       setGoogleLoading(false);
     }
   };
-
-  const otpDigits = Array.from({ length: 6 }, (_, index) => emailOtpCode[index] || '');
-  const trimmedEmail = emailOtpEmail.trim().toLowerCase();
-
-  const authPageTranslateX = emailPageAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -42],
-  });
-
-  const emailPageTranslateX = emailPageAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [Math.max(screenWidth, 360), 0],
-  });
-
-  const emailPageOpacity = emailPageAnim.interpolate({
-    inputRange: [0, 0.16, 1],
-    outputRange: [0.4, 1, 1],
-  });
-
-  const emailStepTranslateY = emailStepAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [12, 0],
-  });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -292,7 +143,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
             styles.content,
             {
               opacity: fadeAnim,
-              transform: [{ translateX: authPageTranslateX }, { translateY: slideAnim }],
+              transform: [{ translateY: slideAnim }],
             },
           ]}
         >
@@ -331,18 +182,6 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
                 <Text style={styles.appleButtonText}>Continue with Apple</Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.authButtonWrap}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[styles.authButton, styles.emailButton]}
-                onPress={openEmailOtpPanel}
-                disabled={googleLoading || emailOtpLoading}
-              >
-                <MaterialCommunityIcons name="email-fast-outline" size={22} color={THEME.textPrimary} style={styles.socialIcon} />
-                <Text style={styles.emailButtonText}>Continue with email</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           <Text style={styles.termsText}>
@@ -350,160 +189,6 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
           </Text>
         </Animated.View>
       </ScrollView>
-
-      {emailOtpMounted ? (
-        <Animated.View
-          pointerEvents={emailOtpOpen ? 'auto' : 'none'}
-          style={[
-            styles.emailPage,
-            {
-              paddingTop: insets.top,
-              paddingBottom: insets.bottom,
-              opacity: emailPageOpacity,
-              transform: [{ translateX: emailPageTranslateX }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[styles.emailPageBackButton, { top: Math.max(insets.top + 8, 24) }]}
-            onPress={closeEmailOtpPanel}
-            disabled={emailOtpLoading}
-            activeOpacity={0.7}
-          >
-            <Feather name="chevron-left" size={28} color={THEME.textPrimary} strokeWidth={3} />
-          </TouchableOpacity>
-
-          <ScrollView
-            style={styles.emailPageScroll}
-            contentContainerStyle={styles.emailPageContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.emailPageHero}>
-              <View style={styles.emailMojiWrap}>
-                <Image source={groceryBagIcon} style={styles.emailMoji} resizeMode="contain" />
-              </View>
-              <Text style={styles.emailPageTitle}>
-                {emailOtpSent ? 'Enter your code' : 'Continue with email'}
-              </Text>
-              <Text style={styles.emailPageSubtitle}>
-                {emailOtpSent
-                  ? `We sent a 6-digit code to ${trimmedEmail || 'your email'}.`
-                  : 'Enter your email address to receive a 6-digit login code.'}
-              </Text>
-            </View>
-
-            <Animated.View
-              style={[
-                styles.emailPageCard,
-                {
-                  opacity: emailStepAnim,
-                  transform: [{ translateY: emailStepTranslateY }],
-                },
-              ]}
-            >
-              {!emailOtpSent ? (
-                <>
-                  <Text style={styles.emailStepLabel}>Email address</Text>
-                  <View style={styles.emailInputWrap}>
-                    <MaterialCommunityIcons name="email-outline" size={20} color={THEME.textMuted} />
-                    <TextInput
-                      ref={emailInputRef}
-                      value={emailOtpEmail}
-                      onChangeText={setEmailOtpEmail}
-                      editable={!emailOtpLoading}
-                      placeholder="name@example.com"
-                      placeholderTextColor="#9CA3AF"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      keyboardType="email-address"
-                      textContentType="emailAddress"
-                      returnKeyType="send"
-                      onSubmitEditing={() => void requestEmailOtp()}
-                      style={styles.emailPanelInput}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    activeOpacity={0.84}
-                    style={[styles.emailOtpPrimaryButton, emailOtpLoading && styles.emailOtpDisabledButton]}
-                    onPress={requestEmailOtp}
-                    disabled={emailOtpLoading}
-                  >
-                    <Text style={styles.emailOtpPrimaryText}>
-                      {emailOtpLoading ? 'Sending code...' : 'Send OTP on email'}
-                    </Text>
-                    {emailOtpLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" style={styles.emailOtpButtonLoader} />
-                    ) : null}
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.emailStepLabel}>Verification code</Text>
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    style={styles.otpBoxes}
-                    onPress={() => otpInputRef.current?.focus()}
-                    disabled={emailOtpLoading}
-                  >
-                    {otpDigits.map((digit, index) => {
-                      const activeBox = index === Math.min(emailOtpCode.length, 5) && !emailOtpLoading;
-                      const filledBox = Boolean(digit);
-                      return (
-                        <View
-                          key={`${index}-${digit || 'empty'}`}
-                          style={[
-                            styles.otpBox,
-                            activeBox && styles.otpBoxActive,
-                            filledBox && styles.otpBoxFilled,
-                          ]}
-                        >
-                          <Text style={styles.otpBoxText}>{digit}</Text>
-                        </View>
-                      );
-                    })}
-                  </TouchableOpacity>
-
-                  <TextInput
-                    ref={otpInputRef}
-                    value={emailOtpCode}
-                    onChangeText={(value) => setEmailOtpCode(value.replace(/\D/g, '').slice(0, 6))}
-                    editable={!emailOtpLoading}
-                    keyboardType="number-pad"
-                    textContentType="oneTimeCode"
-                    maxLength={6}
-                    caretHidden
-                    style={styles.hiddenOtpInput}
-                  />
-
-                  <View style={styles.otpFooterRow}>
-                    {emailOtpLoading ? (
-                      <ActivityIndicator size="small" color={THEME.primary} style={styles.otpLoader} />
-                    ) : resendTimer > 0 ? (
-                      <Text style={styles.otpResendTimerText}>Resend code in {resendTimer}s</Text>
-                    ) : (
-                      <TouchableOpacity onPress={requestEmailOtp}>
-                        <Text style={styles.otpResendActionText}>Resend OTP</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  <TouchableOpacity
-                    activeOpacity={0.84}
-                    style={[styles.emailOtpPrimaryButton, emailOtpLoading && styles.emailOtpDisabledButton]}
-                    onPress={verifyEmailOtp}
-                    disabled={emailOtpLoading || emailOtpCode.length < 6}
-                  >
-                    <Text style={styles.emailOtpPrimaryText}>
-                      {emailOtpLoading ? 'Verifying...' : 'Verify & Continue'}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </Animated.View>
-          </ScrollView>
-        </Animated.View>
-      ) : null}
 
       <Modal
         visible={appleAlertVisible}
@@ -686,21 +371,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  emailButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  emailButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
   recommendedBadge: {
     position: 'absolute',
     top: -9,
@@ -732,180 +402,6 @@ const styles = StyleSheet.create({
     marginTop: 36,
     paddingHorizontal: 16,
     maxWidth: 320,
-  },
-  emailPage: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#FFFFFF',
-    zIndex: 100,
-  },
-  emailPageBackButton: {
-    position: 'absolute',
-    left: 20,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  emailPageScroll: {
-    flex: 1,
-  },
-  emailPageContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 80,
-    paddingBottom: 32,
-    alignItems: 'center',
-  },
-  emailPageHero: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  emailMojiWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: THEME.peachBg,
-    borderWidth: 1.5,
-    borderColor: THEME.peachBorder,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emailMoji: {
-    width: 36,
-    height: 36,
-  },
-  emailPageTitle: {
-    fontFamily: serifFont,
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#0D0E11',
-    letterSpacing: -0.3,
-    marginBottom: 8,
-  },
-  emailPageSubtitle: {
-    fontSize: 14,
-    color: '#7F8489',
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 280,
-  },
-  emailPageCard: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: '#FFFFFF',
-  },
-  emailStepLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0D0E11',
-    marginBottom: 8,
-  },
-  emailInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FB',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    height: 52,
-    marginBottom: 16,
-  },
-  emailPanelInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: '#0D0E11',
-  },
-  emailOtpPrimaryButton: {
-    backgroundColor: THEME.primary,
-    borderRadius: 26,
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: THEME.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
-    marginTop: 6,
-  },
-  emailOtpDisabledButton: {
-    opacity: 0.65,
-  },
-  emailOtpPrimaryText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-  emailOtpButtonLoader: {
-    marginLeft: 8,
-  },
-  otpBoxes: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 12,
-  },
-  otpBox: {
-    width: 44,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#F8F9FB',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  otpBoxActive: {
-    borderColor: THEME.primary,
-    backgroundColor: '#FFFFFF',
-  },
-  otpBoxFilled: {
-    borderColor: '#374151',
-    backgroundColor: '#FFFFFF',
-  },
-  otpBoxText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0D0E11',
-  },
-  hiddenOtpInput: {
-    position: 'absolute',
-    opacity: 0,
-    width: 1,
-    height: 1,
-  },
-  otpFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  otpLoader: {
-    marginRight: 6,
-  },
-  otpResendTimerText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  otpResendActionText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: THEME.primary,
   },
   modalBackdrop: {
     flex: 1,
