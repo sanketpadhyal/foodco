@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, Feather, FontAwesome, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+import { Feather, FontAwesome, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { sendOtpRequest, verifyOtpRequest, parseAuthError, AuthUser, AuthResponse } from './authService';
 
 const logoSource = require('../../assets/logo.png');
@@ -34,9 +34,6 @@ const THEME = {
   textMuted: '#7F8489',
   border: '#E5E7EB',
   cardBg: '#FFFFFF',
-  darkBg: '#191A1B',
-  darkSurface: '#232528',
-  darkBorder: '#2E3035',
 };
 
 const serifFont = Platform.select({
