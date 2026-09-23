@@ -1,20 +1,39 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import FoodcoSplashScreen from './src/splash-screen/splashscreen';
+import LandingPage from './src/landing page/landingpage';
 
 export default function App() {
+  const [appReady, setAppReady] = useState(false);
+
+  useEffect(() => {
+    const prepare = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setAppReady(true);
+    };
+    prepare();
+  }, []);
+
+  if (!appReady) {
+    return <FoodcoSplashScreen isReady={false} />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <View style={styles.root}>
+        <StatusBar style="dark" />
+        <FoodcoSplashScreen isReady={true} />
+        <LandingPage />
+      </View>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F5F6F8',
   },
 });

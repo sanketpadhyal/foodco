@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "677834907140",
+    "project_id": "foodco-official",
+    "storage_bucket": "foodco-official.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:677834907140:android:e675e14654bc5ec4d85f51",
+        "android_client_info": {
+          "package_name": "com.sanket.foodco"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "677834907140-jgf7uh48st456kdp5b0e16laeto55um4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sanket.foodco",
+            "certificate_hash": "692b60d4095b0b6805efb9762739a00a122ad616"
+          }
+        },
+        {
+          "client_id": "677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBg4FaSFC7YHhi37ZuuPqCRjQH3eVpiDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,118 @@
+:root {
+  --foodco-primary: #FF6B35;
+  --foodco-primary-dark: #E8502A;
+  --foodco-peach-bg: #FFF0E6;
+  --foodco-peach-border: #FFB28F;
+  --foodco-outline-border: #3A3A3A;
+  --foodco-text-primary: #141414;
+  --foodco-text-muted: #555555;
+  --foodco-bg: #FFFFFF;
+}
+
+.landing-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100vh;
+  background-color: var(--foodco-bg);
+  padding: 24px 20px;
+  font-family: Georgia, serif;
+}
+
+.landing-header {
+  text-align: center;
+  margin-top: 32px;
+}
+
+.landing-title {
+  font-size: 42px;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--foodco-text-primary);
+  margin: 0;
+}
+
+.landing-subtitle {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  color: var(--foodco-text-muted);
+  margin-top: 16px;
+}
+
+.landing-cloud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  padding: 24px 0;
+}
+
+.landing-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing-chip {
+  padding: 10px 18px;
+  border-radius: 30px;
+  border-style: dashed;
+  border-width: 1.5px;
+  font-size: 14px;
+}
+
+.landing-chip-peach {
+  background-color: var(--foodco-peach-bg);
+  border-color: var(--foodco-peach-border);
+  color: var(--foodco-primary-dark);
+}
+
+.landing-chip-outline {
+  background-color: #FFFFFF;
+  border-color: var(--foodco-outline-border);
+  color: var(--foodco-text-primary);
+}
+
+.landing-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  border-width: 1.5px;
+  border-color: var(--foodco-outline-border);
+  background-color: #FFFFFF;
+  font-size: 20px;
+}
+
+.landing-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.landing-btn-primary {
+  background-color: var(--foodco-primary);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 36px;
+  padding: 18px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.landing-btn-secondary {
+  background: transparent;
+  color: var(--foodco-text-primary);
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 12px;
+}
