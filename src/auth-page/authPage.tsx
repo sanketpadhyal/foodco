@@ -9,34 +9,34 @@ import {
   Animated,
   Easing,
   Platform,
-  KeyboardAvoidingView,
   ScrollView,
   Image,
   ActivityIndicator,
+  useWindowDimensions,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { sendOtpRequest, verifyOtpRequest, parseAuthError, AuthUser } from './authService';
+import { Ionicons, Feather, FontAwesome, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+import { sendOtpRequest, verifyOtpRequest, parseAuthError, AuthUser, AuthResponse } from './authService';
 
 const logoSource = require('../../assets/logo.png');
+const groceryBagIcon = require('../../assets/baskets-icons/grocery-bag.png');
 
 const THEME = {
   primary: '#FF6B35',
   primaryDark: '#E8502A',
   peachBg: '#FFF0E6',
   peachBorder: '#FFB28F',
-  bg: '#F5F6F8',
+  bg: '#FFFFFF',
+  surface: '#F8F9FB',
+  textPrimary: '#0D0E11',
+  textMuted: '#7F8489',
+  border: '#E5E7EB',
   cardBg: '#FFFFFF',
-  textPrimary: '#141414',
-  textMuted: '#666666',
-  inputBg: '#F8F9FB',
-  inputBorder: '#E5E7EB',
-  inputFocusBorder: '#FF6B35',
-  errorBg: '#FEE2E2',
-  errorText: '#DC2626',
-  successBg: '#DCFCE7',
-  successText: '#16A34A',
+  darkBg: '#191A1B',
+  darkSurface: '#232528',
+  darkBorder: '#2E3035',
 };
 
 const serifFont = Platform.select({
@@ -50,42 +50,66 @@ interface AuthPageProps {
   onSuccess?: (user: AuthUser) => void;
 }
 
+interface AlertModalState {
+  visible: boolean;
+  title: string;
+  message: string;
+}
+
 export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [authMethod, setAuthMethod] = useState<'password' | 'otp'>('password');
-
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [emailOtpOpen, setEmailOtpOpen] = useState(false);
+  const [emailOtpMounted, setEmailOtpMounted] = useState(false);
+  const [emailOtpLoading, setEmailOtpLoading] = useState(false);
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtpEmail, setEmailOtpEmail] = useState('');
+  const [emailOtpCode, setEmailOtpCode] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
 
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [appleAlertVisible, setAppleAlertVisible] = useState(false);
+  const [alertModal, setAlertModal] = useState<AlertModalState>({
+    visible: false,
+    title: '',
+    message: '',
+  });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
-  const btnScale = useRef(new Animated.Value(1)).current;
+  const backAnim = useRef(new Animated.Value(0)).current;
+  const backScale = useRef(new Animated.Value(0.85)).current;
+  const emailPageAnim = useRef(new Animated.Value(0)).current;
+  const emailStepAnim = useRef(new Animated.Value(1)).current;
+
+  const emailInputRef = useRef<TextInput | null>(null);
+  const otpInputRef = useRef<TextInput | null>(null);
+  const lastAutoVerifyCodeRef = useRef('');
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.quad),
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 400,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(backAnim, {
+        toValue: 1,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(backScale, {
+        toValue: 1,
+        duration: 240,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -100,411 +124,434 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     return () => clearTimeout(timer);
   }, [resendTimer]);
 
-  const switchMode = (newMode: 'signin' | 'signup') => {
-    if (mode === newMode) return;
-    setMode(newMode);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    setOtpSent(false);
-    setOtpCode('');
-
-    Animated.spring(tabIndicatorAnim, {
-      toValue: newMode === 'signin' ? 0 : 1,
-      damping: 18,
-      stiffness: 200,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const handlePressIn = () => {
-    Animated.spring(btnScale, {
-      toValue: 0.965,
-      damping: 18,
-      stiffness: 220,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(btnScale, {
+  const openEmailOtpPanel = () => {
+    setEmailOtpMounted(true);
+    setEmailOtpOpen(true);
+    emailPageAnim.setValue(0);
+    Animated.timing(emailPageAnim, {
       toValue: 1,
-      damping: 18,
-      stiffness: 220,
+      duration: 300,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
       useNativeDriver: true,
     }).start();
+
+    setTimeout(() => {
+      if (emailOtpSent) {
+        otpInputRef.current?.focus();
+      } else {
+        emailInputRef.current?.focus();
+      }
+    }, 320);
   };
 
-  const handleSendOtp = async () => {
-    if (!email || !email.includes('@')) {
-      setErrorMessage('Please enter a valid email address.');
+  const closeEmailOtpPanel = () => {
+    if (emailOtpLoading) return;
+    Animated.timing(emailPageAnim, {
+      toValue: 0,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setEmailOtpOpen(false);
+      setEmailOtpMounted(false);
+    });
+  };
+
+  const requestEmailOtp = async () => {
+    const trimmed = emailOtpEmail.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes('@')) {
+      setAlertModal({
+        visible: true,
+        title: 'Valid email required',
+        message: 'Please enter a valid email address to continue.',
+      });
       return;
     }
-    setLoading(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
 
+    setEmailOtpLoading(true);
     try {
-      await sendOtpRequest(email);
-      setOtpSent(true);
+      await sendOtpRequest(trimmed);
+      setEmailOtpSent(true);
       setResendTimer(60);
-      setSuccessMessage('A 6-digit verification code was sent to your email.');
-    } catch (err) {
-      setErrorMessage(parseAuthError(err));
+      emailStepAnim.setValue(0);
+      Animated.timing(emailStepAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+
+      setTimeout(() => {
+        otpInputRef.current?.focus();
+      }, 260);
+    } catch (error) {
+      setAlertModal({
+        visible: true,
+        title: 'Could not send code',
+        message: parseAuthError(error),
+      });
     } finally {
-      setLoading(false);
+      setEmailOtpLoading(false);
     }
   };
 
-  const handleSubmit = async () => {
-    setErrorMessage(null);
-    setSuccessMessage(null);
+  const verifyEmailOtp = async () => {
+    const code = emailOtpCode.replace(/\D/g, '').slice(0, 6);
+    if (code.length !== 6) return;
 
-    if (authMethod === 'otp') {
-      if (!otpSent) {
-        await handleSendOtp();
-        return;
-      }
-      if (otpCode.length < 6) {
-        setErrorMessage('Please enter the complete 6-digit OTP code.');
-        return;
-      }
-      setLoading(true);
-      try {
-        const response = await verifyOtpRequest(email, otpCode);
-        if (response.user && onSuccess) {
-          onSuccess(response.user);
-        }
-      } catch (err) {
-        setErrorMessage(parseAuthError(err));
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!email || !email.includes('@')) {
-      setErrorMessage('Please enter a valid email address.');
-      return;
-    }
-    if (!password || password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters.');
-      return;
-    }
-    if (mode === 'signup' && !name.trim()) {
-      setErrorMessage('Please enter your full name.');
-      return;
-    }
-
-    setLoading(true);
+    setEmailOtpLoading(true);
     try {
+      const result: AuthResponse = await verifyOtpRequest(emailOtpEmail.trim().toLowerCase(), code);
+      if (result.user && onSuccess) {
+        onSuccess(result.user);
+      }
+    } catch (error) {
+      setAlertModal({
+        visible: true,
+        title: 'Verification failed',
+        message: parseAuthError(error),
+      });
+    } finally {
+      setEmailOtpLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!emailOtpSent || emailOtpLoading) return;
+    const code = emailOtpCode.replace(/\D/g, '');
+    if (code.length !== 6 || code === lastAutoVerifyCodeRef.current) return;
+    lastAutoVerifyCodeRef.current = code;
+    void verifyEmailOtp();
+  }, [emailOtpCode, emailOtpLoading, emailOtpSent]);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
       const mockUser: AuthUser = {
-        uid: `user_${Date.now()}`,
-        email: email.trim().toLowerCase(),
-        displayName: mode === 'signup' ? name.trim() : email.split('@')[0],
+        uid: `google_${Date.now()}`,
+        email: 'user@gmail.com',
+        displayName: 'Foodco Member',
       };
       if (onSuccess) {
         onSuccess(mockUser);
       }
-    } catch (err) {
-      setErrorMessage(parseAuthError(err));
+    } catch (error) {
+      setAlertModal({
+        visible: true,
+        title: 'Google sign-in failed',
+        message: parseAuthError(error),
+      });
     } finally {
-      setLoading(false);
+      setGoogleLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    try {
-      const mockGoogleUser: AuthUser = {
-        uid: `google_${Date.now()}`,
-        email: 'user@gmail.com',
-        displayName: 'Google User',
-      };
-      if (onSuccess) {
-        onSuccess(mockGoogleUser);
-      }
-    } catch (err) {
-      setErrorMessage(parseAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const otpDigits = Array.from({ length: 6 }, (_, index) => emailOtpCode[index] || '');
+  const trimmedEmail = emailOtpEmail.trim().toLowerCase();
 
-  const tabTranslateX = tabIndicatorAnim.interpolate({
+  const authPageTranslateX = emailPageAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
+    outputRange: [0, -42],
+  });
+
+  const emailPageTranslateX = emailPageAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [Math.max(screenWidth, 360), 0],
+  });
+
+  const emailPageOpacity = emailPageAnim.interpolate({
+    inputRange: [0, 0.16, 1],
+    outputRange: [0.4, 1, 1],
+  });
+
+  const emailStepTranslateY = emailStepAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [12, 0],
   });
 
   return (
-    <View style={[styles.container, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 16) }]}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar style="dark" />
 
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={24} color={THEME.textPrimary} />
-        </TouchableOpacity>
-
-        <View style={styles.headerBrand}>
-          <Image source={logoSource} style={styles.brandLogo} resizeMode="contain" />
-          <Text style={styles.brandTitle}>Foodco</Text>
-        </View>
-
-        <View style={styles.topBarRight} />
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flexOne}
+      <TouchableOpacity
+        style={[styles.backButton, { top: Math.max(insets.top + 8, 24) }]}
+        onPress={onBack}
+        activeOpacity={0.7}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <Animated.View style={[styles.backIconWrap, { opacity: backAnim, transform: [{ scale: backScale }] }]}>
+          <Feather name="chevron-left" size={26} color={THEME.textPrimary} strokeWidth={3} />
+        </Animated.View>
+      </TouchableOpacity>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateX: authPageTranslateX }, { translateY: slideAnim }],
+            },
+          ]}
         >
-          <Animated.View
-            style={[
-              styles.card,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.tabContainer}>
-              <Animated.View
-                style={[
-                  styles.tabIndicator,
-                  {
-                    left: tabTranslateX,
-                  },
-                ]}
-              />
-              <TouchableOpacity
-                style={styles.tabButton}
-                onPress={() => switchMode('signin')}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.tabText, mode === 'signin' && styles.tabTextActive]}>
-                  Sign In
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.tabButton}
-                onPress={() => switchMode('signup')}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>
-                  Sign Up
-                </Text>
-              </TouchableOpacity>
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Image source={logoSource} style={styles.logo} resizeMode="contain" />
             </View>
+            <Text style={styles.title}>Foodco</Text>
+            <Text style={styles.subtitle}>Login to get started</Text>
+          </View>
 
-            <View style={styles.headlineSection}>
-              <Text style={styles.headlineTitle}>
-                {mode === 'signin' ? 'Welcome Back!' : 'Create Account'}
-              </Text>
-              <Text style={styles.headlineSubtitle}>
-                {mode === 'signin'
-                  ? 'Sign in to access your mindful nutrition plans.'
-                  : 'Start your healthy lifestyle journey with Foodco.'}
-              </Text>
-            </View>
-
-            {errorMessage && (
-              <View style={styles.alertError}>
-                <Ionicons name="alert-circle" size={18} color={THEME.errorText} style={styles.alertIcon} />
-                <Text style={styles.alertErrorText}>{errorMessage}</Text>
-              </View>
-            )}
-
-            {successMessage && (
-              <View style={styles.alertSuccess}>
-                <Ionicons name="checkmark-circle" size={18} color={THEME.successText} style={styles.alertIcon} />
-                <Text style={styles.alertSuccessText}>{successMessage}</Text>
-              </View>
-            )}
-
-            <View style={styles.formSection}>
-              {mode === 'signup' && (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Full Name</Text>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedField === 'name' && styles.inputWrapperFocused,
-                    ]}
-                  >
-                    <Ionicons name="person-outline" size={20} color={THEME.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="e.g. John Doe"
-                      placeholderTextColor="#9CA3AF"
-                      value={name}
-                      onChangeText={setName}
-                      onFocus={() => setFocusedField('name')}
-                      onBlur={() => setFocusedField(null)}
-                      autoCapitalize="words"
-                    />
-                  </View>
-                </View>
-              )}
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email Address</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    focusedField === 'email' && styles.inputWrapperFocused,
-                  ]}
-                >
-                  <Ionicons name="mail-outline" size={20} color={THEME.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="name@example.com"
-                    placeholderTextColor="#9CA3AF"
-                    value={email}
-                    onChangeText={setEmail}
-                    onFocus={() => setFocusedField('email')}
-                    onBlur={() => setFocusedField(null)}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-                </View>
-              </View>
-
-              {authMethod === 'password' ? (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Password</Text>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedField === 'password' && styles.inputWrapperFocused,
-                    ]}
-                  >
-                    <Ionicons name="lock-closed-outline" size={20} color={THEME.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Enter your password"
-                      placeholderTextColor="#9CA3AF"
-                      value={password}
-                      onChangeText={setPassword}
-                      onFocus={() => setFocusedField('password')}
-                      onBlur={() => setFocusedField(null)}
-                      secureTextEntry={!showPassword}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeIcon}
-                      onPress={() => setShowPassword(!showPassword)}
-                    >
-                      <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={20}
-                        color={THEME.textMuted}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                otpSent && (
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>6-Digit Verification Code</Text>
-                    <View
-                      style={[
-                        styles.inputWrapper,
-                        focusedField === 'otp' && styles.inputWrapperFocused,
-                      ]}
-                    >
-                      <Ionicons name="key-outline" size={20} color={THEME.textMuted} style={styles.inputIcon} />
-                      <TextInput
-                        style={[styles.textInput, styles.otpInput]}
-                        placeholder="123456"
-                        placeholderTextColor="#9CA3AF"
-                        value={otpCode}
-                        onChangeText={setOtpCode}
-                        onFocus={() => setFocusedField('otp')}
-                        onBlur={() => setFocusedField(null)}
-                        keyboardType="number-pad"
-                        maxLength={6}
-                      />
-                      {resendTimer > 0 ? (
-                        <Text style={styles.resendTimerText}>{resendTimer}s</Text>
-                      ) : (
-                        <TouchableOpacity onPress={handleSendOtp}>
-                          <Text style={styles.resendActionText}>Resend</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                )
-              )}
-
-              <View style={styles.methodToggleRow}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setAuthMethod(authMethod === 'password' ? 'otp' : 'password');
-                    setErrorMessage(null);
-                    setSuccessMessage(null);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.methodToggleText}>
-                    {authMethod === 'password'
-                      ? 'Sign in using Email OTP'
-                      : 'Sign in using Password'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Animated.View style={{ transform: [{ scale: btnScale }], marginTop: 14 }}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    { opacity: pressed ? 0.9 : 1 },
-                  ]}
-                  onPress={handleSubmit}
-                  onPressIn={handlePressIn}
-                  onPressOut={handlePressOut}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>
-                      {authMethod === 'otp' && !otpSent
-                        ? 'Send OTP Code'
-                        : mode === 'signin'
-                        ? 'Sign In'
-                        : 'Create Account'}
-                    </Text>
-                  )}
-                </Pressable>
-              </Animated.View>
-
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or continue with</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
+          <View style={styles.buttonsContainer}>
+            <View style={styles.authButtonWrap}>
               <TouchableOpacity
-                style={styles.googleButton}
+                activeOpacity={0.8}
+                style={[styles.authButton, styles.googleButton]}
                 onPress={handleGoogleSignIn}
-                activeOpacity={0.8}
-                disabled={loading}
+                disabled={googleLoading}
               >
-                <FontAwesome name="google" size={18} color="#EA4335" style={styles.googleIcon} />
+                <FontAwesome name="google" size={20} color="#EA4335" style={styles.socialIcon} />
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
+                {googleLoading && <ActivityIndicator size="small" color={THEME.textPrimary} style={styles.loader} />}
+                <View style={styles.recommendedBadge}>
+                  <Text style={styles.recommendedText}>RECOMMENDED</Text>
+                </View>
               </TouchableOpacity>
             </View>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+            <View style={styles.authButtonWrap}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.authButton, styles.appleButton]}
+                onPress={() => setAppleAlertVisible(true)}
+              >
+                <AntDesign name="apple" size={21} color="#FFFFFF" style={styles.socialIcon} />
+                <Text style={styles.appleButtonText}>Continue with Apple</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.authButtonWrap}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.authButton, styles.emailButton]}
+                onPress={openEmailOtpPanel}
+                disabled={googleLoading || emailOtpLoading}
+              >
+                <MaterialCommunityIcons name="email-fast-outline" size={22} color={THEME.textPrimary} style={styles.socialIcon} />
+                <Text style={styles.emailButtonText}>Continue with email</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={styles.termsText}>
+            Foodco is a mindful nutrition companion app. We prioritize your privacy and never share or monetize your personal health data.
+          </Text>
+        </Animated.View>
+      </ScrollView>
+
+      {emailOtpMounted ? (
+        <Animated.View
+          pointerEvents={emailOtpOpen ? 'auto' : 'none'}
+          style={[
+            styles.emailPage,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+              opacity: emailPageOpacity,
+              transform: [{ translateX: emailPageTranslateX }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[styles.emailPageBackButton, { top: Math.max(insets.top + 8, 24) }]}
+            onPress={closeEmailOtpPanel}
+            disabled={emailOtpLoading}
+            activeOpacity={0.7}
+          >
+            <Feather name="chevron-left" size={28} color={THEME.textPrimary} strokeWidth={3} />
+          </TouchableOpacity>
+
+          <ScrollView
+            style={styles.emailPageScroll}
+            contentContainerStyle={styles.emailPageContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.emailPageHero}>
+              <View style={styles.emailMojiWrap}>
+                <Image source={groceryBagIcon} style={styles.emailMoji} resizeMode="contain" />
+              </View>
+              <Text style={styles.emailPageTitle}>
+                {emailOtpSent ? 'Enter your code' : 'Continue with email'}
+              </Text>
+              <Text style={styles.emailPageSubtitle}>
+                {emailOtpSent
+                  ? `We sent a 6-digit code to ${trimmedEmail || 'your email'}.`
+                  : 'Enter your email address to receive a 6-digit login code.'}
+              </Text>
+            </View>
+
+            <Animated.View
+              style={[
+                styles.emailPageCard,
+                {
+                  opacity: emailStepAnim,
+                  transform: [{ translateY: emailStepTranslateY }],
+                },
+              ]}
+            >
+              {!emailOtpSent ? (
+                <>
+                  <Text style={styles.emailStepLabel}>Email address</Text>
+                  <View style={styles.emailInputWrap}>
+                    <MaterialCommunityIcons name="email-outline" size={20} color={THEME.textMuted} />
+                    <TextInput
+                      ref={emailInputRef}
+                      value={emailOtpEmail}
+                      onChangeText={setEmailOtpEmail}
+                      editable={!emailOtpLoading}
+                      placeholder="name@example.com"
+                      placeholderTextColor="#9CA3AF"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="email-address"
+                      textContentType="emailAddress"
+                      returnKeyType="send"
+                      onSubmitEditing={() => void requestEmailOtp()}
+                      style={styles.emailPanelInput}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.84}
+                    style={[styles.emailOtpPrimaryButton, emailOtpLoading && styles.emailOtpDisabledButton]}
+                    onPress={requestEmailOtp}
+                    disabled={emailOtpLoading}
+                  >
+                    <Text style={styles.emailOtpPrimaryText}>
+                      {emailOtpLoading ? 'Sending code...' : 'Send OTP on email'}
+                    </Text>
+                    {emailOtpLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" style={styles.emailOtpButtonLoader} />
+                    ) : null}
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.emailStepLabel}>Verification code</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    style={styles.otpBoxes}
+                    onPress={() => otpInputRef.current?.focus()}
+                    disabled={emailOtpLoading}
+                  >
+                    {otpDigits.map((digit, index) => {
+                      const activeBox = index === Math.min(emailOtpCode.length, 5) && !emailOtpLoading;
+                      const filledBox = Boolean(digit);
+                      return (
+                        <View
+                          key={`${index}-${digit || 'empty'}`}
+                          style={[
+                            styles.otpBox,
+                            activeBox && styles.otpBoxActive,
+                            filledBox && styles.otpBoxFilled,
+                          ]}
+                        >
+                          <Text style={styles.otpBoxText}>{digit}</Text>
+                        </View>
+                      );
+                    })}
+                  </TouchableOpacity>
+
+                  <TextInput
+                    ref={otpInputRef}
+                    value={emailOtpCode}
+                    onChangeText={(value) => setEmailOtpCode(value.replace(/\D/g, '').slice(0, 6))}
+                    editable={!emailOtpLoading}
+                    keyboardType="number-pad"
+                    textContentType="oneTimeCode"
+                    maxLength={6}
+                    caretHidden
+                    style={styles.hiddenOtpInput}
+                  />
+
+                  <View style={styles.otpFooterRow}>
+                    {emailOtpLoading ? (
+                      <ActivityIndicator size="small" color={THEME.primary} style={styles.otpLoader} />
+                    ) : resendTimer > 0 ? (
+                      <Text style={styles.otpResendTimerText}>Resend code in {resendTimer}s</Text>
+                    ) : (
+                      <TouchableOpacity onPress={requestEmailOtp}>
+                        <Text style={styles.otpResendActionText}>Resend OTP</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <TouchableOpacity
+                    activeOpacity={0.84}
+                    style={[styles.emailOtpPrimaryButton, emailOtpLoading && styles.emailOtpDisabledButton]}
+                    onPress={verifyEmailOtp}
+                    disabled={emailOtpLoading || emailOtpCode.length < 6}
+                  >
+                    <Text style={styles.emailOtpPrimaryText}>
+                      {emailOtpLoading ? 'Verifying...' : 'Verify & Continue'}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </Animated.View>
+          </ScrollView>
+        </Animated.View>
+      ) : null}
+
+      <Modal
+        visible={appleAlertVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAppleAlertVisible(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setAppleAlertVisible(false)}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Apple Sign-In</Text>
+            <Text style={styles.modalMessage}>Continue with Apple will be available in the upcoming build.</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setAppleAlertVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={alertModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAlertModal((prev) => ({ ...prev, visible: false }))}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setAlertModal((prev) => ({ ...prev, visible: false }))}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{alertModal.title}</Text>
+            <Text style={styles.modalMessage}>{alertModal.message}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setAlertModal((prev) => ({ ...prev, visible: false }))}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -514,215 +561,280 @@ export { AuthPage };
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.bg,
+    backgroundColor: '#FFFFFF',
   },
-  flexOne: {
+  scroll: {
     flex: 1,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: THEME.cardBg,
+    position: 'absolute',
+    left: 20,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  backIconWrap: {
+    width: 26,
+    height: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 32,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+  },
+  title: {
+    fontFamily: serifFont,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#0D0E11',
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#7F8489',
+    letterSpacing: 0.2,
+  },
+  buttonsContainer: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 14,
+  },
+  authButtonWrap: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  authButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 310,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 26,
+    justifyContent: 'center',
+    height: 52,
+    position: 'relative',
+  },
+  socialIcon: {
+    marginRight: 10,
+  },
+  googleButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 8,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  headerBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  brandLogo: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
-    marginRight: 8,
-  },
-  brandTitle: {
-    fontFamily: serifFont,
-    fontSize: 20,
+  googleButtonText: {
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textPrimary,
+    color: '#1F2937',
   },
-  topBarRight: {
-    width: 40,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 30,
-  },
-  card: {
-    backgroundColor: THEME.cardBg,
-    borderRadius: 30,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: THEME.inputBg,
-    borderRadius: 20,
-    position: 'relative',
-    height: 44,
-    padding: 3,
-    marginBottom: 20,
-  },
-  tabIndicator: {
-    position: 'absolute',
-    width: '50%',
-    height: '100%',
-    top: 3,
-    backgroundColor: THEME.cardBg,
-    borderRadius: 17,
-    shadowColor: '#000',
+  appleButton: {
+    backgroundColor: '#0D0E11',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  appleButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  emailButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  emailButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  recommendedBadge: {
+    position: 'absolute',
+    top: -9,
+    right: 18,
+    backgroundColor: THEME.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    shadowColor: THEME.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 3,
   },
-  tabButton: {
-    flex: 1,
+  recommendedText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  loader: {
+    marginLeft: 8,
+  },
+  termsText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 36,
+    paddingHorizontal: 16,
+    maxWidth: 320,
+  },
+  emailPage: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#FFFFFF',
+    zIndex: 100,
+  },
+  emailPageBackButton: {
+    position: 'absolute',
+    left: 20,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: THEME.textMuted,
-  },
-  tabTextActive: {
-    color: THEME.textPrimary,
-  },
-  headlineSection: {
-    marginBottom: 20,
-  },
-  headlineTitle: {
-    fontFamily: serifFont,
-    fontSize: 26,
-    fontWeight: '700',
-    color: THEME.textPrimary,
-    letterSpacing: -0.3,
-  },
-  headlineSubtitle: {
-    fontSize: 14,
-    color: THEME.textMuted,
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  alertError: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: THEME.errorBg,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 16,
-  },
-  alertErrorText: {
+  emailPageScroll: {
     flex: 1,
-    fontSize: 13,
-    color: THEME.errorText,
-    fontWeight: '500',
   },
-  alertSuccess: {
-    flexDirection: 'row',
+  emailPageContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 32,
     alignItems: 'center',
-    backgroundColor: THEME.successBg,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 16,
   },
-  alertSuccessText: {
-    flex: 1,
-    fontSize: 13,
-    color: THEME.successText,
-    fontWeight: '500',
-  },
-  alertIcon: {
-    marginRight: 8,
-  },
-  formSection: {
-    gap: 14,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: THEME.textPrimary,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
+  emailPageHero: {
     alignItems: 'center',
-    backgroundColor: THEME.inputBg,
+    marginBottom: 32,
+  },
+  emailMojiWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: THEME.peachBg,
     borderWidth: 1.5,
-    borderColor: THEME.inputBorder,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    height: 50,
+    borderColor: THEME.peachBorder,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  inputWrapperFocused: {
-    borderColor: THEME.inputFocusBorder,
-    backgroundColor: THEME.cardBg,
+  emailMoji: {
+    width: 36,
+    height: 36,
   },
-  inputIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    color: THEME.textPrimary,
-  },
-  otpInput: {
-    letterSpacing: 6,
+  emailPageTitle: {
+    fontFamily: serifFont,
+    fontSize: 24,
     fontWeight: '700',
-    fontSize: 18,
+    color: '#0D0E11',
+    letterSpacing: -0.3,
+    marginBottom: 8,
   },
-  eyeIcon: {
-    padding: 6,
+  emailPageSubtitle: {
+    fontSize: 14,
+    color: '#7F8489',
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
   },
-  resendTimerText: {
+  emailPageCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#FFFFFF',
+  },
+  emailStepLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: THEME.textMuted,
+    color: '#0D0E11',
+    marginBottom: 8,
   },
-  resendActionText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: THEME.primary,
-  },
-  methodToggleRow: {
+  emailInputWrap: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 2,
+    alignItems: 'center',
+    backgroundColor: '#F8F9FB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    height: 52,
+    marginBottom: 16,
   },
-  methodToggleText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: THEME.primaryDark,
+  emailPanelInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: '#0D0E11',
   },
-  primaryButton: {
+  emailOtpPrimaryButton: {
     backgroundColor: THEME.primary,
     borderRadius: 26,
     height: 52,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: THEME.primary,
@@ -730,50 +842,120 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
+    marginTop: 6,
   },
-  primaryButtonText: {
-    fontSize: 16,
+  emailOtpDisabledButton: {
+    opacity: 0.65,
+  },
+  emailOtpPrimaryText: {
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.2,
   },
-  dividerRow: {
+  emailOtpButtonLoader: {
+    marginLeft: 8,
+  },
+  otpBoxes: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 12,
+  },
+  otpBox: {
+    width: 44,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#F8F9FB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpBoxActive: {
+    borderColor: THEME.primary,
+    backgroundColor: '#FFFFFF',
+  },
+  otpBoxFilled: {
+    borderColor: '#374151',
+    backgroundColor: '#FFFFFF',
+  },
+  otpBoxText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0D0E11',
+  },
+  hiddenOtpInput: {
+    position: 'absolute',
+    opacity: 0,
+    width: 1,
+    height: 1,
+  },
+  otpFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
     marginVertical: 12,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
+  otpLoader: {
+    marginRight: 6,
   },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 12,
-    fontWeight: '500',
-    color: THEME.textMuted,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 26,
-    height: 52,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  googleIcon: {
-    marginRight: 10,
-  },
-  googleButtonText: {
-    fontSize: 15,
+  otpResendTimerText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: THEME.textPrimary,
+    color: '#94A3B8',
+  },
+  otpResendActionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontFamily: serifFont,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0D0E11',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: THEME.primary,
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
