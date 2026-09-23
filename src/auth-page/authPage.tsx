@@ -15,10 +15,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather, FontAwesome, AntDesign } from '@expo/vector-icons';
+import { Feather, AntDesign } from '@expo/vector-icons';
 import { parseAuthError, AuthUser } from './authService';
 
 const logoSource = require('../../assets/logo.png');
+const gmailIcon = require('../../assets/gmail-icon.webp');
 
 const THEME = {
   primary: '#FF6B35',
@@ -163,7 +164,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
                 onPress={handleGoogleSignIn}
                 disabled={googleLoading}
               >
-                <FontAwesome name="google" size={20} color="#EA4335" style={styles.socialIcon} />
+                <Image source={gmailIcon} style={styles.socialImage} resizeMode="contain" />
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
                 {googleLoading && <ActivityIndicator size="small" color={THEME.textPrimary} style={styles.loader} />}
                 <View style={styles.recommendedBadge}>
@@ -340,6 +341,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   socialIcon: {
+    marginRight: 10,
+  },
+  socialImage: {
+    width: 20,
+    height: 20,
     marginRight: 10,
   },
   googleButton: {
