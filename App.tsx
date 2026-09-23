@@ -4,9 +4,11 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import FoodcoSplashScreen from './src/splash-screen/splashscreen';
 import LandingPage from './src/landing page/landingpage';
+import { AuthPage } from './src/auth-page';
 
 export default function App() {
   const [appReady, setAppReady] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'auth'>('landing');
 
   useEffect(() => {
     const prepare = async () => {
@@ -25,7 +27,11 @@ export default function App() {
       <View style={styles.root}>
         <StatusBar style="dark" />
         <FoodcoSplashScreen isReady={true} />
-        <LandingPage />
+        {currentScreen === 'landing' ? (
+          <LandingPage onGetStarted={() => setCurrentScreen('auth')} />
+        ) : (
+          <AuthPage onBack={() => setCurrentScreen('landing')} />
+        )}
       </View>
     </SafeAreaProvider>
   );

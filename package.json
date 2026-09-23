@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "expo": "~57.0.24",
     "expo-navigation-bar": "~57.0.2",
     "expo-splash-screen": "~57.0.9",
