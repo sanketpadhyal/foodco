@@ -670,12 +670,12 @@ const styles = StyleSheet.create({
   },
   footerLogoWrap: {
     alignSelf: 'flex-start',
-    marginBottom: 16,
-    marginLeft: 2,
+    marginBottom: 8,
+    marginLeft: 0,
   },
   footerLogo: {
-    width: 30,
-    height: 42,
+    width: 44,
+    height: 60,
   },
   footerHintText: {
     fontSize: 13,
