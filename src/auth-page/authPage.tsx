@@ -12,15 +12,12 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, AntDesign } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 import { parseAuthError, syncTokenWithBackend, AuthUser } from './authService';
-
-WebBrowser.maybeCompleteAuthSession();
 
 const logoSource = require('../../assets/logo.png');
 const gmailIcon = require('../../assets/gmail-icon.webp');
@@ -30,6 +27,12 @@ const GOOGLE_ANDROID_CLIENT_ID = '677834907140-jgf7uh48st456kdp5b0e16laeto55um4.
 
 let googleSigninModule: any = null;
 let firebaseAuthModule: any = null;
+let webBrowserModule: any = null;
+
+try {
+  webBrowserModule = require('expo-web-browser');
+  webBrowserModule.maybeCompleteAuthSession?.();
+} catch (error) {}
 
 try {
   const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
@@ -119,6 +122,58 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     ]).start();
   }, []);
 
+  const handleAuthUrlResponse = async (url: string): Promise<AuthUser | null> => {
+    try {
+      const parsedUrl = new URL(url);
+      const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
+      const searchParams = new URLSearchParams(parsedUrl.search);
+
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+      const idToken = hashParams.get('id_token') || searchParams.get('id_token');
+
+      if (!accessToken && !idToken) {
+        return null;
+      }
+
+      let profileData: { id?: string; email?: string; name?: string; picture?: string } = {};
+
+      if (accessToken) {
+        try {
+          const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (profileRes.ok) {
+            profileData = await profileRes.json();
+          }
+        } catch (e) {}
+      }
+
+      let authUser: AuthUser = {
+        uid: profileData.id || `google_${Date.now()}`,
+        email: profileData.email || '',
+        displayName: profileData.name || 'Foodco Member',
+        photoURL: profileData.picture || null,
+      };
+
+      if (idToken) {
+        try {
+          const backendResult = await syncTokenWithBackend(
+            idToken,
+            authUser.displayName,
+            authUser.photoURL || undefined
+          );
+          if (backendResult?.user) {
+            authUser = backendResult.user;
+          }
+        } catch (err) {}
+      }
+
+      return authUser;
+    } catch (err) {
+      return null;
+    }
+  };
+
   const performNativeGoogleSignIn = async (): Promise<AuthUser | null> => {
     await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const signInResult = await googleSigninModule.signIn();
@@ -179,11 +234,8 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     return authUser;
   };
 
-  const performWebGoogleSignIn = async (): Promise<AuthUser | null> => {
-    const redirectUri = AuthSession.makeRedirectUri({
-      scheme: 'foodco',
-    });
-
+  const performBrowserOAuth = async (): Promise<AuthUser | null> => {
+    const redirectUri = 'foodco://auth';
     const clientId = Platform.OS === 'android' ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_WEB_CLIENT_ID;
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
@@ -194,60 +246,46 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
       'openid profile email'
     )}&nonce=${encodeURIComponent(Math.random().toString(36).substring(2))}`;
 
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-    if (result.type === 'cancel' || result.type === 'dismiss') {
-      return null;
-    }
-
-    if (result.type === 'success' && result.url) {
-      const parsedUrl = new URL(result.url);
-      const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
-      const searchParams = new URLSearchParams(parsedUrl.search);
-
-      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-      const idToken = hashParams.get('id_token') || searchParams.get('id_token');
-
-      if (!accessToken && !idToken) {
-        throw new Error('Could not retrieve authentication tokens from Google.');
-      }
-
-      let profileData: { id?: string; email?: string; name?: string; picture?: string } = {};
-
-      if (accessToken) {
-        const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (profileRes.ok) {
-          profileData = await profileRes.json();
+    if (webBrowserModule?.openAuthSessionAsync) {
+      try {
+        const result = await webBrowserModule.openAuthSessionAsync(authUrl, redirectUri);
+        if (result.type === 'success' && result.url) {
+          return await handleAuthUrlResponse(result.url);
         }
-      }
-
-      let authUser: AuthUser = {
-        uid: profileData.id || `google_${Date.now()}`,
-        email: profileData.email || '',
-        displayName: profileData.name || 'Foodco Member',
-        photoURL: profileData.picture || null,
-      };
-
-      if (idToken) {
-        try {
-          const backendResult = await syncTokenWithBackend(
-            idToken,
-            authUser.displayName,
-            authUser.photoURL || undefined
-          );
-          if (backendResult?.user) {
-            authUser = backendResult.user;
-          }
-        } catch (err) {}
-      }
-
-      return authUser;
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          return null;
+        }
+      } catch (err) {}
     }
 
+    const canOpen = await Linking.canOpenURL(authUrl);
+    if (canOpen) {
+      await Linking.openURL(authUrl);
+    }
     return null;
   };
+
+  useEffect(() => {
+    const handleUrl = async (event: { url: string }) => {
+      if (event.url && event.url.startsWith('foodco://')) {
+        const user = await handleAuthUrlResponse(event.url);
+        if (user && onSuccess) {
+          onSuccess(user);
+        }
+      }
+    };
+
+    const sub = Linking.addEventListener('url', handleUrl);
+    Linking.getInitialURL().then((url) => {
+      if (url && url.startsWith('foodco://')) {
+        handleUrl({ url });
+      }
+    });
+
+    return () => {
+      sub.remove();
+    };
+  }, [onSuccess]);
 
   const handleGoogleSignIn = async () => {
     if (googleLoading) return;
@@ -268,10 +306,10 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
             setGoogleLoading(false);
             return;
           }
-          authUser = await performWebGoogleSignIn();
+          authUser = await performBrowserOAuth();
         }
       } else {
-        authUser = await performWebGoogleSignIn();
+        authUser = await performBrowserOAuth();
       }
 
       if (authUser && onSuccess) {
