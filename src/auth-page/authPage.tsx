@@ -25,20 +25,19 @@ const AUTH_STEP_TIMEOUT_MS = 15000;
 
 let googleSigninModule: any = null;
 let firebaseAuthModule: any = null;
-let isNativeAuthAvailable = false;
 
 try {
   const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
-  const fAuth = require('@react-native-firebase/auth').default;
-
   gSignin.configure({
     webClientId: GOOGLE_CLIENT_ID,
     offlineAccess: false,
   });
-
   googleSigninModule = gSignin;
-  firebaseAuthModule = fAuth;
-  isNativeAuthAvailable = true;
+} catch (error) {}
+
+try {
+  const fAuthPackage = require('@react-native-firebase/auth');
+  firebaseAuthModule = fAuthPackage.default || fAuthPackage;
 } catch (error) {}
 
 const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> => {
@@ -52,11 +51,18 @@ export async function clearNativeAuthState() {
   const cleanupJobs: Promise<unknown>[] = [];
 
   if (firebaseAuthModule) {
-    cleanupJobs.push(
-      firebaseAuthModule()
-        .signOut()
-        .catch(() => null)
-    );
+    try {
+      const authInstance =
+        typeof firebaseAuthModule === 'function'
+          ? firebaseAuthModule()
+          : firebaseAuthModule.getAuth
+          ? firebaseAuthModule.getAuth()
+          : firebaseAuthModule;
+
+      if (authInstance?.signOut) {
+        cleanupJobs.push(authInstance.signOut().catch(() => null));
+      }
+    } catch (e) {}
   }
 
   if (googleSigninModule) {
@@ -158,11 +164,11 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     if (googleLoading) return;
     setDataAlertVisible(false);
 
-    if (!isNativeAuthAvailable || !googleSigninModule || !firebaseAuthModule) {
+    if (!googleSigninModule) {
       setAlertModal({
         visible: true,
-        title: 'Google sign-in unavailable',
-        message: 'Google sign-in is not available in this version of Foodco yet. Please restart after updating or building.',
+        title: 'Google Sign-In Unavailable',
+        message: 'Google Sign-In is not initialized. Please ensure Google Play Services are available.',
       });
       return;
     }
@@ -182,35 +188,67 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
         'Google sign-in timed out before returning an account. Close the Google sheet and try again.'
       );
 
-      const idToken = response?.data?.idToken ?? response?.idToken;
-
       if (response?.type === 'cancelled') {
         return;
       }
+
+      const idToken = response?.data?.idToken ?? response?.idToken;
+      const rawUser = response?.data?.user ?? response?.user;
 
       if (!idToken) {
         throw new Error('No ID token found');
       }
 
-      const googleCredential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
-      const firebaseUserCredential = await withTimeout<any>(
-        firebaseAuthModule().signInWithCredential(googleCredential),
-        AUTH_STEP_TIMEOUT_MS,
-        'Google sign-in took too long. Please try again.'
-      );
-
-      const firebaseIdToken = await withTimeout<string>(
-        firebaseUserCredential.user.getIdToken(true),
-        AUTH_STEP_TIMEOUT_MS,
-        'Google sign-in took too long. Please try again.'
-      );
-
       let authUser: AuthUser = {
-        uid: firebaseUserCredential.user.uid,
-        email: firebaseUserCredential.user.email || '',
-        displayName: firebaseUserCredential.user.displayName || 'Foodco Member',
-        photoURL: firebaseUserCredential.user.photoURL || null,
+        uid: rawUser?.id || `google_${Date.now()}`,
+        email: rawUser?.email || '',
+        displayName: rawUser?.name || 'Foodco Member',
+        photoURL: rawUser?.photo || null,
       };
+
+      let firebaseIdToken = idToken;
+
+      if (firebaseAuthModule) {
+        try {
+          const GoogleAuthProvider =
+            firebaseAuthModule.GoogleAuthProvider || firebaseAuthModule.default?.GoogleAuthProvider;
+          const authInstance =
+            typeof firebaseAuthModule === 'function'
+              ? firebaseAuthModule()
+              : firebaseAuthModule.getAuth
+              ? firebaseAuthModule.getAuth()
+              : firebaseAuthModule;
+
+          const signInFn =
+            firebaseAuthModule.signInWithCredential ||
+            (authInstance && authInstance.signInWithCredential?.bind(authInstance));
+
+          if (GoogleAuthProvider && signInFn) {
+            const googleCredential = GoogleAuthProvider.credential(idToken);
+            const userCredential = await withTimeout<any>(
+              signInFn(authInstance, googleCredential).catch(() => signInFn(googleCredential)),
+              AUTH_STEP_TIMEOUT_MS,
+              'Google sign-in took too long. Please try again.'
+            );
+            const fbToken = await withTimeout<string>(
+              userCredential?.user?.getIdToken?.(true) || Promise.resolve(idToken),
+              AUTH_STEP_TIMEOUT_MS,
+              'Google sign-in took too long. Please try again.'
+            );
+            if (fbToken) {
+              firebaseIdToken = fbToken;
+            }
+            if (userCredential?.user) {
+              authUser = {
+                uid: userCredential.user.uid,
+                email: userCredential.user.email || authUser.email,
+                displayName: userCredential.user.displayName || authUser.displayName,
+                photoURL: userCredential.user.photoURL || authUser.photoURL,
+              };
+            }
+          }
+        } catch (firebaseError) {}
+      }
 
       try {
         const backendResult = await syncTokenWithBackend(
