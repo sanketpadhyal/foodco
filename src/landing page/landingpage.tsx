@@ -499,6 +499,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             },
           ]}
         >
+          <Text style={[styles.footerHintText, { fontSize: isVeryCompactHeight ? 12 : 13 }]}>
+            Scan any product barcode to get instant info and ask our FoodAI about it.
+          </Text>
           <Animated.View style={{ transform: [{ scale: primaryBtnScale }] }}>
             <Pressable
               style={({ pressed }) => [
@@ -656,5 +659,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+  footerHintText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    fontWeight: '500',
   },
 });
