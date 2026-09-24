@@ -12,7 +12,6 @@ import {
   Image,
   ActivityIndicator,
   Modal,
-  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,29 +22,31 @@ const logoSource = require('../../assets/logo.png');
 const gmailIcon = require('../../assets/gmail-icon.webp');
 
 const GOOGLE_WEB_CLIENT_ID = '677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com';
-const GOOGLE_ANDROID_CLIENT_ID = '677834907140-jgf7uh48st456kdp5b0e16laeto55um4.apps.googleusercontent.com';
 
 let googleSigninModule: any = null;
 let firebaseAuthModule: any = null;
-let webBrowserModule: any = null;
-
-try {
-  webBrowserModule = require('expo-web-browser');
-  webBrowserModule.maybeCompleteAuthSession?.();
-} catch (error) {}
 
 try {
   const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+  const fAuth = require('@react-native-firebase/auth').default;
+
   gSignin.configure({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     offlineAccess: false,
   });
-  googleSigninModule = gSignin;
-} catch (error) {}
 
-try {
-  firebaseAuthModule = require('@react-native-firebase/auth').default;
-} catch (error) {}
+  googleSigninModule = gSignin;
+  firebaseAuthModule = fAuth;
+} catch (error) {
+  try {
+    const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+    gSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      offlineAccess: false,
+    });
+    googleSigninModule = gSignin;
+  } catch (err) {}
+}
 
 const THEME = {
   primary: '#FF6B35',
@@ -81,6 +82,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const insets = useSafeAreaInsets();
 
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [dataAlertVisible, setDataAlertVisible] = useState(false);
   const [appleAlertVisible, setAppleAlertVisible] = useState(false);
   const [alertModal, setAlertModal] = useState<AlertModalState>({
     visible: false,
@@ -122,40 +124,86 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     ]).start();
   }, []);
 
-  const handleAuthUrlResponse = async (url: string): Promise<AuthUser | null> => {
+  const handleGoogleSignIn = () => {
+    if (googleLoading) return;
+    setDataAlertVisible(true);
+  };
+
+  const startGoogleSignIn = async () => {
+    if (googleLoading) return;
+    setDataAlertVisible(false);
+
+    if (!googleSigninModule) {
+      setAlertModal({
+        visible: true,
+        title: 'Google Sign-In',
+        message: 'Google Sign-In is ready. Please ensure Google Play Services are enabled on this device.',
+      });
+      return;
+    }
+
+    setGoogleLoading(true);
+
     try {
-      const parsedUrl = new URL(url);
-      const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
-      const searchParams = new URLSearchParams(parsedUrl.search);
+      await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await googleSigninModule.signOut().catch(() => null);
+      const response = await googleSigninModule.signIn();
 
-      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-      const idToken = hashParams.get('id_token') || searchParams.get('id_token');
-
-      if (!accessToken && !idToken) {
-        return null;
+      if (response?.type === 'cancelled') {
+        setGoogleLoading(false);
+        return;
       }
 
-      let profileData: { id?: string; email?: string; name?: string; picture?: string } = {};
+      const idToken = response?.data?.idToken ?? response?.idToken;
+      const rawUser = response?.data?.user ?? response?.user;
 
-      if (accessToken) {
-        try {
-          const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          if (profileRes.ok) {
-            profileData = await profileRes.json();
-          }
-        } catch (e) {}
+      if (!idToken) {
+        throw new Error('Google did not return a valid account token.');
       }
 
       let authUser: AuthUser = {
-        uid: profileData.id || `google_${Date.now()}`,
-        email: profileData.email || '',
-        displayName: profileData.name || 'Foodco Member',
-        photoURL: profileData.picture || null,
+        uid: rawUser?.id || `google_${Date.now()}`,
+        email: rawUser?.email || '',
+        displayName: rawUser?.name || 'Foodco Member',
+        photoURL: rawUser?.photo || null,
       };
 
-      if (idToken) {
+      if (firebaseAuthModule) {
+        try {
+          const googleCredential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
+          const firebaseUserCredential = await firebaseAuthModule().signInWithCredential(googleCredential);
+          const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
+
+          authUser = {
+            uid: firebaseUserCredential.user.uid,
+            email: firebaseUserCredential.user.email || authUser.email,
+            displayName: firebaseUserCredential.user.displayName || authUser.displayName,
+            photoURL: firebaseUserCredential.user.photoURL || authUser.photoURL,
+          };
+
+          try {
+            const backendResult = await syncTokenWithBackend(
+              firebaseIdToken,
+              authUser.displayName,
+              authUser.photoURL || undefined
+            );
+            if (backendResult?.user) {
+              authUser = backendResult.user;
+            }
+          } catch (backendError) {}
+        } catch (firebaseErr) {
+          try {
+            const backendResult = await syncTokenWithBackend(
+              idToken,
+              authUser.displayName,
+              authUser.photoURL || undefined
+            );
+            if (backendResult?.user) {
+              authUser = backendResult.user;
+            }
+          } catch (backendError) {}
+        }
+      } else {
         try {
           const backendResult = await syncTokenWithBackend(
             idToken,
@@ -165,154 +213,10 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
           if (backendResult?.user) {
             authUser = backendResult.user;
           }
-        } catch (err) {}
+        } catch (backendError) {}
       }
 
-      return authUser;
-    } catch (err) {
-      return null;
-    }
-  };
-
-  const performNativeGoogleSignIn = async (): Promise<AuthUser | null> => {
-    await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const signInResult = await googleSigninModule.signIn();
-
-    if (signInResult?.type === 'cancelled') {
-      return null;
-    }
-
-    const idToken = signInResult?.data?.idToken ?? signInResult?.idToken;
-    const rawUser = signInResult?.data?.user ?? signInResult?.user;
-
-    if (!idToken) {
-      throw new Error('Google did not return an ID token.');
-    }
-
-    let authUser: AuthUser = {
-      uid: rawUser?.id || `google_${Date.now()}`,
-      email: rawUser?.email || '',
-      displayName: rawUser?.name || 'Foodco Member',
-      photoURL: rawUser?.photo || null,
-    };
-
-    if (firebaseAuthModule) {
-      try {
-        const credential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
-        const userCredential = await firebaseAuthModule().signInWithCredential(credential);
-        const firebaseIdToken = await userCredential.user.getIdToken(true);
-        authUser = {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email || authUser.email,
-          displayName: userCredential.user.displayName || authUser.displayName,
-          photoURL: userCredential.user.photoURL || authUser.photoURL,
-        };
-        try {
-          const backendResult = await syncTokenWithBackend(
-            firebaseIdToken,
-            authUser.displayName,
-            authUser.photoURL || undefined
-          );
-          if (backendResult?.user) {
-            authUser = backendResult.user;
-          }
-        } catch (err) {}
-      } catch (fbErr) {}
-    } else {
-      try {
-        const backendResult = await syncTokenWithBackend(
-          idToken,
-          authUser.displayName,
-          authUser.photoURL || undefined
-        );
-        if (backendResult?.user) {
-          authUser = backendResult.user;
-        }
-      } catch (err) {}
-    }
-
-    return authUser;
-  };
-
-  const performBrowserOAuth = async (): Promise<AuthUser | null> => {
-    const redirectUri = 'foodco://auth';
-    const clientId = Platform.OS === 'android' ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_WEB_CLIENT_ID;
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
-      clientId
-    )}&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&response_type=token%20id_token&scope=${encodeURIComponent(
-      'openid profile email'
-    )}&nonce=${encodeURIComponent(Math.random().toString(36).substring(2))}`;
-
-    if (webBrowserModule?.openAuthSessionAsync) {
-      try {
-        const result = await webBrowserModule.openAuthSessionAsync(authUrl, redirectUri);
-        if (result.type === 'success' && result.url) {
-          return await handleAuthUrlResponse(result.url);
-        }
-        if (result.type === 'cancel' || result.type === 'dismiss') {
-          return null;
-        }
-      } catch (err) {}
-    }
-
-    const canOpen = await Linking.canOpenURL(authUrl);
-    if (canOpen) {
-      await Linking.openURL(authUrl);
-    }
-    return null;
-  };
-
-  useEffect(() => {
-    const handleUrl = async (event: { url: string }) => {
-      if (event.url && event.url.startsWith('foodco://')) {
-        const user = await handleAuthUrlResponse(event.url);
-        if (user && onSuccess) {
-          onSuccess(user);
-        }
-      }
-    };
-
-    const sub = Linking.addEventListener('url', handleUrl);
-    Linking.getInitialURL().then((url) => {
-      if (url && url.startsWith('foodco://')) {
-        handleUrl({ url });
-      }
-    });
-
-    return () => {
-      sub.remove();
-    };
-  }, [onSuccess]);
-
-  const handleGoogleSignIn = async () => {
-    if (googleLoading) return;
-    setGoogleLoading(true);
-
-    try {
-      let authUser: AuthUser | null = null;
-
-      if (googleSigninModule) {
-        try {
-          authUser = await performNativeGoogleSignIn();
-        } catch (nativeError: any) {
-          if (
-            nativeError?.code === 'SIGN_IN_CANCELLED' ||
-            nativeError?.code === '12501' ||
-            nativeError?.message?.toLowerCase().includes('cancel')
-          ) {
-            setGoogleLoading(false);
-            return;
-          }
-          authUser = await performBrowserOAuth();
-        }
-      } else {
-        authUser = await performBrowserOAuth();
-      }
-
-      if (authUser && onSuccess) {
+      if (onSuccess) {
         onSuccess(authUser);
       }
     } catch (error: any) {
@@ -327,7 +231,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
 
       setAlertModal({
         visible: true,
-        title: 'Google Sign-In Failed',
+        title: 'Login failed',
         message: parseAuthError(error),
       });
     } finally {
@@ -406,6 +310,47 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
           </Text>
         </Animated.View>
       </ScrollView>
+
+      <Modal
+        visible={dataAlertVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDataAlertVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => !googleLoading && setDataAlertVisible(false)}
+        >
+          <View style={styles.dataNoticeCard}>
+            <Text style={styles.dataNoticeTitle}>Data collection notice</Text>
+            <View style={styles.dataNoticeDivider} />
+            <Text style={styles.dataNoticeHighlight}>
+              We do not collect anything extra from your Google account.
+            </Text>
+            <Text style={styles.dataNoticeBody}>
+              When you continue with Google, Foodco only uses the basic sign-in info Google provides, like your email and account ID, to log you in and keep your account secure. We do not read your Gmail, contacts, Drive, photos, or anything else.
+            </Text>
+            <View style={styles.dataNoticeActions}>
+              <TouchableOpacity
+                style={[styles.dataNoticeBtn, styles.dataNoticeCancelBtn]}
+                onPress={() => setDataAlertVisible(false)}
+                disabled={googleLoading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.dataNoticeCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dataNoticeBtn, styles.dataNoticeConfirmBtn]}
+                onPress={() => void startGoogleSignIn()}
+                disabled={googleLoading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.dataNoticeConfirmText}>Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={appleAlertVisible}
@@ -660,6 +605,73 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  dataNoticeCard: {
+    width: '100%',
+    maxWidth: 330,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  dataNoticeTitle: {
+    fontFamily: serifFont,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0D0E11',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  dataNoticeDivider: {
+    height: 1,
+    backgroundColor: '#F0F2F5',
+    marginBottom: 14,
+  },
+  dataNoticeHighlight: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 8,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  dataNoticeBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  dataNoticeActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dataNoticeBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dataNoticeCancelBtn: {
+    backgroundColor: '#F1F5F9',
+  },
+  dataNoticeCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  dataNoticeConfirmBtn: {
+    backgroundColor: THEME.primary,
+  },
+  dataNoticeConfirmText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
   },
