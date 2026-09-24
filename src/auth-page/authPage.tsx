@@ -10,7 +10,6 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,31 +20,57 @@ import UniversalPanel from '../components/universalpanel';
 const logoSource = require('../../assets/logo.png');
 const gmailIcon = require('../../assets/gmail-icon.webp');
 
-const GOOGLE_WEB_CLIENT_ID = '677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com';
+const AUTH_STEP_TIMEOUT_MS = 15000;
 
 let googleSigninModule: any = null;
 let firebaseAuthModule: any = null;
+let isNativeAuthAvailable = false;
 
 try {
   const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
   const fAuth = require('@react-native-firebase/auth').default;
 
   gSignin.configure({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
+    webClientId: GOOGLE_CLIENT_ID,
     offlineAccess: false,
   });
 
   googleSigninModule = gSignin;
   firebaseAuthModule = fAuth;
-} catch (error) {
-  try {
-    const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
-    gSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID,
-      offlineAccess: false,
-    });
-    googleSigninModule = gSignin;
-  } catch (err) {}
+  isNativeAuthAvailable = true;
+} catch (error) {}
+
+const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(errorMessage)), timeoutMs)),
+  ]);
+};
+
+export async function clearNativeAuthState() {
+  const cleanupJobs: Promise<unknown>[] = [];
+
+  if (firebaseAuthModule) {
+    cleanupJobs.push(
+      firebaseAuthModule()
+        .signOut()
+        .catch(() => null)
+    );
+  }
+
+  if (googleSigninModule) {
+    cleanupJobs.push(
+      Promise.resolve().then(async () => {
+        if (typeof googleSigninModule.revokeAccess === 'function') {
+          await googleSigninModule.revokeAccess().catch(() => null);
+        }
+        await googleSigninModule.signOut().catch(() => null);
+      })
+    );
+  }
+
+  await Promise.all(cleanupJobs);
 }
 
 const THEME = {
@@ -124,75 +149,6 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     ]).start();
   }, []);
 
-  const handleDeepLinkResponse = async (url: string) => {
-    try {
-      const parsedUrl = new URL(url);
-      const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
-      const searchParams = new URLSearchParams(parsedUrl.search);
-
-      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-      const idToken = hashParams.get('id_token') || searchParams.get('id_token');
-
-      if (!accessToken && !idToken) return;
-
-      let profileData: { id?: string; email?: string; name?: string; picture?: string } = {};
-
-      if (accessToken) {
-        try {
-          const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          if (profileRes.ok) {
-            profileData = await profileRes.json();
-          }
-        } catch (e) {}
-      }
-
-      let authUser: AuthUser = {
-        uid: profileData.id || `google_${Date.now()}`,
-        email: profileData.email || '',
-        displayName: profileData.name || 'Foodco Member',
-        photoURL: profileData.picture || null,
-      };
-
-      if (idToken) {
-        try {
-          const backendResult = await syncTokenWithBackend(
-            idToken,
-            authUser.displayName,
-            authUser.photoURL || undefined
-          );
-          if (backendResult?.user) {
-            authUser = backendResult.user;
-          }
-        } catch (err) {}
-      }
-
-      if (onSuccess) {
-        onSuccess(authUser);
-      }
-    } catch (err) {}
-  };
-
-  useEffect(() => {
-    const handleUrl = (event: { url: string }) => {
-      if (event.url && event.url.startsWith('foodco://')) {
-        void handleDeepLinkResponse(event.url);
-      }
-    };
-
-    const sub = Linking.addEventListener('url', handleUrl);
-    Linking.getInitialURL().then((url) => {
-      if (url && url.startsWith('foodco://')) {
-        void handleDeepLinkResponse(url);
-      }
-    });
-
-    return () => {
-      sub.remove();
-    };
-  }, [onSuccess]);
-
   const handleGoogleSignIn = () => {
     if (googleLoading) return;
     setDataAlertVisible(true);
@@ -201,107 +157,82 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const startGoogleSignIn = async () => {
     if (googleLoading) return;
     setDataAlertVisible(false);
+
+    if (!isNativeAuthAvailable || !googleSigninModule || !firebaseAuthModule) {
+      setAlertModal({
+        visible: true,
+        title: 'Google sign-in unavailable',
+        message: 'Google sign-in is not available in this version of Foodco yet. Please restart after updating or building.',
+      });
+      return;
+    }
+
     setGoogleLoading(true);
 
     try {
-      if (googleSigninModule) {
-        await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
-        await googleSigninModule.signOut().catch(() => null);
-        const response = await googleSigninModule.signIn();
+      await withTimeout(
+        googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true }),
+        AUTH_STEP_TIMEOUT_MS,
+        'Google Play Services check timed out. Try again after updating Play Services or restarting the emulator.'
+      );
 
-        if (response?.type === 'cancelled') {
-          setGoogleLoading(false);
-          return;
+      const response = await withTimeout<any>(
+        googleSigninModule.signIn(),
+        AUTH_STEP_TIMEOUT_MS,
+        'Google sign-in timed out before returning an account. Close the Google sheet and try again.'
+      );
+
+      const idToken = response?.data?.idToken ?? response?.idToken;
+
+      if (response?.type === 'cancelled') {
+        return;
+      }
+
+      if (!idToken) {
+        throw new Error('No ID token found');
+      }
+
+      const googleCredential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
+      const firebaseUserCredential = await withTimeout<any>(
+        firebaseAuthModule().signInWithCredential(googleCredential),
+        AUTH_STEP_TIMEOUT_MS,
+        'Google sign-in took too long. Please try again.'
+      );
+
+      const firebaseIdToken = await withTimeout<string>(
+        firebaseUserCredential.user.getIdToken(true),
+        AUTH_STEP_TIMEOUT_MS,
+        'Google sign-in took too long. Please try again.'
+      );
+
+      let authUser: AuthUser = {
+        uid: firebaseUserCredential.user.uid,
+        email: firebaseUserCredential.user.email || '',
+        displayName: firebaseUserCredential.user.displayName || 'Foodco Member',
+        photoURL: firebaseUserCredential.user.photoURL || null,
+      };
+
+      try {
+        const backendResult = await syncTokenWithBackend(
+          firebaseIdToken,
+          authUser.displayName,
+          authUser.photoURL || undefined
+        );
+        if (backendResult?.user) {
+          authUser = backendResult.user;
         }
+      } catch (backendError) {}
 
-        const idToken = response?.data?.idToken ?? response?.idToken;
-        const rawUser = response?.data?.user ?? response?.user;
-
-        if (!idToken) {
-          throw new Error('Google did not return a valid account token.');
-        }
-
-        let authUser: AuthUser = {
-          uid: rawUser?.id || `google_${Date.now()}`,
-          email: rawUser?.email || '',
-          displayName: rawUser?.name || 'Foodco Member',
-          photoURL: rawUser?.photo || null,
-        };
-
-        if (firebaseAuthModule) {
-          try {
-            const googleCredential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
-            const firebaseUserCredential = await firebaseAuthModule().signInWithCredential(googleCredential);
-            const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
-
-            authUser = {
-              uid: firebaseUserCredential.user.uid,
-              email: firebaseUserCredential.user.email || authUser.email,
-              displayName: firebaseUserCredential.user.displayName || authUser.displayName,
-              photoURL: firebaseUserCredential.user.photoURL || authUser.photoURL,
-            };
-
-            try {
-              const backendResult = await syncTokenWithBackend(
-                firebaseIdToken,
-                authUser.displayName,
-                authUser.photoURL || undefined
-              );
-              if (backendResult?.user) {
-                authUser = backendResult.user;
-              }
-            } catch (backendError) {}
-          } catch (firebaseErr) {
-            try {
-              const backendResult = await syncTokenWithBackend(
-                idToken,
-                authUser.displayName,
-                authUser.photoURL || undefined
-              );
-              if (backendResult?.user) {
-                authUser = backendResult.user;
-              }
-            } catch (backendError) {}
-          }
-        } else {
-          try {
-            const backendResult = await syncTokenWithBackend(
-              idToken,
-              authUser.displayName,
-              authUser.photoURL || undefined
-            );
-            if (backendResult?.user) {
-              authUser = backendResult.user;
-            }
-          } catch (backendError) {}
-        }
-
-        if (onSuccess) {
-          onSuccess(authUser);
-        }
-      } else {
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
-          GOOGLE_WEB_CLIENT_ID
-        )}&redirect_uri=${encodeURIComponent(
-          'foodco://auth'
-        )}&response_type=token%20id_token&scope=${encodeURIComponent(
-          'openid profile email'
-        )}&nonce=${encodeURIComponent(Math.random().toString(36).substring(2))}`;
-
-        const canOpen = await Linking.canOpenURL(authUrl);
-        if (canOpen) {
-          await Linking.openURL(authUrl);
-        } else {
-          throw new Error('Could not launch Google authentication sheet.');
-        }
+      if (onSuccess) {
+        onSuccess(authUser);
       }
     } catch (error: any) {
+      await clearNativeAuthState();
       if (
         error?.code === 'SIGN_IN_CANCELLED' ||
         error?.code === '12501' ||
         error?.message?.toLowerCase().includes('cancel')
       ) {
-        setGoogleLoading(false);
         return;
       }
 
