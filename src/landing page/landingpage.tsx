@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   footerLogoWrap: {
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 16,
     marginLeft: 2,
   },
   footerLogo: {
