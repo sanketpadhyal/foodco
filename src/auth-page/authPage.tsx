@@ -16,12 +16,17 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, AntDesign } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import { parseAuthError, syncTokenWithBackend, AuthUser } from './authService';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const logoSource = require('../../assets/logo.png');
 const gmailIcon = require('../../assets/gmail-icon.webp');
 
 const GOOGLE_WEB_CLIENT_ID = '677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com';
+const GOOGLE_ANDROID_CLIENT_ID = '677834907140-jgf7uh48st456kdp5b0e16laeto55um4.apps.googleusercontent.com';
 
 let googleSigninModule: any = null;
 let firebaseAuthModule: any = null;
@@ -114,74 +119,163 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     ]).start();
   }, []);
 
+  const performNativeGoogleSignIn = async (): Promise<AuthUser | null> => {
+    await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const signInResult = await googleSigninModule.signIn();
+
+    if (signInResult?.type === 'cancelled') {
+      return null;
+    }
+
+    const idToken = signInResult?.data?.idToken ?? signInResult?.idToken;
+    const rawUser = signInResult?.data?.user ?? signInResult?.user;
+
+    if (!idToken) {
+      throw new Error('Google did not return an ID token.');
+    }
+
+    let authUser: AuthUser = {
+      uid: rawUser?.id || `google_${Date.now()}`,
+      email: rawUser?.email || '',
+      displayName: rawUser?.name || 'Foodco Member',
+      photoURL: rawUser?.photo || null,
+    };
+
+    if (firebaseAuthModule) {
+      try {
+        const credential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
+        const userCredential = await firebaseAuthModule().signInWithCredential(credential);
+        const firebaseIdToken = await userCredential.user.getIdToken(true);
+        authUser = {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email || authUser.email,
+          displayName: userCredential.user.displayName || authUser.displayName,
+          photoURL: userCredential.user.photoURL || authUser.photoURL,
+        };
+        try {
+          const backendResult = await syncTokenWithBackend(
+            firebaseIdToken,
+            authUser.displayName,
+            authUser.photoURL || undefined
+          );
+          if (backendResult?.user) {
+            authUser = backendResult.user;
+          }
+        } catch (err) {}
+      } catch (fbErr) {}
+    } else {
+      try {
+        const backendResult = await syncTokenWithBackend(
+          idToken,
+          authUser.displayName,
+          authUser.photoURL || undefined
+        );
+        if (backendResult?.user) {
+          authUser = backendResult.user;
+        }
+      } catch (err) {}
+    }
+
+    return authUser;
+  };
+
+  const performWebGoogleSignIn = async (): Promise<AuthUser | null> => {
+    const redirectUri = AuthSession.makeRedirectUri({
+      scheme: 'foodco',
+    });
+
+    const clientId = Platform.OS === 'android' ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_WEB_CLIENT_ID;
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      clientId
+    )}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=token%20id_token&scope=${encodeURIComponent(
+      'openid profile email'
+    )}&nonce=${encodeURIComponent(Math.random().toString(36).substring(2))}`;
+
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+    if (result.type === 'cancel' || result.type === 'dismiss') {
+      return null;
+    }
+
+    if (result.type === 'success' && result.url) {
+      const parsedUrl = new URL(result.url);
+      const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
+      const searchParams = new URLSearchParams(parsedUrl.search);
+
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+      const idToken = hashParams.get('id_token') || searchParams.get('id_token');
+
+      if (!accessToken && !idToken) {
+        throw new Error('Could not retrieve authentication tokens from Google.');
+      }
+
+      let profileData: { id?: string; email?: string; name?: string; picture?: string } = {};
+
+      if (accessToken) {
+        const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (profileRes.ok) {
+          profileData = await profileRes.json();
+        }
+      }
+
+      let authUser: AuthUser = {
+        uid: profileData.id || `google_${Date.now()}`,
+        email: profileData.email || '',
+        displayName: profileData.name || 'Foodco Member',
+        photoURL: profileData.picture || null,
+      };
+
+      if (idToken) {
+        try {
+          const backendResult = await syncTokenWithBackend(
+            idToken,
+            authUser.displayName,
+            authUser.photoURL || undefined
+          );
+          if (backendResult?.user) {
+            authUser = backendResult.user;
+          }
+        } catch (err) {}
+      }
+
+      return authUser;
+    }
+
+    return null;
+  };
+
   const handleGoogleSignIn = async () => {
     if (googleLoading) return;
     setGoogleLoading(true);
 
     try {
-      if (!googleSigninModule) {
-        throw new Error('Google Sign-In native module is not initialized on this device.');
-      }
+      let authUser: AuthUser | null = null;
 
-      await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const signInResult = await googleSigninModule.signIn();
-
-      if (signInResult?.type === 'cancelled') {
-        setGoogleLoading(false);
-        return;
-      }
-
-      const idToken = signInResult?.data?.idToken ?? signInResult?.idToken;
-      const rawUser = signInResult?.data?.user ?? signInResult?.user;
-
-      if (!idToken) {
-        throw new Error('Google did not return a valid ID token.');
-      }
-
-      let authenticatedUser: AuthUser = {
-        uid: rawUser?.id || `user_${Date.now()}`,
-        email: rawUser?.email || '',
-        displayName: rawUser?.name || 'Foodco Member',
-        photoURL: rawUser?.photo || null,
-      };
-
-      if (firebaseAuthModule) {
-        const credential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
-        const userCredential = await firebaseAuthModule().signInWithCredential(credential);
-        const firebaseIdToken = await userCredential.user.getIdToken(true);
-
-        authenticatedUser = {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email || rawUser?.email || '',
-          displayName: userCredential.user.displayName || rawUser?.name || 'Foodco Member',
-          photoURL: userCredential.user.photoURL || rawUser?.photo || null,
-        };
-
+      if (googleSigninModule) {
         try {
-          const backendResult = await syncTokenWithBackend(
-            firebaseIdToken,
-            authenticatedUser.displayName,
-            authenticatedUser.photoURL || undefined
-          );
-          if (backendResult?.user) {
-            authenticatedUser = backendResult.user;
+          authUser = await performNativeGoogleSignIn();
+        } catch (nativeError: any) {
+          if (
+            nativeError?.code === 'SIGN_IN_CANCELLED' ||
+            nativeError?.code === '12501' ||
+            nativeError?.message?.toLowerCase().includes('cancel')
+          ) {
+            setGoogleLoading(false);
+            return;
           }
-        } catch (backendError) {}
+          authUser = await performWebGoogleSignIn();
+        }
       } else {
-        try {
-          const backendResult = await syncTokenWithBackend(
-            idToken,
-            authenticatedUser.displayName,
-            authenticatedUser.photoURL || undefined
-          );
-          if (backendResult?.user) {
-            authenticatedUser = backendResult.user;
-          }
-        } catch (backendError) {}
+        authUser = await performWebGoogleSignIn();
       }
 
-      if (onSuccess) {
-        onSuccess(authenticatedUser);
+      if (authUser && onSuccess) {
+        onSuccess(authUser);
       }
     } catch (error: any) {
       if (

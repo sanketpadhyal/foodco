@@ -42,7 +42,8 @@
           "image": "./assets/splash-logo.png",
           "imageWidth": 132
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }
