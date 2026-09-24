@@ -499,8 +499,15 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             },
           ]}
         >
+          <View style={styles.footerLogoWrap}>
+            <Image
+              source={logoSource}
+              style={styles.footerLogo}
+              resizeMode="contain"
+            />
+          </View>
           <Text style={[styles.footerHintText, { fontSize: isVeryCompactHeight ? 12 : 13 }]}>
-            Scan any product barcode to get instant info and ask our FoodAI about it.
+            Scan any product barcode to get instant info and ask our FodAi about it.
           </Text>
           <Animated.View style={{ transform: [{ scale: primaryBtnScale }] }}>
             <Pressable
@@ -660,13 +667,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.2,
   },
+  footerLogoWrap: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+  footerLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+  },
   footerHintText: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 18.5,
     color: '#6B7280',
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 14,
-    paddingHorizontal: 12,
+    paddingHorizontal: 2,
     fontWeight: '500',
   },
 });
