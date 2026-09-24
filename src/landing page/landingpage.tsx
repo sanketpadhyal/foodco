@@ -77,8 +77,8 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const chipPadH = scaled(15);
   const chipFontSize = isVeryCompactHeight ? 12.5 : 13.5;
 
-  const btnPaddingVertical = isVeryCompactHeight ? 14 : isCompactHeight ? 16.5 : 18.5;
-  const btnFontSize = isVeryCompactHeight ? 16 : 17.5;
+  const btnPaddingVertical = isVeryCompactHeight ? 11 : isCompactHeight ? 12 : 13.5;
+  const btnFontSize = isVeryCompactHeight ? 14 : 15;
 
   const contentPaddingTop = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 12) + (isCompactHeight ? 6 : 10);
   const contentPaddingBottom = Math.max(insets.bottom, 12) + (isVeryCompactHeight ? 10 : 16);
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: THEME.primary,
-    borderRadius: 30,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
