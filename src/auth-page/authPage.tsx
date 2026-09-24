@@ -4,19 +4,18 @@ import {
   Text,
   View,
   TouchableOpacity,
-  Pressable,
   Animated,
   Easing,
   Platform,
   ScrollView,
   Image,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import { parseAuthError, syncTokenWithBackend, AuthUser } from './authService';
+import UniversalPanel from '../components/universalpanel';
 
 const logoSource = require('../../assets/logo.png');
 const gmailIcon = require('../../assets/gmail-icon.webp');
@@ -311,91 +310,62 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
         </Animated.View>
       </ScrollView>
 
-      <Modal
+      <UniversalPanel
         visible={dataAlertVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDataAlertVisible(false)}
+        title="Data collection notice"
+        titleUnderline
+        dismissOnBackdropPress={!googleLoading}
+        onClose={() => setDataAlertVisible(false)}
+        actions={[
+          {
+            label: 'Cancel',
+            variant: 'secondary',
+            onPress: () => setDataAlertVisible(false),
+            disabled: googleLoading,
+          },
+          {
+            label: 'Continue',
+            variant: 'primary',
+            onPress: startGoogleSignIn,
+            loading: googleLoading,
+          },
+        ]}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => !googleLoading && setDataAlertVisible(false)}
-        >
-          <View style={styles.dataNoticeCard}>
-            <Text style={styles.dataNoticeTitle}>Data collection notice</Text>
-            <View style={styles.dataNoticeDivider} />
-            <Text style={styles.dataNoticeHighlight}>
-              We do not collect anything extra from your Google account.
-            </Text>
-            <Text style={styles.dataNoticeBody}>
-              When you continue with Google, Foodco only uses the basic sign-in info Google provides, like your email and account ID, to log you in and keep your account secure. We do not read your Gmail, contacts, Drive, photos, or anything else.
-            </Text>
-            <View style={styles.dataNoticeActions}>
-              <TouchableOpacity
-                style={[styles.dataNoticeBtn, styles.dataNoticeCancelBtn]}
-                onPress={() => setDataAlertVisible(false)}
-                disabled={googleLoading}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.dataNoticeCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dataNoticeBtn, styles.dataNoticeConfirmBtn]}
-                onPress={() => void startGoogleSignIn()}
-                disabled={googleLoading}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.dataNoticeConfirmText}>Continue</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+        <Text style={styles.dataNoticeHighlight}>
+          We do not collect anything extra from your Google account.
+        </Text>
+        <Text style={styles.dataNoticeBody}>
+          When you continue with Google, Foodco only uses the basic sign-in info Google provides, like your email and account ID, to log you in and keep your account secure. We do not read your Gmail, contacts, Drive, photos, or anything else.
+        </Text>
+      </UniversalPanel>
 
-      <Modal
+      <UniversalPanel
         visible={appleAlertVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAppleAlertVisible(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setAppleAlertVisible(false)}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Apple Sign-In</Text>
-            <Text style={styles.modalMessage}>Continue with Apple will be available in the upcoming build.</Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setAppleAlertVisible(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+        title="Apple Sign-In"
+        message="Continue with Apple will be available in the upcoming build."
+        onClose={() => setAppleAlertVisible(false)}
+        actions={[
+          {
+            label: 'OK',
+            variant: 'primary',
+            onPress: () => setAppleAlertVisible(false),
+          },
+        ]}
+      />
 
-      <Modal
+      <UniversalPanel
         visible={alertModal.visible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAlertModal((prev) => ({ ...prev, visible: false }))}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setAlertModal((prev) => ({ ...prev, visible: false }))}
-        >
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{alertModal.title}</Text>
-            <Text style={styles.modalMessage}>{alertModal.message}</Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setAlertModal((prev) => ({ ...prev, visible: false }))}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+        title={alertModal.title}
+        message={alertModal.message}
+        onClose={() => setAlertModal((prev) => ({ ...prev, visible: false }))}
+        actions={[
+          {
+            label: 'OK',
+            variant: 'primary',
+            onPress: () => setAlertModal((prev) => ({ ...prev, visible: false })),
+          },
+        ]}
+      />
     </View>
   );
 }
@@ -560,119 +530,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     maxWidth: 320,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontFamily: serifFont,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0D0E11',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalButton: {
-    backgroundColor: THEME.primary,
-    borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    minWidth: 120,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  dataNoticeCard: {
-    width: '100%',
-    maxWidth: 330,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  dataNoticeTitle: {
-    fontFamily: serifFont,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0D0E11',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  dataNoticeDivider: {
-    height: 1,
-    backgroundColor: '#F0F2F5',
-    marginBottom: 14,
-  },
   dataNoticeHighlight: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: THEME.primary,
     marginBottom: 8,
-    lineHeight: 20,
+    lineHeight: 19,
     textAlign: 'center',
   },
   dataNoticeBody: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: '#64748B',
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  dataNoticeActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dataNoticeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dataNoticeCancelBtn: {
-    backgroundColor: '#F1F5F9',
-  },
-  dataNoticeCancelText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  dataNoticeConfirmBtn: {
-    backgroundColor: THEME.primary,
-  },
-  dataNoticeConfirmText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
 });
