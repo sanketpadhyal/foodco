@@ -261,7 +261,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 { fontSize: titleFontSize, lineHeight: titleLineHeight },
               ]}
             >
-              {"Let's make\nyour days\nhealthier"}
+              {"Scan barcodes,\nshop smarter,\neat healthier"}
             </Text>
             <Text
               style={[
@@ -273,7 +273,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 },
               ]}
             >
-              {"Nutritious, delicious, and convenient."}
+              {"Instant food info while shopping & ask FodAi anything."}
             </Text>
           </Animated.View>
 
@@ -318,7 +318,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                   { paddingVertical: chipPadV, paddingHorizontal: chipPadH },
                 ]}
               >
-                <Text style={[styles.chipFilledText, { fontSize: chipFontSize }]}>Nutrients</Text>
+                <Text style={[styles.chipFilledText, { fontSize: chipFontSize }]}>Scan barcode</Text>
               </View>
 
               <View
@@ -343,7 +343,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 ]}
               >
                 <Text style={[styles.chipOutlineText, { fontSize: chipFontSize }]}>
-                  Track meals mindfully
+                  Instant product info
                 </Text>
               </View>
 
@@ -354,7 +354,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                   { paddingVertical: chipPadV, paddingHorizontal: chipPadH },
                 ]}
               >
-                <Text style={[styles.chipOutlineText, { fontSize: chipFontSize }]}>Track</Text>
+                <Text style={[styles.chipOutlineText, { fontSize: chipFontSize }]}>Shop smarter</Text>
               </View>
             </Animated.View>
 
@@ -392,7 +392,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 ]}
               >
                 <Text style={[styles.chipOutlineText, { fontSize: chipFontSize }]}>
-                  Build healthy habits
+                  Ask FodAi anything
                 </Text>
               </View>
 
@@ -418,7 +418,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 ]}
               >
                 <Text style={[styles.chipFilledText, { fontSize: chipFontSize }]}>
-                  Support energy
+                  Check ingredients
                 </Text>
               </View>
             </Animated.View>
@@ -457,7 +457,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 ]}
               >
                 <Text style={[styles.chipFilledText, { fontSize: chipFontSize }]}>
-                  Smart nutrition
+                  Allergen alerts
                 </Text>
               </View>
 
@@ -483,7 +483,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 ]}
               >
                 <Text style={[styles.chipOutlineText, { fontSize: chipFontSize }]}>
-                  Increase meals nutrition
+                  Healthy alternatives
                 </Text>
               </View>
             </Animated.View>
@@ -508,7 +508,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             />
           </View>
           <Text style={[styles.footerHintText, { fontSize: isVeryCompactHeight ? 12 : 13 }]}>
-            Scan any product barcode to get instant info and ask our FodAi about it.
+            Scan any product barcode while shopping to get instant info, and ask our FodAi any question about it.
           </Text>
           <Animated.View style={{ transform: [{ scale: primaryBtnScale }] }}>
             <Pressable

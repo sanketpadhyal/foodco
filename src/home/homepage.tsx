@@ -79,39 +79,39 @@ export default function HomePage({ user, onLogout }: HomePageProps) {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Mindful Nutrition</Text>
+        <Text style={styles.sectionTitle}>Smart Shopping with FodAi</Text>
 
         <View style={styles.grid}>
           <View style={styles.card}>
             <View style={styles.cardIconWrap}>
               <Image source={groceriesIcon} style={styles.cardIcon} resizeMode="contain" />
             </View>
-            <Text style={styles.cardTitle}>Fresh Harvest</Text>
-            <Text style={styles.cardDesc}>100% Organic, traceable whole foods.</Text>
+            <Text style={styles.cardTitle}>Barcode Scanner</Text>
+            <Text style={styles.cardDesc}>Scan any product barcode during shopping for instant details.</Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.cardIconWrap}>
               <Image source={groceryBagIcon} style={styles.cardIcon} resizeMode="contain" />
             </View>
-            <Text style={styles.cardTitle}>Smart Basket</Text>
-            <Text style={styles.cardDesc}>Personalized wholesome meal plans.</Text>
+            <Text style={styles.cardTitle}>FodAi Assistant</Text>
+            <Text style={styles.cardDesc}>Ask our AI any question about ingredients, health, or nutrition.</Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.cardIconWrap}>
               <Image source={waterBottleIcon} style={styles.cardIcon} resizeMode="contain" />
             </View>
-            <Text style={styles.cardTitle}>Hydration Track</Text>
-            <Text style={styles.cardDesc}>Daily vitality & hydration goals.</Text>
+            <Text style={styles.cardTitle}>Ingredient Check</Text>
+            <Text style={styles.cardDesc}>Know what is inside before you buy—allergens, additives & facts.</Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.cardIconWrap}>
               <MaterialCommunityIcons name="shield-check" size={28} color="#FF6B35" />
             </View>
-            <Text style={styles.cardTitle}>Privacy First</Text>
-            <Text style={styles.cardDesc}>Zero ads, zero data monetization.</Text>
+            <Text style={styles.cardTitle}>Healthier Choices</Text>
+            <Text style={styles.cardDesc}>Discover clean, nutritious alternatives for your cart.</Text>
           </View>
         </View>
       </ScrollView>
