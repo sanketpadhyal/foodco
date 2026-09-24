@@ -20,6 +20,7 @@ try {
 } catch (error) {}
 
 const logoSource = require('../../assets/logo.png');
+const fodaiLogo = require('../../logo-formats/fodai.png');
 const groceriesIcon = require('../../assets/baskets-icons/groceries.png');
 const groceryBagIcon = require('../../assets/baskets-icons/grocery-bag.png');
 const waterBottleIcon = require('../../assets/baskets-icons/water-bottle.png');
@@ -501,7 +502,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         >
           <View style={styles.footerLogoWrap}>
             <Image
-              source={logoSource}
+              source={fodaiLogo}
               style={styles.footerLogo}
               resizeMode="contain"
             />
@@ -673,9 +674,8 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   footerLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 30,
+    height: 42,
   },
   footerHintText: {
     fontSize: 13,
