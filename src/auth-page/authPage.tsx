@@ -16,7 +16,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, AntDesign } from '@expo/vector-icons';
-import { parseAuthError, AuthUser } from './authService';
+import { parseAuthError, syncTokenWithBackend, AuthUser } from './authService';
 
 const logoSource = require('../../assets/logo.png');
 const gmailIcon = require('../../assets/gmail-icon.webp');
@@ -24,6 +24,8 @@ const gmailIcon = require('../../assets/gmail-icon.webp');
 const GOOGLE_WEB_CLIENT_ID = '677834907140-4tee16jc3cpe8mu51rfe873i1439odhr.apps.googleusercontent.com';
 
 let googleSigninModule: any = null;
+let firebaseAuthModule: any = null;
+
 try {
   const gSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
   gSignin.configure({
@@ -31,6 +33,10 @@ try {
     offlineAccess: false,
   });
   googleSigninModule = gSignin;
+} catch (error) {}
+
+try {
+  firebaseAuthModule = require('@react-native-firebase/auth').default;
 } catch (error) {}
 
 const THEME = {
@@ -111,55 +117,85 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const handleGoogleSignIn = async () => {
     if (googleLoading) return;
     setGoogleLoading(true);
+
     try {
-      if (googleSigninModule) {
-        await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
-        const response = await googleSigninModule.signIn();
-        if (response?.type === 'cancelled') {
-          setGoogleLoading(false);
-          return;
-        }
-        const userInfo = response?.data?.user ?? response?.user;
-        const authUser: AuthUser = {
-          uid: userInfo?.id || `google_${Date.now()}`,
-          email: userInfo?.email || 'user@gmail.com',
-          displayName: userInfo?.name || 'Foodco Member',
-          photoURL: userInfo?.photo || undefined,
-        };
-        if (onSuccess) {
-          onSuccess(authUser);
-        } else {
-          setAlertModal({
-            visible: true,
-            title: 'Logged in successfully',
-            message: `Welcome to Foodco, ${authUser.displayName || authUser.email}!`,
-          });
-        }
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        const mockUser: AuthUser = {
-          uid: `google_${Date.now()}`,
-          email: 'user@gmail.com',
-          displayName: 'Foodco Member',
-        };
-        if (onSuccess) {
-          onSuccess(mockUser);
-        } else {
-          setAlertModal({
-            visible: true,
-            title: 'Logged in successfully',
-            message: `Welcome to Foodco, ${mockUser.displayName}!`,
-          });
-        }
+      if (!googleSigninModule) {
+        throw new Error('Google Sign-In native module is not initialized on this device.');
       }
-    } catch (error: any) {
-      if (error?.code === 'SIGN_IN_CANCELLED' || error?.code === '12501' || error?.message?.includes('cancelled')) {
+
+      await googleSigninModule.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const signInResult = await googleSigninModule.signIn();
+
+      if (signInResult?.type === 'cancelled') {
         setGoogleLoading(false);
         return;
       }
+
+      const idToken = signInResult?.data?.idToken ?? signInResult?.idToken;
+      const rawUser = signInResult?.data?.user ?? signInResult?.user;
+
+      if (!idToken) {
+        throw new Error('Google did not return a valid ID token.');
+      }
+
+      let authenticatedUser: AuthUser = {
+        uid: rawUser?.id || `user_${Date.now()}`,
+        email: rawUser?.email || '',
+        displayName: rawUser?.name || 'Foodco Member',
+        photoURL: rawUser?.photo || null,
+      };
+
+      if (firebaseAuthModule) {
+        const credential = firebaseAuthModule.GoogleAuthProvider.credential(idToken);
+        const userCredential = await firebaseAuthModule().signInWithCredential(credential);
+        const firebaseIdToken = await userCredential.user.getIdToken(true);
+
+        authenticatedUser = {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email || rawUser?.email || '',
+          displayName: userCredential.user.displayName || rawUser?.name || 'Foodco Member',
+          photoURL: userCredential.user.photoURL || rawUser?.photo || null,
+        };
+
+        try {
+          const backendResult = await syncTokenWithBackend(
+            firebaseIdToken,
+            authenticatedUser.displayName,
+            authenticatedUser.photoURL || undefined
+          );
+          if (backendResult?.user) {
+            authenticatedUser = backendResult.user;
+          }
+        } catch (backendError) {}
+      } else {
+        try {
+          const backendResult = await syncTokenWithBackend(
+            idToken,
+            authenticatedUser.displayName,
+            authenticatedUser.photoURL || undefined
+          );
+          if (backendResult?.user) {
+            authenticatedUser = backendResult.user;
+          }
+        } catch (backendError) {}
+      }
+
+      if (onSuccess) {
+        onSuccess(authenticatedUser);
+      }
+    } catch (error: any) {
+      if (
+        error?.code === 'SIGN_IN_CANCELLED' ||
+        error?.code === '12501' ||
+        error?.message?.toLowerCase().includes('cancel')
+      ) {
+        setGoogleLoading(false);
+        return;
+      }
+
       setAlertModal({
         visible: true,
-        title: 'Google sign-in failed',
+        title: 'Google Sign-In Failed',
         message: parseAuthError(error),
       });
     } finally {

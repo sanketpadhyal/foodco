@@ -4,6 +4,8 @@
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-firebase/app": "^26.4.0",
+    "@react-native-firebase/auth": "^26.4.0",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "expo": "~57.0.24",
     "expo-navigation-bar": "~57.0.2",
