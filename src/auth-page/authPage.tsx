@@ -371,7 +371,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
           },
           {
             label: 'Continue',
-            variant: 'primary',
+            variant: 'blue',
             onPress: startGoogleSignIn,
             loading: googleLoading,
           },
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   dataNoticeHighlight: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: THEME.primary,
+    color: '#1A73E8',
     marginBottom: 8,
     lineHeight: 19,
     textAlign: 'center',

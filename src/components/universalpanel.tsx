@@ -27,7 +27,7 @@ const serifFont = Platform.select({
 export type PanelAction = {
   label: string;
   onPress?: () => void | Promise<void>;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'blue';
   loading?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -239,9 +239,10 @@ export default function UniversalPanel({
           {resolvedActions.length > 0 ? (
             <View style={styles.actionsRow}>
               {resolvedActions.map((action) => {
-                const isPrimary = action.variant === 'primary' || !action.variant;
+                const isBlue = action.variant === 'blue';
                 const isDanger = action.variant === 'danger';
                 const isSecondary = action.variant === 'secondary';
+                const isPrimary = action.variant === 'primary' || (!action.variant && !isBlue && !isDanger && !isSecondary);
 
                 return (
                   <TouchableOpacity
@@ -252,6 +253,7 @@ export default function UniversalPanel({
                       styles.actionBtn,
                       resolvedActions.length === 2 && styles.halfWidthBtn,
                       isPrimary && styles.primaryBtn,
+                      isBlue && styles.blueBtn,
                       isSecondary && styles.secondaryBtn,
                       isDanger && styles.dangerBtn,
                       action.disabled && styles.disabledBtn,
@@ -268,9 +270,8 @@ export default function UniversalPanel({
                     <Text
                       style={[
                         styles.actionText,
-                        isPrimary && styles.primaryText,
+                        (isPrimary || isBlue || isDanger) && styles.primaryText,
                         isSecondary && styles.secondaryText,
-                        isDanger && styles.dangerText,
                         action.textStyle,
                       ]}
                     >
@@ -279,7 +280,7 @@ export default function UniversalPanel({
                     {action.loading ? (
                       <ActivityIndicator
                         size="small"
-                        color={isPrimary || isDanger ? '#FFFFFF' : '#475569'}
+                        color={isPrimary || isBlue || isDanger ? '#FFFFFF' : '#475569'}
                         style={styles.btnLoader}
                       />
                     ) : null}
@@ -389,6 +390,9 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     backgroundColor: '#FF6B35',
+  },
+  blueBtn: {
+    backgroundColor: '#1A73E8',
   },
   secondaryBtn: {
     backgroundColor: '#F1F5F9',
