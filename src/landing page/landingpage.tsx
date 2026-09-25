@@ -27,6 +27,7 @@ const fodaiVideo = require('../../logo-formats/clideo_editor_53a7cf597624468ea2a
 const groceriesIcon = require('../../assets/baskets-icons/groceries.png');
 const groceryBagIcon = require('../../assets/baskets-icons/grocery-bag.png');
 const waterBottleIcon = require('../../assets/baskets-icons/water-bottle.png');
+const arrowRightIcon = require('../../assets/arrow-right.png');
 
 const THEME = {
   primary: '#FF6B35',
@@ -565,6 +566,11 @@ export default function LandingPage({ onGetStarted, isFocused = true }: LandingP
               <Text style={[styles.primaryButtonText, { fontSize: btnFontSize }]}>
                 Get Started
               </Text>
+              <Image
+                source={arrowRightIcon}
+                style={[styles.primaryButtonIcon, { width: Math.round(btnFontSize * 0.95), height: Math.round(btnFontSize * 0.95) }]}
+                resizeMode="contain"
+              />
             </Pressable>
           </Animated.View>
         </Animated.View>
@@ -693,6 +699,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: THEME.primary,
     borderRadius: 24,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
@@ -701,6 +708,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+  primaryButtonIcon: {
+    marginLeft: 8,
+    tintColor: '#FFFFFF',
   },
   footerLogoWrap: {
     alignSelf: 'flex-start',
