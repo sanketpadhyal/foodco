@@ -520,11 +520,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     marginTop: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   googleButtonText: {
     fontSize: 15,
@@ -533,11 +528,6 @@ const styles = StyleSheet.create({
   },
   appleButton: {
     backgroundColor: '#0D0E11',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   appleButtonText: {
     fontSize: 15,
@@ -552,11 +542,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    shadowColor: THEME.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
   },
   recommendedText: {
     fontSize: 9,
