@@ -11,10 +11,13 @@ import {
   useWindowDimensions,
   Image,
   AppState,
+  TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { AntDesign } from '@expo/vector-icons';
 import UniversalPanel from '../components/universalpanel';
 
 let NavigationBarComponent: any = null;
@@ -63,6 +66,7 @@ export default function LandingPage({ onGetStarted, onAbout, isFocused = true }:
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [aboutVisible, setAboutVisible] = useState(false);
+  const [githubModalVisible, setGithubModalVisible] = useState(false);
 
   const isVeryCompactHeight = screenHeight < 680;
   const isCompactHeight = screenHeight < 760;
@@ -311,6 +315,14 @@ export default function LandingPage({ onGetStarted, onAbout, isFocused = true }:
               resizeMode="contain"
             />
           </View>
+          <TouchableOpacity
+            style={styles.githubButton}
+            onPress={() => setGithubModalVisible(true)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <AntDesign name="github" size={26} color={THEME.textPrimary} />
+          </TouchableOpacity>
         </Animated.View>
 
         <View style={[styles.contentWrapper, { maxWidth: maxContentWidth }]}>
@@ -649,6 +661,28 @@ export default function LandingPage({ onGetStarted, onAbout, isFocused = true }:
           },
         ]}
       />
+
+      <UniversalPanel
+        visible={githubModalVisible}
+        title="GitHub Repository"
+        message="Are you sure you want to go to the GitHub repository of this?"
+        onClose={() => setGithubModalVisible(false)}
+        actions={[
+          {
+            label: 'Cancel',
+            variant: 'secondary',
+            onPress: () => setGithubModalVisible(false),
+          },
+          {
+            label: 'Open GitHub',
+            variant: 'blue',
+            onPress: () => {
+              setGithubModalVisible(false);
+              Linking.openURL('https://github.com/sanketpadhyal/foodco').catch(() => {});
+            },
+          },
+        ]}
+      />
     </View>
   );
 }
@@ -674,7 +708,7 @@ const styles = StyleSheet.create({
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: 20,
     paddingBottom: 4,
@@ -687,6 +721,12 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
+  },
+  githubButton: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerSection: {
     alignItems: 'center',
