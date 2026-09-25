@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,6 +15,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import UniversalPanel from '../components/universalpanel';
 
 let NavigationBarComponent: any = null;
 try {
@@ -28,6 +29,7 @@ const groceriesIcon = require('../../assets/baskets-icons/groceries.png');
 const groceryBagIcon = require('../../assets/baskets-icons/grocery-bag.png');
 const waterBottleIcon = require('../../assets/baskets-icons/water-bottle.png');
 const arrowRightIcon = require('../../assets/arrow-right.png');
+const infoIcon = require('../../assets/info.png');
 
 const THEME = {
   primary: '#FF6B35',
@@ -41,6 +43,7 @@ const THEME = {
   panelBg: '#FFFFFF',
   textPrimary: '#141414',
   textMuted: '#666666',
+  blue: '#1A73E8',
 };
 
 const serifFont = Platform.select({
@@ -52,12 +55,14 @@ const serifFont = Platform.select({
 interface LandingPageProps {
   onGetStarted?: () => void;
   onLogin?: () => void;
+  onAbout?: () => void;
   isFocused?: boolean;
 }
 
-export default function LandingPage({ onGetStarted, isFocused = true }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, onAbout, isFocused = true }: LandingPageProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [aboutVisible, setAboutVisible] = useState(false);
 
   const isVeryCompactHeight = screenHeight < 680;
   const isCompactHeight = screenHeight < 760;
@@ -98,6 +103,7 @@ export default function LandingPage({ onGetStarted, isFocused = true }: LandingP
   const floatAnim = useRef(new Animated.Value(0)).current;
 
   const primaryBtnScale = useRef(new Animated.Value(1)).current;
+  const aboutBtnScale = useRef(new Animated.Value(1)).current;
 
   const videoPlayer = useVideoPlayer(fodaiVideo, (player) => {
     player.loop = false;
@@ -248,6 +254,31 @@ export default function LandingPage({ onGetStarted, isFocused = true }: LandingP
     }).start();
   };
 
+  const handleAboutPressIn = () => {
+    Animated.spring(aboutBtnScale, {
+      toValue: 0.965,
+      damping: 18,
+      stiffness: 220,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleAboutPressOut = () => {
+    Animated.spring(aboutBtnScale, {
+      toValue: 1,
+      damping: 18,
+      stiffness: 220,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleOpenAbout = () => {
+    setAboutVisible(true);
+    if (onAbout) {
+      onAbout();
+    }
+  };
+
   return (
     <View style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -298,7 +329,10 @@ export default function LandingPage({ onGetStarted, isFocused = true }: LandingP
                 { fontSize: titleFontSize, lineHeight: titleLineHeight },
               ]}
             >
-              {"Scan barcodes,\nshop smarter,\neat healthier"}
+              {"Scan barcodes,\nshop "}
+              <Text style={{ color: THEME.blue }}>smarter</Text>
+              {",\neat "}
+              <Text style={{ color: THEME.blue }}>healthier</Text>
             </Text>
             <Text
               style={[
@@ -550,31 +584,71 @@ export default function LandingPage({ onGetStarted, isFocused = true }: LandingP
           <Text style={[styles.footerHintText, { fontSize: isVeryCompactHeight ? 12 : 13 }]}>
             Scan any product barcode while shopping to get instant info, and ask our FodAi any question about it.
           </Text>
-          <Animated.View style={{ transform: [{ scale: primaryBtnScale }] }}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                {
-                  opacity: pressed ? 0.9 : 1,
-                  paddingVertical: btnPaddingVertical,
-                },
-              ]}
-              onPress={onGetStarted}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-            >
-              <Text style={[styles.primaryButtonText, { fontSize: btnFontSize }]}>
-                Get Started
-              </Text>
-              <Image
-                source={arrowRightIcon}
-                style={[styles.primaryButtonIcon, { width: Math.round(btnFontSize * 0.95), height: Math.round(btnFontSize * 0.95) }]}
-                resizeMode="contain"
-              />
-            </Pressable>
-          </Animated.View>
+          <View style={styles.buttonRow}>
+            <Animated.View style={{ flex: 1.35, transform: [{ scale: primaryBtnScale }] }}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  {
+                    opacity: pressed ? 0.9 : 1,
+                    paddingVertical: btnPaddingVertical,
+                  },
+                ]}
+                onPress={onGetStarted}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+              >
+                <Text style={[styles.primaryButtonText, { fontSize: btnFontSize }]}>
+                  Get Started
+                </Text>
+                <Image
+                  source={arrowRightIcon}
+                  style={[styles.primaryButtonIcon, { width: Math.round(btnFontSize * 0.95), height: Math.round(btnFontSize * 0.95) }]}
+                  resizeMode="contain"
+                />
+              </Pressable>
+            </Animated.View>
+
+            <Animated.View style={{ flex: 1, transform: [{ scale: aboutBtnScale }] }}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.aboutButton,
+                  {
+                    opacity: pressed ? 0.9 : 1,
+                    paddingVertical: btnPaddingVertical,
+                  },
+                ]}
+                onPress={handleOpenAbout}
+                onPressIn={handleAboutPressIn}
+                onPressOut={handleAboutPressOut}
+              >
+                <Text style={[styles.aboutButtonText, { fontSize: btnFontSize }]}>
+                  About
+                </Text>
+                <Image
+                  source={infoIcon}
+                  style={[styles.aboutButtonIcon, { width: Math.round(btnFontSize * 0.95), height: Math.round(btnFontSize * 0.95) }]}
+                  resizeMode="contain"
+                />
+              </Pressable>
+            </Animated.View>
+          </View>
         </Animated.View>
       </View>
+
+      <UniversalPanel
+        visible={aboutVisible}
+        title="About Foodco"
+        message="Foodco is your mindful nutrition companion. Scan any product barcode while shopping to get instant info, ingredient analysis, allergen alerts, and ask our FodAi assistant any question about it."
+        onClose={() => setAboutVisible(false)}
+        actions={[
+          {
+            label: 'Got it',
+            variant: 'blue',
+            onPress: () => setAboutVisible(false),
+          },
+        ]}
+      />
     </View>
   );
 }
@@ -696,6 +770,12 @@ const styles = StyleSheet.create({
     borderRightWidth: Platform.OS === 'ios' ? 0.5 : 0,
     borderColor: 'rgba(0, 0, 0, 0.05)',
   },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    gap: 10,
+  },
   primaryButton: {
     backgroundColor: THEME.primary,
     borderRadius: 24,
@@ -710,7 +790,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   primaryButtonIcon: {
-    marginLeft: 8,
+    marginLeft: 7,
+    tintColor: '#FFFFFF',
+  },
+  aboutButton: {
+    backgroundColor: THEME.blue,
+    borderRadius: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  aboutButtonText: {
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  aboutButtonIcon: {
+    marginLeft: 7,
     tintColor: '#FFFFFF',
   },
   footerLogoWrap: {
