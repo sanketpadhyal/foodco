@@ -10,6 +10,7 @@ import {
   StatusBar as RNStatusBar,
   useWindowDimensions,
   Image,
+  AppState,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,9 +51,10 @@ const serifFont = Platform.select({
 interface LandingPageProps {
   onGetStarted?: () => void;
   onLogin?: () => void;
+  isFocused?: boolean;
 }
 
-export default function LandingPage({ onGetStarted }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, isFocused = true }: LandingPageProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
@@ -97,16 +99,36 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const primaryBtnScale = useRef(new Animated.Value(1)).current;
 
   const videoPlayer = useVideoPlayer(fodaiVideo, (player) => {
-    player.loop = true;
+    player.loop = false;
     player.muted = true;
     player.play();
   });
 
-  const handleToggleSound = () => {
+  const handlePressVideo = () => {
     if (videoPlayer) {
-      videoPlayer.muted = !videoPlayer.muted;
+      videoPlayer.replay();
     }
   };
+
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (isFocused && videoPlayer) {
+      videoPlayer.replay();
+    }
+  }, [isFocused, videoPlayer]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && isFocused && videoPlayer) {
+        videoPlayer.replay();
+      }
+    });
+    return () => subscription.remove();
+  }, [isFocused, videoPlayer]);
 
   useEffect(() => {
     if (Platform.OS === 'android' && NavigationBarComponent) {
@@ -515,7 +537,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           ]}
         >
           <View style={styles.footerLogoWrap}>
-            <Pressable onPress={handleToggleSound}>
+            <Pressable onPress={handlePressVideo}>
               <VideoView
                 player={videoPlayer}
                 style={styles.footerVideo}

@@ -108,7 +108,10 @@ export default function App() {
             ]}
           >
             <View style={[styles.screenWrapper, { width: screenWidth }]}>
-              <LandingPage onGetStarted={handleGoToAuth} />
+              <LandingPage
+                onGetStarted={handleGoToAuth}
+                isFocused={currentScreen === 'landing'}
+              />
             </View>
             <View style={[styles.screenWrapper, { width: screenWidth }]}>
               <AuthPage
