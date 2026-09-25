@@ -678,7 +678,7 @@ export default function LandingPage({ onGetStarted, onAbout, isFocused = true }:
             variant: 'blue',
             onPress: () => {
               setGithubModalVisible(false);
-              Linking.openURL('https://github.com/sanketpadhyal/foodco').catch(() => {});
+              Linking.openURL('https://github.com/sanketpadhyal/foodco.git').catch(() => {});
             },
           },
         ]}
