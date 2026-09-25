@@ -13,7 +13,10 @@ import {
   ViewStyle,
   TextStyle,
   ActivityIndicator,
+  PanResponder,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const serifFont = Platform.select({
   ios: 'Georgia',
@@ -54,48 +57,93 @@ export default function UniversalPanel({
   dismissOnBackdropPress = true,
   onClose,
   panelStyle,
-  maxWidth = 330,
+  maxWidth = 440,
 }: UniversalPanelProps) {
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
 
   const backdropAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.88)).current;
-  const translateYAnim = useRef(new Animated.Value(24)).current;
-  const panelOpacityAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(600)).current;
+  const panY = useRef(new Animated.Value(0)).current;
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          panY.setValue(gestureState.dy);
+        } else {
+          panY.setValue(0);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 70 || gestureState.vy > 0.4) {
+          if (dismissOnBackdropPress) {
+            Animated.parallel([
+              Animated.timing(panY, {
+                toValue: 600,
+                duration: 180,
+                easing: Easing.in(Easing.cubic),
+                useNativeDriver: true,
+              }),
+              Animated.timing(backdropAnim, {
+                toValue: 0,
+                duration: 180,
+                easing: Easing.in(Easing.cubic),
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              panY.setValue(0);
+              onCloseRef.current?.();
+            });
+          } else {
+            Animated.spring(panY, {
+              toValue: 0,
+              damping: 24,
+              stiffness: 260,
+              useNativeDriver: true,
+            }).start();
+          }
+        } else {
+          Animated.spring(panY, {
+            toValue: 0,
+            damping: 24,
+            stiffness: 260,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
+      panY.setValue(0);
+      slideAnim.setValue(600);
       backdropAnim.setValue(0);
-      scaleAnim.setValue(0.88);
-      translateYAnim.setValue(24);
-      panelOpacityAnim.setValue(0);
 
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 1,
-          duration: 260,
+          duration: 250,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(panelOpacityAnim, {
-          toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          damping: 24,
-          stiffness: 240,
-          mass: 0.8,
-          useNativeDriver: true,
-        }),
-        Animated.spring(translateYAnim, {
+        Animated.spring(slideAnim, {
           toValue: 0,
-          damping: 24,
+          damping: 26,
           stiffness: 240,
-          mass: 0.8,
+          mass: 0.9,
           useNativeDriver: true,
         }),
       ]).start();
@@ -107,21 +155,9 @@ export default function UniversalPanel({
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(panelOpacityAnim, {
-          toValue: 0,
-          duration: 180,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.92,
-          duration: 200,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateYAnim, {
-          toValue: 16,
-          duration: 200,
+        Animated.timing(slideAnim, {
+          toValue: 600,
+          duration: 220,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -129,19 +165,19 @@ export default function UniversalPanel({
         setMounted(false);
       });
     }
-  }, [visible, mounted, backdropAnim, scaleAnim, translateYAnim, panelOpacityAnim]);
+  }, [visible, mounted, backdropAnim, slideAnim, panY]);
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !visible || !mounted) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (dismissOnBackdropPress && onClose) {
-        onClose();
+      if (dismissOnBackdropPress && onCloseRef.current) {
+        onCloseRef.current();
         return true;
       }
       return true;
     });
     return () => subscription.remove();
-  }, [dismissOnBackdropPress, mounted, onClose, visible]);
+  }, [dismissOnBackdropPress, mounted, visible]);
 
   if (!mounted) return null;
 
@@ -151,6 +187,10 @@ export default function UniversalPanel({
       : children
       ? []
       : [{ label: 'OK', onPress: onClose, variant: 'primary' }];
+
+  const resolvedMaxWidth = Math.min(screenWidth, maxWidth || 440);
+  const bottomPadding = Math.max(insets.bottom + 12, 22);
+  const translateY = Animated.add(slideAnim, panY);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -169,18 +209,22 @@ export default function UniversalPanel({
         />
       </Animated.View>
 
-      <View style={styles.centerContainer} pointerEvents="box-none">
+      <View style={styles.sheetContainer} pointerEvents="box-none">
         <Animated.View
+          {...panResponder.panHandlers}
           style={[
             styles.card,
-            { maxWidth },
+            { maxWidth: resolvedMaxWidth, paddingBottom: bottomPadding },
             panelStyle,
             {
-              opacity: panelOpacityAnim,
-              transform: [{ scale: scaleAnim }, { translateY: translateYAnim }],
+              transform: [{ translateY }],
             },
           ]}
         >
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
+
           {title ? (
             <View style={styles.titleWrap}>
               <Text style={styles.title}>{title}</Text>
@@ -260,29 +304,40 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     zIndex: 1000,
   },
-  centerContainer: {
+  sheetContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    padding: 24,
     zIndex: 1001,
   },
   card: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     paddingHorizontal: 22,
-    paddingTop: 24,
-    paddingBottom: 20,
+    paddingTop: 8,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  handleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 6,
+    paddingBottom: 14,
+  },
+  handle: {
+    width: 38,
+    height: 4.5,
+    borderRadius: 3,
+    backgroundColor: '#E2E5EA',
   },
   titleWrap: {
     alignItems: 'center',
@@ -290,7 +345,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: serifFont,
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '700',
     color: '#0D0E11',
     textAlign: 'center',
@@ -322,7 +377,7 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     minHeight: 46,
-    borderRadius: 20,
+    borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
