@@ -43,7 +43,8 @@
           "imageWidth": 132
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-video"
     ]
   }
 }

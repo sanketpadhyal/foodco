@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 let NavigationBarComponent: any = null;
 try {
@@ -21,6 +22,7 @@ try {
 
 const logoSource = require('../../assets/logo.png');
 const fodaiLogo = require('../../logo-formats/fodai.png');
+const fodaiVideo = require('../../logo-formats/clideo_editor_53a7cf597624468ea2a9dad5e7319e8f_V1.mp4');
 const groceriesIcon = require('../../assets/baskets-icons/groceries.png');
 const groceryBagIcon = require('../../assets/baskets-icons/grocery-bag.png');
 const waterBottleIcon = require('../../assets/baskets-icons/water-bottle.png');
@@ -93,6 +95,18 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const floatAnim = useRef(new Animated.Value(0)).current;
 
   const primaryBtnScale = useRef(new Animated.Value(1)).current;
+
+  const videoPlayer = useVideoPlayer(fodaiVideo, (player) => {
+    player.loop = true;
+    player.muted = true;
+    player.play();
+  });
+
+  const handleToggleSound = () => {
+    if (videoPlayer) {
+      videoPlayer.muted = !videoPlayer.muted;
+    }
+  };
 
   useEffect(() => {
     if (Platform.OS === 'android' && NavigationBarComponent) {
@@ -501,11 +515,14 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           ]}
         >
           <View style={styles.footerLogoWrap}>
-            <Image
-              source={fodaiLogo}
-              style={styles.footerLogo}
-              resizeMode="contain"
-            />
+            <Pressable onPress={handleToggleSound}>
+              <VideoView
+                player={videoPlayer}
+                style={styles.footerVideo}
+                nativeControls={false}
+                contentFit="contain"
+              />
+            </Pressable>
           </View>
           <Text style={[styles.footerHintText, { fontSize: isVeryCompactHeight ? 12 : 13 }]}>
             Scan any product barcode while shopping to get instant info, and ask our FodAi any question about it.
@@ -668,9 +685,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 0,
   },
-  footerLogo: {
-    width: 52,
-    height: 72,
+  footerVideo: {
+    width: 64,
+    height: 64,
+    backgroundColor: '#FFFFFF',
   },
   footerHintText: {
     fontSize: 13,
