@@ -140,7 +140,7 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           <View style={styles.iconSlot}>
             <Ionicons
               name={activeTab === 'recipes' ? 'document-text' : 'document-text-outline'}
-              size={22}
+              size={27}
               color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
             />
           </View>
@@ -157,7 +157,7 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           <View style={styles.iconSlot}>
             <Ionicons
               name={activeTab === 'cart' ? 'bag-handle' : 'bag-handle-outline'}
-              size={22}
+              size={27}
               color={activeTab === 'cart' ? THEME.active : THEME.inactive}
             />
           </View>
@@ -220,35 +220,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconSlot: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   gridIconWrap: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignContent: 'space-between',
   },
   gridBlock: {
-    width: 8.8,
-    height: 8.8,
-    borderRadius: 2.8,
+    width: 9.8,
+    height: 9.8,
+    borderRadius: 3.2,
   },
   chartIconWrap: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
     gap: 3,
   },
   chartBar: {
-    width: 4.4,
-    borderRadius: 2.2,
+    width: 4.8,
+    borderRadius: 2.4,
   },
   centerSpace: {
     width: 60,
