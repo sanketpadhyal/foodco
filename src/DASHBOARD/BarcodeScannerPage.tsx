@@ -506,7 +506,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       <View
         style={[
           styles.bottomNavBackdrop,
-          { height: Math.max(insets.bottom, Platform.OS === 'android' ? 52 : 24) },
+          { height: insets.bottom > 0 ? insets.bottom : 0 },
         ]}
         pointerEvents="none"
       />
@@ -521,8 +521,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#EEF0F4',
     zIndex: 998,
   },
   fullContainer: {

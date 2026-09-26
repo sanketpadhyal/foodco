@@ -88,10 +88,10 @@ export default function ProductDetailPage({
   const fatPct = Math.round(((metrics.fat || 0) / totalMacros) * 100);
   const proteinPct = Math.max(0, 100 - carbPct - fatPct);
 
-  const navBarHeight = Math.max(insets.bottom, Platform.OS === 'android' ? 52 : 24);
+  const navBarHeight = insets.bottom > 0 ? insets.bottom : 12;
   const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : insets.top;
   const headerPaddingTop = Math.max(insets.top, statusBarHeight) + 8;
-  const bottomNavPadding = navBarHeight + 36;
+  const bottomNavPadding = navBarHeight + 20;
 
   React.useEffect(() => {
     if (Platform.OS === 'android') {
@@ -521,8 +521,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#EEF0F4',
     zIndex: 9999,
   },
   fullContainer: {

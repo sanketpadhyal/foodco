@@ -205,8 +205,7 @@ export default function UniversalPanel({
       : [{ label: 'OK', onPress: onClose, variant: 'primary' }];
 
   const resolvedMaxWidth = Math.min(screenWidth, maxWidth || 440);
-  const androidNavClearance = Platform.OS === 'android' ? Math.max(insets.bottom, 48) : insets.bottom;
-  const bottomPadding = androidNavClearance + 18;
+  const bottomPadding = Math.max(insets.bottom + 12, 22);
   const translateY = Animated.add(slideAnim, panY);
 
   // Backdrop fades proportionally as user drags — Instagram-style
