@@ -25,7 +25,6 @@ const defaultAvatarSource = require('../../../assets/default-avatar.png');
 export const DashboardNavbar: React.FC<DashboardNavbarProps> = memo(({
   user,
   customAvatar,
-  onMenuPress,
   onProfilePress,
   onLogout,
 }) => {
@@ -49,21 +48,6 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = memo(({
 
   return (
     <View style={styles.container}>
-      {/* Menu / Hamburger Button */}
-      <TouchableOpacity
-        style={styles.menuButton}
-        onPress={onMenuPress}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Navigation menu"
-      >
-        <View style={styles.menuIconWrapper}>
-          <View style={[styles.menuLine, styles.menuLineShort]} />
-          <View style={[styles.menuLine, styles.menuLineLong]} />
-          <View style={[styles.menuLine, styles.menuLineLong]} />
-        </View>
-      </TouchableOpacity>
-
       {/* Profile Avatar Button */}
       <TouchableOpacity
         style={styles.avatarButton}
@@ -90,36 +74,11 @@ export default DashboardNavbar;
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
-  },
-  menuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#F5F6F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuIconWrapper: {
-    width: 20,
-    height: 16,
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  menuLine: {
-    height: 2.8,
-    backgroundColor: '#1E222B',
-    borderRadius: 2,
-  },
-  menuLineShort: {
-    width: 10,
-  },
-  menuLineLong: {
-    width: 20,
   },
   avatarButton: {
     width: 44,
