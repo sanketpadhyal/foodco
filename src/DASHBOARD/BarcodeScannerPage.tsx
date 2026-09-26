@@ -7,9 +7,8 @@ import {
   Animated,
   Easing,
   Dimensions,
-  Image,
-  ScrollView,
   TextInput,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +17,7 @@ import { fetchProductByBarcode, ScannedProduct } from './productService';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Dynamically and safely resolve expo-camera to prevent native module crash on older APK builds
+// Dynamic resolution of expo-camera
 let SafeCameraView: any = null;
 let safeUseCameraPermissions: any = null;
 
@@ -64,35 +63,43 @@ export interface BarcodeScannerPageProps {
   onClose: () => void;
 }
 
-const DEMO_MART_PRODUCTS = [
-  { barcode: '3017620422003', label: '🍫 Nutella' },
-  { barcode: '5449000000996', label: '🥤 Coca-Cola' },
-  { barcode: '7622210449283', label: '🍪 Oreo Cookies' },
-  { barcode: '8901491101838', label: "🥔 Lay's Chips" },
-  { barcode: '8901030383701', label: '🍜 Maggi Noodles' },
-  { barcode: '3033490004523', label: '🥣 Activia Yogurt' },
-  { barcode: '5000159461122', label: '🥜 Snickers' },
-];
-
-function NativeCameraInner({
+function RealCameraComponent({
   onBarcodeScanned,
+  torch,
 }: {
   onBarcodeScanned: (result: { type: string; data: string }) => void;
+  torch: boolean;
 }) {
   if (!safeUseCameraPermissions || !SafeCameraView) {
-    return <RealMartCameraView />;
+    return <CameraFallbackPlaceholder />;
   }
 
   const [permission, requestPermission] = safeUseCameraPermissions();
 
   if (!permission?.granted) {
-    return <RealMartCameraView onRequestPermission={requestPermission} />;
+    return (
+      <View style={styles.permissionContainer}>
+        <Ionicons name="camera-outline" size={60} color="#FFFFFF" />
+        <Text style={styles.permissionTitle}>Camera Permission Required</Text>
+        <Text style={styles.permissionSub}>
+          Allow camera access so Foodco can scan product barcodes.
+        </Text>
+        <TouchableOpacity
+          style={styles.permissionButton}
+          activeOpacity={0.82}
+          onPress={requestPermission}
+        >
+          <Text style={styles.permissionButtonText}>Enable Camera</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   return (
     <SafeCameraView
       style={StyleSheet.absoluteFill}
       facing="back"
+      enableTorch={torch}
       barcodeScannerSettings={{
         barcodeTypes: [
           'ean13',
@@ -110,33 +117,17 @@ function NativeCameraInner({
   );
 }
 
-function RealMartCameraView({ onRequestPermission }: { onRequestPermission?: () => void }) {
+function CameraFallbackPlaceholder() {
   return (
-    <View style={StyleSheet.absoluteFill}>
-      {/* 100% Fullscreen Photorealistic Mart Camera View */}
-      <Image
-        source={require('../../assets/dashboard/real_mart_camera_portrait.jpg')}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
-      {onRequestPermission ? (
-        <View style={styles.permissionBar}>
-          <TouchableOpacity
-            style={styles.permissionPill}
-            activeOpacity={0.82}
-            onPress={onRequestPermission}
-          >
-            <Ionicons name="camera" size={14} color="#FFFFFF" />
-            <Text style={styles.permissionPillText}>Tap for Live Camera</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
+    <View style={styles.darkCameraBackdrop}>
+      <Ionicons name="camera-outline" size={48} color="rgba(255, 255, 255, 0.4)" />
     </View>
   );
 }
 
 export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerPageProps) {
   const insets = useSafeAreaInsets();
+  const [torch, setTorch] = useState<boolean>(false);
   const [manualCode, setManualCode] = useState<string>('');
   const [showManualInput, setShowManualInput] = useState<boolean>(false);
 
@@ -152,8 +143,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
   // Scanning laser beam animation
   const laserAnim = useRef(new Animated.Value(0)).current;
-  // Pulse animation for HUD distance badge
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const isCooldownRef = useRef(false);
 
   useEffect(() => {
@@ -171,22 +160,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           useNativeDriver: true,
         }),
       ]).start();
-
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.04,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1.0,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
 
       const laser = Animated.loop(
         Animated.sequence([
@@ -207,7 +180,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       laser.start();
 
       return () => {
-        pulse.stop();
         laser.stop();
       };
     } else {
@@ -241,6 +213,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     ]).start(() => {
       setResultVisible(false);
       setProductData(null);
+      setTorch(false);
       onClose();
     });
   };
@@ -284,10 +257,13 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
   const laserTranslateY = laserAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [10, 160],
+    outputRange: [10, 180],
   });
 
   if (!visible) return null;
+
+  // Optimized bottom padding for Android 3-button navigation bar (triangle, circle, square)
+  const bottomBarPadding = Math.max(insets.bottom, 48) + 20;
 
   return (
     <Animated.View
@@ -299,14 +275,13 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         },
       ]}
     >
-      {/* 100% Fullscreen Proper Camera View (No green triangles, no roads, full viewport) */}
+      {/* 100% Real Camera Fullscreen View (No fake image behind) */}
       <View style={StyleSheet.absoluteFill}>
-        <CameraErrorBoundary fallback={<RealMartCameraView />}>
-          {SafeCameraView && safeUseCameraPermissions ? (
-            <NativeCameraInner onBarcodeScanned={handleBarcodeScanned} />
-          ) : (
-            <RealMartCameraView />
-          )}
+        <CameraErrorBoundary fallback={<CameraFallbackPlaceholder />}>
+          <RealCameraComponent
+            onBarcodeScanned={handleBarcodeScanned}
+            torch={torch}
+          />
         </CameraErrorBoundary>
       </View>
 
@@ -322,45 +297,36 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <Ionicons name="chevron-back" size={22} color="#1E1D25" />
         </TouchableOpacity>
 
-        {/* Center Scanner Title */}
+        {/* Clean Center Scanner Title (No extra subhead) */}
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitleText}>Foodco AI Scanner</Text>
-          <View style={styles.liveIndicatorRow}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveIndicatorText}>Live Camera Feed</Text>
-          </View>
+          <Text style={styles.headerTitleText}>Scan Barcode</Text>
         </View>
 
-        {/* Right Action Button: White Rounded Square with Scan Icon */}
+        {/* Right Flashlight / Torch Toggle */}
         <TouchableOpacity
-          style={styles.squareControlBtn}
+          style={[styles.squareControlBtn, torch && styles.torchActiveBtn]}
           activeOpacity={0.82}
-          onPress={() => setShowManualInput(prev => !prev)}
-          accessibilityLabel="Toggle Barcode Input"
+          onPress={() => setTorch(prev => !prev)}
+          accessibilityLabel="Toggle Flashlight"
         >
-          <Ionicons name="scan-outline" size={22} color="#5DB035" />
+          <Ionicons
+            name={torch ? 'flash' : 'flash-outline'}
+            size={22}
+            color={torch ? '#5DB035' : '#1E1D25'}
+          />
         </TouchableOpacity>
       </View>
 
-      {/* Center Viewfinder Target Box on Fullscreen Camera */}
-      <View style={styles.viewfinderCenterWrap} pointerEvents="box-none">
-        {/* Floating HUD Pill: Themed with green icon and scanner guide */}
-        <Animated.View style={[styles.hudBadgePill, { transform: [{ scale: pulseAnim }] }]}>
-          <View style={styles.hudIconBox}>
-            <Ionicons name="scan" size={16} color="#5DB035" />
-          </View>
-          <Text style={styles.hudDistanceText}>Align Mart Barcode</Text>
-        </Animated.View>
-
-        {/* Viewfinder Target Box */}
+      {/* PROPERLY CENTERED Viewfinder Target Frame (Exact Geometric Center of Screen) */}
+      <View style={styles.centeredViewfinderWrapper} pointerEvents="box-none">
         <View style={styles.viewfinderBox}>
-          {/* 4 Green Corner Brackets */}
+          {/* 4 Clean Green Corner Brackets */}
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
           <View style={[styles.corner, styles.cornerBL]} />
           <View style={[styles.corner, styles.cornerBR]} />
 
-          {/* Glowing Animated Laser Scan Beam */}
+          {/* Sweeping Laser Scan Line */}
           <Animated.View
             style={[
               styles.laserLine,
@@ -370,74 +336,24 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             <View style={styles.laserGlow} />
           </Animated.View>
 
-          {/* Barcode Watermark Icon */}
+          {/* Clean Barcode Watermark in Center */}
           <View style={styles.barcodeWatermark}>
-            <Ionicons name="barcode-outline" size={60} color="rgba(255, 255, 255, 0.45)" />
+            <Ionicons name="barcode-outline" size={64} color="rgba(255, 255, 255, 0.4)" />
           </View>
         </View>
       </View>
 
-      {/* Minimal Floating Camera Bottom Controls (100% Unobstructed Fullscreen Viewport) */}
-      <View style={[styles.floatingBottomControls, { paddingBottom: insets.bottom + 24 }]} pointerEvents="box-none">
-        {/* Floating Quick Demo Chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.floatingChipsScroll}
-        >
-          {DEMO_MART_PRODUCTS.map(item => (
-            <TouchableOpacity
-              key={item.barcode}
-              style={styles.floatingChip}
-              activeOpacity={0.8}
-              onPress={() => processBarcode(item.barcode)}
-            >
-              <Text style={styles.floatingChipText}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Floating Shutter Row */}
-        <View style={styles.shutterActionRow} pointerEvents="box-none">
-          {/* Keypad Digits Button */}
-          <TouchableOpacity
-            style={styles.glassCircleBtn}
-            onPress={() => setShowManualInput(prev => !prev)}
-            activeOpacity={0.8}
-            accessibilityLabel="Enter Digits"
-          >
-            <Ionicons name="keypad" size={22} color="#1E1D25" />
-          </TouchableOpacity>
-
-          {/* Large Center Green Scanner Shutter Button */}
-          <TouchableOpacity
-            style={styles.centerShutterButton}
-            activeOpacity={0.85}
-            onPress={() => processBarcode('3017620422003')}
-            accessibilityLabel="Scan Product"
-          >
-            <View style={styles.centerShutterRing}>
-              <Ionicons name="barcode-outline" size={32} color="#FFFFFF" />
-            </View>
-          </TouchableOpacity>
-
-          {/* Demo Item Quick Shutter */}
-          <TouchableOpacity
-            style={styles.glassCircleBtn}
-            onPress={() => processBarcode('5449000000996')}
-            activeOpacity={0.8}
-            accessibilityLabel="Quick Item"
-          >
-            <Ionicons name="sparkles" size={22} color="#5DB035" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Manual Barcode Input Sheet */}
+      {/* Bottom Action Controls - Optimized for Android Navigation Buttons */}
+      <View
+        style={[styles.floatingBottomControls, { paddingBottom: bottomBarPadding }]}
+        pointerEvents="box-none"
+      >
+        {/* Manual Barcode Input Card if toggled */}
         {showManualInput ? (
           <View style={styles.floatingManualInputWrap}>
             <TextInput
               style={styles.floatingManualInput}
-              placeholder="Enter barcode digits (e.g. 3017620422003)..."
+              placeholder="Enter barcode number (e.g. 3017620422003)..."
               placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
               value={manualCode}
@@ -453,6 +369,43 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             </TouchableOpacity>
           </View>
         ) : null}
+
+        {/* Shutter Button Row */}
+        <View style={styles.shutterActionRow} pointerEvents="box-none">
+          {/* Keypad Digits Toggle Button */}
+          <TouchableOpacity
+            style={[styles.glassCircleBtn, showManualInput && styles.glassCircleActive]}
+            onPress={() => setShowManualInput(prev => !prev)}
+            activeOpacity={0.8}
+            accessibilityLabel="Enter Digits"
+          >
+            <Ionicons
+              name="keypad"
+              size={22}
+              color={showManualInput ? '#5DB035' : '#1E1D25'}
+            />
+          </TouchableOpacity>
+
+          {/* Center Green Barcode Shutter Button */}
+          <TouchableOpacity
+            style={styles.centerShutterButton}
+            activeOpacity={0.85}
+            onPress={() => processBarcode('3017620422003')}
+            accessibilityLabel="Scan Product"
+          >
+            <Ionicons name="barcode-outline" size={32} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          {/* Info / Hint Button */}
+          <TouchableOpacity
+            style={styles.glassCircleBtn}
+            onPress={() => processBarcode('5449000000996')}
+            activeOpacity={0.8}
+            accessibilityLabel="Sample Scan"
+          >
+            <Ionicons name="sparkles" size={22} color="#5DB035" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Universal Panel Product Scan Result with Skeleton & Proper Graph */}
@@ -478,127 +431,112 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     zIndex: 999,
   },
-  permissionBar: {
-    position: 'absolute',
-    top: 100,
-    left: 0,
-    right: 0,
+  darkCameraBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#0A0C0E',
     alignItems: 'center',
-    zIndex: 10,
+    justifyContent: 'center',
   },
-  permissionPill: {
-    flexDirection: 'row',
+  permissionContainer: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#111418',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
   },
-  permissionPillText: {
+  permissionTitle: {
+    fontSize: 19,
+    fontWeight: '800',
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  permissionSub: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  permissionButton: {
+    backgroundColor: '#5DB035',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  permissionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 22,
-    zIndex: 20,
+    paddingHorizontal: 20,
+    zIndex: 25,
   },
   squareControlBtn: {
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.18,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 5,
+  },
+  torchActiveBtn: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 2,
+    borderColor: '#5DB035',
   },
   headerTitleWrap: {
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  headerTitleText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1E1D25',
-  },
-  liveIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-    marginRight: 4,
-  },
-  liveIndicatorText: {
-    fontSize: 10.5,
-    color: '#10B981',
-    fontWeight: '700',
-  },
-  viewfinderCenterWrap: {
-    position: 'absolute',
-    top: '26%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 15,
-  },
-  hudBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 14,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.14,
     shadowRadius: 8,
     elevation: 4,
   },
-  hudIconBox: {
-    marginRight: 6,
-  },
-  hudDistanceText: {
-    fontSize: 13.5,
+  headerTitleText: {
+    fontSize: 15,
     fontWeight: '800',
     color: '#1E1D25',
     letterSpacing: 0.2,
   },
+  centeredViewfinderWrapper: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   viewfinderBox: {
-    width: Math.min(SCREEN_WIDTH - 80, 270),
-    height: 190,
-    borderRadius: 22,
+    width: Math.min(SCREEN_WIDTH - 80, 280),
+    height: 200,
+    borderRadius: 24,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   corner: {
     position: 'absolute',
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     borderColor: '#5DB035',
   },
   cornerTL: {
@@ -606,49 +544,49 @@ const styles = StyleSheet.create({
     left: 0,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderTopLeftRadius: 16,
+    borderTopLeftRadius: 18,
   },
   cornerTR: {
     top: 0,
     right: 0,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderTopRightRadius: 16,
+    borderTopRightRadius: 18,
   },
   cornerBL: {
     bottom: 0,
     left: 0,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderBottomLeftRadius: 16,
+    borderBottomLeftRadius: 18,
   },
   cornerBR: {
     bottom: 0,
     right: 0,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderBottomRightRadius: 16,
+    borderBottomRightRadius: 18,
   },
   laserLine: {
     position: 'absolute',
     left: 10,
     right: 10,
-    height: 2.5,
+    height: 3,
     backgroundColor: '#5DB035',
     borderRadius: 2,
     shadowColor: '#5DB035',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.95,
+    shadowRadius: 10,
+    elevation: 8,
   },
   laserGlow: {
     position: 'absolute',
-    top: -3,
+    top: -4,
     left: 0,
     right: 0,
-    height: 9,
-    backgroundColor: 'rgba(93, 176, 53, 0.35)',
+    height: 11,
+    backgroundColor: 'rgba(93, 176, 53, 0.4)',
     borderRadius: 4,
   },
   barcodeWatermark: {
@@ -662,29 +600,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: 'center',
-    zIndex: 30,
-  },
-  floatingChipsScroll: {
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    gap: 8,
-  },
-  floatingChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  floatingChipText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#1E1D25',
+    zIndex: 25,
   },
   shutterActionRow: {
     flexDirection: 'row',
@@ -692,73 +608,74 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     paddingHorizontal: 40,
-    gap: 28,
+    gap: 32,
   },
   glassCircleBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  glassCircleActive: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 2,
+    borderColor: '#5DB035',
   },
   centerShutterButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: '#5DB035',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#5DB035',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 14,
+    elevation: 9,
     borderWidth: 4,
     borderColor: '#FFFFFF',
-  },
-  centerShutterRing: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   floatingManualInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginTop: 14,
+    marginHorizontal: 24,
+    marginBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 8,
   },
   floatingManualInput: {
     flex: 1,
-    height: 42,
-    paddingHorizontal: 12,
-    fontSize: 13,
+    height: 44,
+    paddingHorizontal: 14,
+    fontSize: 14,
     color: '#1E1D25',
     fontWeight: '600',
   },
   floatingManualSubmitBtn: {
     backgroundColor: '#5DB035',
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   floatingManualSubmitText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 14,
   },
 });
