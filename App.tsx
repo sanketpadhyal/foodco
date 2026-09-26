@@ -16,6 +16,8 @@ import Dashboard from './src/DASHBOARD/dashboard';
 import { AuthUser, saveUserSession, loadUserSession, clearUserSession } from './src/auth-page/authService';
 import { clearNativeAuthState } from './src/auth-page/authPage';
 
+import * as SplashScreen from 'expo-splash-screen';
+
 export default function App() {
   const [appReady, setAppReady] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'landing' | 'auth' | 'dashboard'>('landing');
@@ -26,12 +28,15 @@ export default function App() {
 
   useEffect(() => {
     const prepare = async () => {
-      const savedUser = await loadUserSession();
-      if (savedUser) {
-        setAuthenticatedUser(savedUser);
-        setCurrentScreen('dashboard');
-      }
+      try {
+        const savedUser = await loadUserSession();
+        if (savedUser) {
+          setAuthenticatedUser(savedUser);
+          setCurrentScreen('dashboard');
+        }
+      } catch (_) {}
       setAppReady(true);
+      SplashScreen.hideAsync().catch(() => null);
     };
     prepare();
   }, []);
@@ -85,50 +90,39 @@ export default function App() {
     handleBackToLanding();
   };
 
-  if (!appReady) {
-    return <FoodcoSplashScreen isReady={false} />;
-  }
-
-  if (currentScreen === 'dashboard' && authenticatedUser) {
-    return (
-      <SafeAreaProvider>
-        <View style={styles.root}>
-          <StatusBar style="dark" />
-          <Dashboard user={authenticatedUser} onLogout={handleLogout} />
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
   return (
     <SafeAreaProvider>
       <View style={styles.root}>
         <StatusBar style="dark" />
-        <FoodcoSplashScreen isReady={true} />
-        <View style={styles.container}>
-          <Animated.View
-            style={[
-              styles.sliderContainer,
-              {
-                width: screenWidth * 2,
-                transform: [{ translateX: screenX }],
-              },
-            ]}
-          >
-            <View style={[styles.screenWrapper, { width: screenWidth }]}>
-              <LandingPage
-                onGetStarted={handleGoToAuth}
-                isFocused={currentScreen === 'landing'}
-              />
-            </View>
-            <View style={[styles.screenWrapper, { width: screenWidth }]}>
-              <AuthPage
-                onBack={handleBackToLanding}
-                onSuccess={handleAuthSuccess}
-              />
-            </View>
-          </Animated.View>
-        </View>
+        <FoodcoSplashScreen isReady={appReady} />
+        {appReady && currentScreen === 'dashboard' && authenticatedUser ? (
+          <Dashboard user={authenticatedUser} onLogout={handleLogout} />
+        ) : appReady ? (
+          <View style={styles.container}>
+            <Animated.View
+              style={[
+                styles.sliderContainer,
+                {
+                  width: screenWidth * 2,
+                  transform: [{ translateX: screenX }],
+                },
+              ]}
+            >
+              <View style={[styles.screenWrapper, { width: screenWidth }]}>
+                <LandingPage
+                  onGetStarted={handleGoToAuth}
+                  isFocused={currentScreen === 'landing'}
+                />
+              </View>
+              <View style={[styles.screenWrapper, { width: screenWidth }]}>
+                <AuthPage
+                  onBack={handleBackToLanding}
+                  onSuccess={handleAuthSuccess}
+                />
+              </View>
+            </Animated.View>
+          </View>
+        ) : null}
       </View>
     </SafeAreaProvider>
   );
