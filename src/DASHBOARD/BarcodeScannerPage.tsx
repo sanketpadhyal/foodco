@@ -317,7 +317,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {/* Top mask with Verified Foodco DB Trust Note */}
-        <View style={[styles.maskTop, { paddingTop: insets.top + 64 }]} pointerEvents="box-none">
+        <View style={styles.maskTop} pointerEvents="box-none">
           <View style={styles.trustCardWrap}>
             <View style={styles.trustCard}>
               <View style={styles.trustIconWrap}>
@@ -531,7 +531,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 16,
   },
   trustCardWrap: {
     paddingHorizontal: 20,
