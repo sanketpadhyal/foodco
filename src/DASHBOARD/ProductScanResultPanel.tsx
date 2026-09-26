@@ -225,7 +225,11 @@ export default function ProductScanResultPanel({
             {/* Header: Tag + Verdict */}
             <View style={styles.scoreCardTopRow}>
               <View style={styles.scoreTagRow}>
-                <Ionicons name="shield-checkmark" size={14} color={product.verdictColor} />
+                <Image
+                  source={require('../../assets/logo.png')}
+                  style={styles.logoTagIcon}
+                  resizeMode="contain"
+                />
                 <Text style={styles.scoreTagText}>FOODCO HEALTH INDEX</Text>
               </View>
               <View style={[styles.verdictBadge, { backgroundColor: `${product.verdictColor}14` }]}>
@@ -494,6 +498,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  logoTagIcon: {
+    width: 17,
+    height: 17,
   },
   scoreTagText: {
     fontSize: 11,
