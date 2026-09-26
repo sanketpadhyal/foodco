@@ -334,13 +334,8 @@ const styles = StyleSheet.create({
   productImageBanner: {
     width: '100%',
     height: 140,
-    borderRadius: 18,
-    backgroundColor: '#F5F6F8',
-    borderWidth: 1,
-    borderColor: '#ECEEF2',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
     marginBottom: 14,
   },
   productBannerImg: {
