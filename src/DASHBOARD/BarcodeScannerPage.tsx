@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef, Component, ReactNode } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Easing,
   Dimensions,
-  TextInput,
+  Image,
   ScrollView,
+  TextInput,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,48 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ProductScanResultPanel from './ProductScanResultPanel';
 import { fetchProductByBarcode, ScannedProduct } from './productService';
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Dynamically and safely resolve expo-camera to prevent "[runtime not ready]: Cannot find native module 'ExpoCamera'"
-let SafeCameraView: any = null;
-let safeUseCameraPermissions: any = null;
-
-try {
-  const ExpoCam = require('expo-camera');
-  if (ExpoCam && ExpoCam.CameraView) {
-    SafeCameraView = ExpoCam.CameraView;
-    safeUseCameraPermissions = ExpoCam.useCameraPermissions;
-  }
-} catch (_) {
-  SafeCameraView = null;
-  safeUseCameraPermissions = null;
-}
-
-interface ErrorBoundaryProps {
-  fallback: ReactNode;
-  children: ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-}
-
-class CameraErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
-
-  static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true };
-  }
-
-  componentDidCatch() {}
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
-    return this.props.children;
-  }
-}
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export interface BarcodeScannerPageProps {
   visible: boolean;
@@ -74,79 +33,8 @@ const DEMO_MART_PRODUCTS = [
   { barcode: '5000159461122', label: '🥜 Snickers' },
 ];
 
-function NativeCameraInner({
-  onBarcodeScanned,
-  facing,
-  torch,
-}: {
-  onBarcodeScanned: (result: { type: string; data: string }) => void;
-  facing: 'back' | 'front';
-  torch: boolean;
-}) {
-  if (!safeUseCameraPermissions || !SafeCameraView) {
-    return <CameraSimulationView />;
-  }
-
-  const [permission, requestPermission] = safeUseCameraPermissions();
-
-  if (!permission?.granted) {
-    return (
-      <View style={styles.permissionFallback}>
-        <Text style={styles.fallbackEmoji}>📷</Text>
-        <Text style={styles.fallbackTitle}>Camera Permission Required</Text>
-        <Text style={styles.fallbackSub}>
-          Foodco AI needs camera access to scan mart barcodes and analyze harmful ingredients.
-        </Text>
-        <TouchableOpacity
-          style={styles.permissionBtn}
-          activeOpacity={0.82}
-          onPress={requestPermission}
-        >
-          <Text style={styles.permissionBtnText}>Grant Camera Access</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  return (
-    <SafeCameraView
-      style={StyleSheet.absoluteFill}
-      facing={facing}
-      enableTorch={torch}
-      barcodeScannerSettings={{
-        barcodeTypes: [
-          'ean13',
-          'ean8',
-          'upc_a',
-          'upc_e',
-          'code128',
-          'code39',
-          'qr',
-          'datamatrix',
-        ],
-      }}
-      onBarcodeScanned={onBarcodeScanned}
-    />
-  );
-}
-
-function CameraSimulationView() {
-  return (
-    <View style={styles.simulationBackdrop}>
-      {/* Subtle Grid and Camera Aperture Elements */}
-      <View style={styles.lensCircleOuter}>
-        <View style={styles.lensCircleInner} />
-      </View>
-      <View style={styles.simulatedGridLineHoriz} />
-      <View style={styles.simulatedGridLineVert} />
-    </View>
-  );
-}
-
 export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerPageProps) {
   const insets = useSafeAreaInsets();
-  const [facing, setFacing] = useState<'back' | 'front'>('back');
-  const [torch, setTorch] = useState<boolean>(false);
   const [manualCode, setManualCode] = useState<string>('');
   const [showManualInput, setShowManualInput] = useState<boolean>(false);
 
@@ -156,20 +44,19 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   const [productData, setProductData] = useState<ScannedProduct | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
 
-  // Down-to-up page transition animation
+  // Down-to-up transition animation
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Scanning laser beam animation
-  const laserAnim = useRef(new Animated.Value(0)).current;
-  const isCooldownRef = useRef(false);
+  // Pulse animation for HUD distance badge
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 250,
+          duration: 220,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
@@ -180,33 +67,30 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         }),
       ]).start();
 
-      const laserLoop = Animated.loop(
+      const pulse = Animated.loop(
         Animated.sequence([
-          Animated.timing(laserAnim, {
-            toValue: 1,
-            duration: 1800,
-            easing: Easing.inOut(Easing.quad),
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 1000,
             useNativeDriver: true,
           }),
-          Animated.timing(laserAnim, {
-            toValue: 0,
-            duration: 1800,
-            easing: Easing.inOut(Easing.quad),
+          Animated.timing(pulseAnim, {
+            toValue: 1.0,
+            duration: 1000,
             useNativeDriver: true,
           }),
         ])
       );
-      laserLoop.start();
+      pulse.start();
 
       return () => {
-        laserLoop.stop();
+        pulse.stop();
       };
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT,
           duration: 260,
-          easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
@@ -223,7 +107,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       Animated.timing(slideAnim, {
         toValue: SCREEN_HEIGHT,
         duration: 260,
-        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
@@ -239,10 +122,9 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   };
 
   const processBarcode = async (rawCode: string) => {
-    if (isCooldownRef.current || !rawCode.trim()) return;
-    isCooldownRef.current = true;
-
+    if (!rawCode.trim()) return;
     const cleaned = rawCode.trim();
+
     setResultVisible(true);
     setFetchingProduct(true);
     setScanError(null);
@@ -255,16 +137,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       setScanError(err?.message || 'Could not fetch product details.');
     } finally {
       setFetchingProduct(false);
-      setTimeout(() => {
-        isCooldownRef.current = false;
-      }, 1500);
-    }
-  };
-
-  const handleBarcodeScanned = (result: { type: string; data: string }) => {
-    if (resultVisible || fetchingProduct || isCooldownRef.current) return;
-    if (result && result.data) {
-      processBarcode(result.data);
     }
   };
 
@@ -272,13 +144,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     setResultVisible(false);
     setProductData(null);
     setScanError(null);
-    isCooldownRef.current = false;
   };
-
-  const laserTranslateY = laserAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [12, 218],
-  });
 
   if (!visible) return null;
 
@@ -292,158 +158,160 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         },
       ]}
     >
-      {/* Guarded Camera Viewport */}
-      <CameraErrorBoundary fallback={<CameraSimulationView />}>
-        {SafeCameraView && safeUseCameraPermissions ? (
-          <NativeCameraInner
-            onBarcodeScanned={handleBarcodeScanned}
-            facing={facing}
-            torch={torch}
-          />
-        ) : (
-          <CameraSimulationView />
-        )}
-      </CameraErrorBoundary>
+      {/* Real AR Camera Street View with Green Perspective Path and Arrows */}
+      <Image
+        source={require('../../assets/dashboard/ar_camera_bg.png')}
+        style={styles.cameraBackground}
+        resizeMode="cover"
+      />
 
-      {/* Camera Dark Overlays for Viewfinder Framing */}
-      <View style={styles.overlayContainer} pointerEvents="box-none">
-        {/* Top Floating Controls */}
-        <View style={[styles.topControlsRow, { paddingTop: insets.top + 8 }]}>
-          {/* Back Circular Button */}
+      {/* Top Controls Row */}
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+        {/* Back Button: White Rounded Square with < Chevron */}
+        <TouchableOpacity
+          style={styles.squareControlBtn}
+          onPress={handleClose}
+          activeOpacity={0.82}
+          accessibilityLabel="Back"
+        >
+          <Ionicons name="chevron-back" size={22} color="#1E1D25" />
+        </TouchableOpacity>
+
+        {/* Right Compass Button: White Rounded Square with Green Compass */}
+        <TouchableOpacity
+          style={styles.squareControlBtn}
+          activeOpacity={0.82}
+          onPress={() => setShowManualInput(prev => !prev)}
+          accessibilityLabel="Toggle Barcode Input"
+        >
+          <Ionicons name="compass" size={24} color="#5DB035" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Floating Center HUD Pill (109.0 m with Green Soundwave Icon) */}
+      <View style={styles.hudBadgeContainer} pointerEvents="box-none">
+        <Animated.View style={[styles.hudBadgePill, { transform: [{ scale: pulseAnim }] }]}>
+          <View style={styles.hudIconBox}>
+            <Ionicons name="arrow-back" size={16} color="#5DB035" />
+            <View style={styles.hudSoundwaveBar} />
+            <View style={[styles.hudSoundwaveBar, { height: 12 }]} />
+          </View>
+          <Text style={styles.hudDistanceText}>109.0 m</Text>
+        </Animated.View>
+      </View>
+
+      {/* Bottom Sheet - Exact Reproduction of Reference Design */}
+      <View style={[styles.bottomSheet, { paddingBottom: insets.bottom + 18 }]}>
+        {/* Driver / Mart Agent Profile Row */}
+        <View style={styles.profileRow}>
+          <View style={styles.avatarWrapper}>
+            <Image
+              source={require('../../assets/dashboard/brooklyn_avatar.png')}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          </View>
+          <View style={styles.profileMeta}>
+            <Text style={styles.profileName}>Brooklyn Simmons</Text>
+            <Text style={styles.profileSubtitle}>Driver is on the way to you</Text>
+          </View>
+          {/* Circular Green Call / Action Button */}
           <TouchableOpacity
-            style={styles.circularGlassBtn}
-            onPress={handleClose}
-            activeOpacity={0.8}
-            accessibilityLabel="Close Scanner"
+            style={styles.callActionButton}
+            activeOpacity={0.85}
+            onPress={() => processBarcode('3017620422003')}
+            accessibilityLabel="Call or Scan"
           >
-            <Ionicons name="chevron-back" size={24} color="#1E1D25" />
+            <Ionicons name="call" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Route / Mart Stops Section */}
+        <View style={styles.routeSection}>
+          {/* Stop 1: Vegan Foodable Shop */}
+          <TouchableOpacity
+            style={styles.routeStopRow}
+            activeOpacity={0.8}
+            onPress={() => processBarcode('3033490004523')}
+          >
+            <View style={styles.iconCircle}>
+              <Ionicons name="cart" size={18} color="#1E1D25" />
+            </View>
+            <View style={styles.stopTextCol}>
+              <Text style={styles.stopTitle}>Vegan foodable shop</Text>
+              <Text style={styles.stopAddress}>Preston Rd. Inglewood, Maine</Text>
+            </View>
           </TouchableOpacity>
 
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.scannerHeaderTitle}>Barcode Scanner</Text>
-            <View style={styles.liveIndicatorRow}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveIndicatorText}>
-                {SafeCameraView ? 'Camera OCR Active' : 'Hyper OCR Digits Active'}
+          {/* Dotted Vertical Connector Line */}
+          <View style={styles.dottedLineWrapper}>
+            <View style={styles.dottedLine} />
+          </View>
+
+          {/* Stop 2: Home Sweet Home */}
+          <TouchableOpacity
+            style={styles.routeStopRow}
+            activeOpacity={0.8}
+            onPress={() => processBarcode('7622210449283')}
+          >
+            <View style={styles.iconCircle}>
+              <Ionicons name="location" size={18} color="#1E1D25" />
+            </View>
+            <View style={styles.stopTextCol}>
+              <Text style={styles.stopTitle}>Home sweet home</Text>
+              <Text style={styles.stopAddress}>Elgin St. Celina, Delaware</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Hyper OCR Barcode Digits Quick Bar */}
+        <View style={styles.ocrQuickBar}>
+          <View style={styles.ocrQuickHeader}>
+            <Text style={styles.ocrQuickTitle}>⚡ Foodco AI Barcode OCR</Text>
+            <TouchableOpacity onPress={() => setShowManualInput(prev => !prev)}>
+              <Text style={styles.ocrInputToggleText}>
+                {showManualInput ? 'Close Input' : 'Type Barcode'}
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          {/* Right Action Buttons */}
-          <View style={styles.topRightActions}>
-            <TouchableOpacity
-              style={[styles.circularGlassBtn, torch && styles.glassBtnActive]}
-              onPress={() => setTorch(prev => !prev)}
-              activeOpacity={0.8}
-              accessibilityLabel="Toggle Flashlight"
-            >
-              <Ionicons
-                name={torch ? 'flash' : 'flash-outline'}
-                size={20}
-                color={torch ? '#FF6B35' : '#1E1D25'}
+          {showManualInput ? (
+            <View style={styles.manualInputRow}>
+              <TextInput
+                style={styles.manualInput}
+                placeholder="Enter 8, 12, or 13-digit barcode..."
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+                value={manualCode}
+                onChangeText={setManualCode}
+                onSubmitEditing={() => processBarcode(manualCode)}
               />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.circularGlassBtn, { marginLeft: 10 }]}
-              onPress={() => setFacing(prev => (prev === 'back' ? 'front' : 'back'))}
-              activeOpacity={0.8}
-              accessibilityLabel="Flip Camera"
-            >
-              <Ionicons name="camera-reverse-outline" size={22} color="#1E1D25" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Center Target Viewfinder */}
-        <View style={styles.viewfinderCenterWrap} pointerEvents="none">
-          <View style={styles.viewfinderBox}>
-            {/* Viewfinder Corners */}
-            <View style={[styles.corner, styles.cornerTL]} />
-            <View style={[styles.corner, styles.cornerTR]} />
-            <View style={[styles.corner, styles.cornerBL]} />
-            <View style={[styles.corner, styles.cornerBR]} />
-
-            {/* Glowing Laser Scan Line */}
-            <Animated.View
-              style={[
-                styles.laserLine,
-                { transform: [{ translateY: laserTranslateY }] },
-              ]}
-            >
-              <View style={styles.laserGlow} />
-            </Animated.View>
-
-            {/* Center Barcode Watermark Icon */}
-            <View style={styles.barcodeWatermark}>
-              <Ionicons name="barcode-outline" size={64} color="rgba(255,255,255,0.22)" />
-            </View>
-          </View>
-          <Text style={styles.aimInstructionText}>
-            Align package barcode or numeric digits inside frame
-          </Text>
-        </View>
-
-        {/* Bottom Hyper OCR & Quick Digit Chips Panel */}
-        <View style={[styles.bottomControlDeck, { paddingBottom: insets.bottom + 16 }]}>
-          {/* Quick Manual OCR Digits Input Bar */}
-          <View style={styles.ocrDeckCard}>
-            <View style={styles.ocrHeaderRow}>
-              <View style={styles.ocrTag}>
-                <Ionicons name="scan" size={14} color="#FF6B35" />
-                <Text style={styles.ocrTagText}>HYPER OCR DIGITS DETECTOR</Text>
-              </View>
               <TouchableOpacity
-                onPress={() => setShowManualInput(prev => !prev)}
-                activeOpacity={0.7}
+                style={styles.manualSubmitBtn}
+                onPress={() => processBarcode(manualCode)}
               >
-                <Text style={styles.manualToggleText}>
-                  {showManualInput ? 'Close Input' : 'Type Digits'}
-                </Text>
+                <Text style={styles.manualSubmitText}>Scan</Text>
               </TouchableOpacity>
             </View>
+          ) : null}
 
-            {showManualInput ? (
-              <View style={styles.manualInputRow}>
-                <TextInput
-                  style={styles.manualTextInput}
-                  placeholder="Enter 8, 12, or 13-digit barcode..."
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  value={manualCode}
-                  onChangeText={setManualCode}
-                  returnKeyType="search"
-                  onSubmitEditing={() => processBarcode(manualCode)}
-                />
-                <TouchableOpacity
-                  style={styles.manualSubmitBtn}
-                  activeOpacity={0.82}
-                  onPress={() => processBarcode(manualCode)}
-                >
-                  <Text style={styles.manualSubmitText}>Scan</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            {/* Quick Demo Mart Barcode Chips */}
-            <Text style={styles.chipsSectionTitle}>Tap popular mart items to test:</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.demoChipsScroll}
-            >
-              {DEMO_MART_PRODUCTS.map(item => (
-                <TouchableOpacity
-                  key={item.barcode}
-                  style={styles.demoChip}
-                  activeOpacity={0.75}
-                  onPress={() => processBarcode(item.barcode)}
-                >
-                  <Text style={styles.demoChipText}>{item.label}</Text>
-                  <Text style={styles.demoChipCode}>{item.barcode.slice(-4)}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          {/* Quick Demo Mart Chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsScroll}
+          >
+            {DEMO_MART_PRODUCTS.map(item => (
+              <TouchableOpacity
+                key={item.barcode}
+                style={styles.quickChip}
+                activeOpacity={0.75}
+                onPress={() => processBarcode(item.barcode)}
+              >
+                <Text style={styles.quickChipText}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </View>
 
@@ -467,327 +335,245 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0F1115',
+    backgroundColor: '#000000',
     zIndex: 999,
   },
-  simulationBackdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#121419',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lensCircleOuter: {
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lensCircleInner: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  simulatedGridLineHoriz: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-  },
-  simulatedGridLineVert: {
+  cameraBackground: {
+    width: '100%',
+    height: '75%',
     position: 'absolute',
     top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    left: 0,
   },
-  permissionFallback: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#1E1D25',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  fallbackEmoji: {
-    fontSize: 54,
-    marginBottom: 16,
-  },
-  fallbackTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  fallbackSub: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  permissionBtn: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 16,
-  },
-  permissionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  overlayContainer: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: 'space-between',
-  },
-  topControlsRow: {
+  topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    alignItems: 'center',
+    paddingHorizontal: 22,
     zIndex: 20,
   },
-  circularGlassBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+  squareControlBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  hudBadgeContainer: {
+    position: 'absolute',
+    top: '32%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 15,
+  },
+  hudBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
     shadowRadius: 8,
     elevation: 4,
   },
-  glassBtnActive: {
-    backgroundColor: '#FFF0E8',
-    borderWidth: 1.5,
-    borderColor: '#FF6B35',
-  },
-  headerTitleWrap: {
+  hudIconBox: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 8,
   },
-  scannerHeaderTitle: {
-    fontSize: 16,
+  hudSoundwaveBar: {
+    width: 3,
+    height: 8,
+    backgroundColor: '#5DB035',
+    marginLeft: 3,
+    borderRadius: 1.5,
+  },
+  hudDistanceText: {
+    fontSize: 15,
     fontWeight: '800',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    color: '#1E1D25',
+    letterSpacing: 0.2,
   },
-  liveIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    marginRight: 5,
-  },
-  liveIndicatorText: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '600',
-  },
-  topRightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  viewfinderCenterWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  viewfinderBox: {
-    width: Math.min(SCREEN_WIDTH - 64, 300),
-    height: 240,
-    borderRadius: 24,
-    position: 'relative',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  corner: {
+  bottomSheet: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: '#FF6B35',
-  },
-  cornerTL: {
-    top: 0,
     left: 0,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderTopLeftRadius: 18,
-  },
-  cornerTR: {
-    top: 0,
     right: 0,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderTopRightRadius: 18,
-  },
-  cornerBL: {
     bottom: 0,
-    left: 0,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderBottomLeftRadius: 18,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderBottomRightRadius: 18,
-  },
-  laserLine: {
-    position: 'absolute',
-    left: 10,
-    right: 10,
-    height: 3,
-    backgroundColor: '#FF6B35',
-    borderRadius: 2,
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  laserGlow: {
-    position: 'absolute',
-    top: -4,
-    left: 0,
-    right: 0,
-    height: 11,
-    backgroundColor: 'rgba(255, 107, 53, 0.35)',
-    borderRadius: 4,
-  },
-  barcodeWatermark: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aimInstructionText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 16,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  bottomControlDeck: {
-    paddingHorizontal: 16,
-    zIndex: 20,
-  },
-  ocrDeckCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderRadius: 22,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    paddingTop: 22,
+    paddingHorizontal: 22,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  ocrHeaderRow: {
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarWrapper: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: '#F7EFE8',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileMeta: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  profileName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1E1D25',
+    letterSpacing: -0.2,
+  },
+  profileSubtitle: {
+    fontSize: 13,
+    color: '#7E858E',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  callActionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#5DB035',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#5DB035',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  routeSection: {
+    marginBottom: 14,
+    paddingLeft: 4,
+  },
+  routeStopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stopTextCol: {
+    marginLeft: 14,
+  },
+  stopTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E1D25',
+  },
+  stopAddress: {
+    fontSize: 12.5,
+    color: '#7E858E',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  dottedLineWrapper: {
+    height: 20,
+    marginLeft: 20,
+    justifyContent: 'center',
+  },
+  dottedLine: {
+    width: 1,
+    height: '100%',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderStyle: 'dashed',
+  },
+  ocrQuickBar: {
+    marginTop: 6,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  ocrQuickHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  ocrTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF0EA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  ocrTagText: {
-    fontSize: 10,
+  ocrQuickTitle: {
+    fontSize: 12,
     fontWeight: '800',
     color: '#FF6B35',
-    marginLeft: 5,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
-  manualToggleText: {
+  ocrInputToggleText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FF6B35',
+    color: '#5DB035',
   },
   manualInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  manualTextInput: {
+  manualInput: {
     flex: 1,
-    height: 44,
-    backgroundColor: '#F3F4F6',
+    height: 40,
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 14,
+    paddingHorizontal: 12,
+    fontSize: 13,
     color: '#1E1D25',
-    fontWeight: '600',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   manualSubmitBtn: {
-    marginLeft: 10,
-    backgroundColor: '#FF6B35',
-    height: 44,
-    paddingHorizontal: 16,
+    marginLeft: 8,
+    backgroundColor: '#5DB035',
+    paddingHorizontal: 14,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   manualSubmitText: {
     color: '#FFFFFF',
-    fontSize: 13,
     fontWeight: '700',
+    fontSize: 12,
   },
-  chipsSectionTitle: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  demoChipsScroll: {
+  chipsScroll: {
     paddingVertical: 2,
     gap: 8,
   },
-  demoChip: {
+  quickChip: {
     backgroundColor: '#F3F4F6',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingVertical: 7,
+    borderRadius: 10,
     marginRight: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
-  demoChipText: {
+  quickChipText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E1D25',
-  },
-  demoChipCode: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    marginLeft: 6,
+    color: '#374151',
   },
 });
