@@ -79,6 +79,13 @@ const CATEGORIES: CategoryItem[] = [
     bgColor: '#FFF8E7',
     image: require('../../assets/dashboard/cat_food.png'),
   },
+  {
+    id: 'drinks',
+    title: 'Cold Drinks',
+    subtitle: 'Soda & Juices',
+    bgColor: '#EAF4FD',
+    image: require('../../assets/dashboard/cat_drinks.png'),
+  },
 ];
 
 const HEALTHY_DISHES: FoodItem[] = [
