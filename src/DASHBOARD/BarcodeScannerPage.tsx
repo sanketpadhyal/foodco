@@ -338,9 +338,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         <View style={styles.maskRow} pointerEvents="box-none">
           <View style={styles.maskSide} />
 
-          <TouchableOpacity
-            activeOpacity={0.92}
-            onPress={handleScanRandom}
+          <View
             style={styles.viewfinderBox}
           >
             {/* 4 Corner Rounding Masks - Gives a smooth curved cutout */}
@@ -364,7 +362,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             >
               <View style={styles.laserGlow} />
             </Animated.View>
-          </TouchableOpacity>
+          </View>
 
           <View style={styles.maskSide} />
         </View>
