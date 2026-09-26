@@ -106,6 +106,13 @@ const CATEGORIES_ROW_2: CategoryItem[] = [
     bgColor: '#FFF5EC',
     image: require('../../assets/dashboard/cat_biscuits.png'),
   },
+  {
+    id: 'perfume',
+    title: 'Perfume',
+    subtitle: 'Fragrance & Scent',
+    bgColor: '#F0F2F6',
+    image: require('../../assets/dashboard/cat_perfume.png'),
+  },
 ];
 
 const HEALTHY_DISHES: FoodItem[] = [
