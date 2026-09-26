@@ -222,7 +222,7 @@ export default function ProductScanResultPanel({
 
           {/* Modern Health Score Card */}
           <View style={styles.scoreHeroCard}>
-            {/* Header: Tag + Verdict */}
+            {/* Header: Tag */}
             <View style={styles.scoreCardTopRow}>
               <View style={styles.scoreTagRow}>
                 <Image
@@ -231,12 +231,6 @@ export default function ProductScanResultPanel({
                   resizeMode="contain"
                 />
                 <Text style={styles.scoreTagText}>FOODCO HEALTH INDEX</Text>
-              </View>
-              <View style={[styles.verdictBadge, { backgroundColor: `${product.verdictColor}14` }]}>
-                <View style={[styles.verdictDot, { backgroundColor: product.verdictColor }]} />
-                <Text style={[styles.verdictBadgeText, { color: product.verdictColor }]}>
-                  {product.verdict}
-                </Text>
               </View>
             </View>
 
