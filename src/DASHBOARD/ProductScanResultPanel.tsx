@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,26 @@ import {
 } from 'react-native';
 import UniversalPanel from '../components/universalpanel';
 import { ScannedProduct } from './productService';
+
+const CAT_FALLBACKS: Record<string, any> = {
+  drinks: require('../../assets/dashboard/cat_drinks.png'),
+  chocolates: require('../../assets/dashboard/cat_chocolates.png'),
+  biscuits: require('../../assets/dashboard/cat_biscuits.png'),
+  food: require('../../assets/dashboard/cat_food.png'),
+  dairy: require('../../assets/dashboard/dish_yogurt.png'),
+  beauty: require('../../assets/dashboard/cat_beauty.png'),
+  default: require('../../assets/dashboard/banner_card.png'),
+};
+
+function getCategoryFallback(category?: string, name?: string) {
+  const str = `${category || ''} ${name || ''}`.toLowerCase();
+  if (/drink|soda|coke|beverage|cola/i.test(str)) return CAT_FALLBACKS.drinks;
+  if (/chocolate|spread|nutella|snickers|candy|sweet/i.test(str)) return CAT_FALLBACKS.chocolates;
+  if (/biscuit|cookie|oreo|wafer/i.test(str)) return CAT_FALLBACKS.biscuits;
+  if (/noodle|pasta|maggi|chips|lays|snack/i.test(str)) return CAT_FALLBACKS.food;
+  if (/butter|milk|yogurt|dairy|cheese/i.test(str)) return CAT_FALLBACKS.dairy;
+  return CAT_FALLBACKS.default;
+}
 
 export interface ProductScanResultPanelProps {
   visible: boolean;
@@ -33,6 +53,11 @@ export default function ProductScanResultPanel({
 }: ProductScanResultPanelProps) {
   // Skeleton pulse animation
   const pulseAnim = useRef(new Animated.Value(0.35)).current;
+  const [imageLoadError, setImageLoadError] = useState(false);
+
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [product?.barcode, product?.imageUrl]);
 
   useEffect(() => {
     let anim: Animated.CompositeAnimation | null = null;
@@ -152,16 +177,19 @@ export default function ProductScanResultPanel({
           {/* Header Row: Image & Info */}
           <View style={styles.productHeader}>
             <View style={styles.productImageWrapper}>
-              {product.imageUrl ? (
+              {product.imageUrl && !imageLoadError ? (
                 <Image
                   source={{ uri: product.imageUrl }}
                   style={styles.productImage}
                   resizeMode="contain"
+                  onError={() => setImageLoadError(true)}
                 />
               ) : (
-                <View style={styles.productImagePlaceholder}>
-                  <Text style={styles.productPlaceholderEmoji}>🛒</Text>
-                </View>
+                <Image
+                  source={getCategoryFallback(product.category, product.name)}
+                  style={styles.productImage}
+                  resizeMode="contain"
+                />
               )}
             </View>
             <View style={styles.productMeta}>
