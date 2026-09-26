@@ -88,9 +88,21 @@ export default function ProductDetailPage({
   const fatPct = Math.round(((metrics.fat || 0) / totalMacros) * 100);
   const proteinPct = Math.max(0, 100 - carbPct - fatPct);
 
+  const navBarHeight = Math.max(insets.bottom, Platform.OS === 'android' ? 52 : 24);
   const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : insets.top;
   const headerPaddingTop = Math.max(insets.top, statusBarHeight) + 8;
-  const bottomNavPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 64 : 24) + 64;
+  const bottomNavPadding = navBarHeight + 36;
+
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      try {
+        const NavigationBar = require('expo-navigation-bar');
+        NavigationBar.setBackgroundColorAsync?.('#FFFFFF');
+        NavigationBar.setButtonStyleAsync?.('dark');
+        NavigationBar.setBorderColorAsync?.('#EEF0F4');
+      } catch (_) {}
+    }
+  }, [visible]);
 
   return (
     <Modal
@@ -491,12 +503,28 @@ export default function ProductDetailPage({
             )}
           </View>
         </ScrollView>
+
+        {/* Solid White Panel Behind Android System Navigation Buttons */}
+        <View
+          style={[styles.bottomWhitePanel, { height: navBarHeight }]}
+          pointerEvents="none"
+        />
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  bottomWhitePanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#EEF0F4',
+    zIndex: 9999,
+  },
   fullContainer: {
     flex: 1,
     width: '100%',

@@ -163,7 +163,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       } catch (_) {}
       try {
         const NavigationBar = require('expo-navigation-bar');
-        NavigationBar.setStyle?.('dark');
+        NavigationBar.setBackgroundColorAsync?.('#FFFFFF');
+        NavigationBar.setButtonStyleAsync?.('dark');
+        NavigationBar.setBorderColorAsync?.('#EEF0F4');
       } catch (_) {}
     }
   }, []);

@@ -35,6 +35,14 @@ export default function App() {
           setCurrentScreen('dashboard');
         }
       } catch (_) {}
+      if (Platform.OS === 'android') {
+        try {
+          const NavigationBar = require('expo-navigation-bar');
+          NavigationBar.setBackgroundColorAsync?.('#FFFFFF');
+          NavigationBar.setButtonStyleAsync?.('dark');
+          NavigationBar.setBorderColorAsync?.('#EEF0F4');
+        } catch (_) {}
+      }
       setAppReady(true);
       SplashScreen.hideAsync().catch(() => null);
     };

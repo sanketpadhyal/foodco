@@ -501,11 +501,30 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           setResultVisible(true);
         }}
       />
+
+      {/* Solid White Panel Behind Android System Navigation Buttons */}
+      <View
+        style={[
+          styles.bottomNavBackdrop,
+          { height: Math.max(insets.bottom, Platform.OS === 'android' ? 52 : 24) },
+        ]}
+        pointerEvents="none"
+      />
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  bottomNavBackdrop: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#EEF0F4',
+    zIndex: 998,
+  },
   fullContainer: {
     position: 'absolute',
     top: 0,
