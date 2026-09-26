@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   Image,
@@ -41,6 +42,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [profilePanelVisible, setProfilePanelVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>('home');
   const [scannerPanelVisible, setScannerPanelVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -75,6 +77,20 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           <Text style={styles.subtitleText}>
             What would you like to <Text style={styles.subtitleHighlight}>scan</Text>?
           </Text>
+        </View>
+
+        {/* Centered Search Bar */}
+        <View style={styles.searchBarWrapper}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for healthy food..."
+            placeholderTextColor="#B5B9BC"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            accessibilityRole="search"
+            accessibilityLabel="Search for healthy food"
+          />
         </View>
       </ScrollView>
 
@@ -190,6 +206,24 @@ const styles = StyleSheet.create({
   },
   subtitleHighlight: {
     color: theme.blue,
+  },
+  searchBarWrapper: {
+    marginHorizontal: 20,
+    marginTop: 24,
+    height: 54,
+    backgroundColor: '#F7F8FA',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  searchInput: {
+    width: '100%',
+    height: '100%',
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '500',
+    color: theme.textPrimary,
   },
   profilePanelCard: {
     flexDirection: 'row',
