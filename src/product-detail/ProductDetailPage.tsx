@@ -447,6 +447,7 @@ export default function ProductDetailPage({
       transparent={false}
       onRequestClose={onClose}
       statusBarTranslucent={true}
+      hardwareAccelerated={true}
     >
       <View style={styles.fullContainer}>
         <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
@@ -480,10 +481,12 @@ export default function ProductDetailPage({
         <ScrollView
           style={styles.scrollArea}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavPadding }]}
-          showsVerticalScrollIndicator={true}
-          bounces={true}
-          overScrollMode="always"
-          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
+          scrollEventThrottle={16}
+          decelerationRate="normal"
+          removeClippedSubviews={Platform.OS === 'android'}
           keyboardShouldPersistTaps="handled"
         >
           {/* Product Image */}
@@ -493,12 +496,13 @@ export default function ProductDetailPage({
                 source={{ uri: product.imageUrl }}
                 style={styles.heroImage}
                 resizeMode="contain"
+                fadeDuration={0}
               />
             </View>
           ) : null}
 
           {/* Product Identity */}
-          <View style={styles.identityCard}>
+          <View style={styles.identityCard} renderToHardwareTextureAndroid={true}>
             <Text style={styles.productName}>{product.name}</Text>
             <Text style={styles.productBrandCategory}>
               {product.brand} • <Text style={styles.productCategory}>{product.category}</Text>
@@ -511,7 +515,7 @@ export default function ProductDetailPage({
           </View>
 
           {/* Health Score Main Card */}
-          <View style={styles.scoreCard}>
+          <View style={styles.scoreCard} renderToHardwareTextureAndroid={true}>
             <View style={styles.scoreTopRow}>
               <View style={styles.logoRow}>
                 <Image

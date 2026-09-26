@@ -211,27 +211,8 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         setIsCameraMounted(true);
       }, 300);
 
-      const laser = Animated.loop(
-        Animated.sequence([
-          Animated.timing(laserAnim, {
-            toValue: 1,
-            duration: 1800,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(laserAnim, {
-            toValue: 0,
-            duration: 1800,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      laser.start();
-
       return () => {
         clearTimeout(mountTimer);
-        laser.stop();
       };
     } else {
       setIsCameraMounted(false);
@@ -250,6 +231,31 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       ]).start();
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (visible && !resultVisible && !productDetailVisible) {
+      const laser = Animated.loop(
+        Animated.sequence([
+          Animated.timing(laserAnim, {
+            toValue: 1,
+            duration: 1800,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(laserAnim, {
+            toValue: 0,
+            duration: 1800,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      laser.start();
+      return () => laser.stop();
+    } else {
+      laserAnim.stopAnimation();
+    }
+  }, [visible, resultVisible, productDetailVisible]);
 
   const handleClose = () => {
     setIsCameraMounted(false);
