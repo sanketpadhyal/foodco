@@ -59,6 +59,58 @@ export function isBeautyCategory(category: string, name: string): boolean {
 }
 
 const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
+  '0051111407592': {
+    name: 'Birthday Cake Protein Oats',
+    brand: 'Freaking Protein Oats',
+    category: 'Protein bars & Oats',
+    imageUrl: 'https://images.openfoodfacts.org/images/products/005/111/140/7592/front_en.10.400.jpg',
+    productType: 'food',
+    nutriScore: 'B',
+    novaGroup: 4,
+    aiHealthRating: 83,
+    verdict: 'Excellent Choice',
+    verdictColor: '#10B981',
+    metrics: {
+      calories: 364,
+      carbs: 51.9,
+      sugars: 7.8,
+      fat: 7.8,
+      saturatedFat: 1.9,
+      protein: 28.6,
+      fiber: 26.0,
+      salt: 0.65,
+    },
+    additives: [],
+    hasPalmOil: false,
+    isUltraProcessed: true,
+    ingredientsSummary: 'Whole grain rolled oats, plant protein blend (pea protein, fava bean protein isolate, brown rice protein concentrate), cake flavoring powder, dates, monk fruit extract, chia seeds, flax seeds.',
+  },
+  '051111407592': {
+    name: 'Birthday Cake Protein Oats',
+    brand: 'Freaking Protein Oats',
+    category: 'Protein bars & Oats',
+    imageUrl: 'https://images.openfoodfacts.org/images/products/005/111/140/7592/front_en.10.400.jpg',
+    productType: 'food',
+    nutriScore: 'B',
+    novaGroup: 4,
+    aiHealthRating: 83,
+    verdict: 'Excellent Choice',
+    verdictColor: '#10B981',
+    metrics: {
+      calories: 364,
+      carbs: 51.9,
+      sugars: 7.8,
+      fat: 7.8,
+      saturatedFat: 1.9,
+      protein: 28.6,
+      fiber: 26.0,
+      salt: 0.65,
+    },
+    additives: [],
+    hasPalmOil: false,
+    isUltraProcessed: true,
+    ingredientsSummary: 'Whole grain rolled oats, plant protein blend (pea protein, fava bean protein isolate, brown rice protein concentrate), cake flavoring powder, dates, monk fruit extract, chia seeds, flax seeds.',
+  },
   '3017620422003': {
     name: 'Nutella Hazelnut Spread',
     brand: 'Ferrero',
@@ -604,11 +656,21 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
       if (backendJson.success && backendJson.product) {
         const prod = backendJson.product;
         const isBeauty = prod.productType === 'beauty' || isBeautyCategory(prod.category || '', prod.product_name || prod.name || '');
-        const grade = (prod.nutriscore_grade || prod.nutriScore || 'c').toString().toUpperCase() as ScannedProduct['nutriScore'];
-        const nutriGrade = ['A', 'B', 'C', 'D', 'E'].includes(grade) ? grade : 'C';
+        const validNutriScores = ['A', 'B', 'C', 'D', 'E'];
+        const scoreCandidate = (prod.nutriScore || prod.nutriscore_grade || 'C').toString().toUpperCase();
+        const safeNutriScore: ScannedProduct['nutriScore'] = validNutriScores.includes(scoreCandidate)
+          ? (scoreCandidate as ScannedProduct['nutriScore'])
+          : 'C';
         const nova = typeof prod.nova_group === 'number' ? prod.nova_group : (isBeauty ? 1 : 3);
-        const sugars = Number(prod.sugars ?? prod.metrics?.sugars ?? 0);
-        const satFat = Number(prod.saturatedFat ?? prod.metrics?.saturatedFat ?? 0);
+        const n = prod.nutrition_per_100g || {};
+        const calories = Math.round(Number(prod.metrics?.calories ?? prod.calories ?? n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0));
+        const carbs = Number((Number(prod.metrics?.carbs ?? prod.carbs ?? n.carbohydrates_100g ?? n.carbohydrates ?? 0)).toFixed(1));
+        const sugars = Number((Number(prod.metrics?.sugars ?? prod.sugars ?? n.sugars_100g ?? 0)).toFixed(1));
+        const fat = Number((Number(prod.metrics?.fat ?? prod.fat ?? n.fat_100g ?? 0)).toFixed(1));
+        const saturatedFat = Number((Number(prod.metrics?.saturatedFat ?? prod.saturatedFat ?? n['saturated-fat_100g'] ?? 0)).toFixed(1));
+        const protein = Number((Number(prod.metrics?.protein ?? prod.protein ?? n.proteins_100g ?? 0)).toFixed(1));
+        const fiber = Number((Number(prod.metrics?.fiber ?? prod.fiber ?? n.fiber_100g ?? 0)).toFixed(1));
+        const salt = Number((Number(prod.metrics?.salt ?? prod.salt ?? n.salt_100g ?? 0)).toFixed(2));
         const hasPalm = Boolean(prod.hasPalmOil || (prod.ingredients && /palm/i.test(prod.ingredients)));
         const additives = Array.isArray(prod.additives) ? prod.additives : [];
 
@@ -617,8 +679,8 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
         let backendVerdictColor = prod.verdictColor || '#58B84F';
         let formulation = prod.formulationProfile || null;
 
-        if (isBeauty && !formulation && prod.ingredientsSummary) {
-          const beautyAnalysis = parseBeautyIngredients(prod.ingredientsSummary);
+        if (isBeauty && !formulation && (prod.ingredientsSummary || prod.ingredients_text)) {
+          const beautyAnalysis = parseBeautyIngredients(prod.ingredientsSummary || prod.ingredients_text);
           formulation = beautyAnalysis.formulationProfile;
           backendAiRating = beautyAnalysis.score;
           backendVerdict = beautyAnalysis.verdict;
@@ -632,21 +694,21 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           category: prod.category || (isBeauty ? 'Beauty & Care' : 'Grocery'),
           imageUrl: prod.image_url || prod.imageUrl,
           productType: isBeauty ? 'beauty' : 'food',
-          nutriScore: (prod.nutriScore || nutriGrade) as ScannedProduct['nutriScore'],
+          nutriScore: safeNutriScore,
           novaGroup: prod.novaGroup ?? nova,
           aiHealthRating: backendAiRating,
           verdict: backendVerdict,
           verdictColor: backendVerdictColor,
           insight: prod.insight,
           metrics: {
-            calories: Number(prod.metrics?.calories ?? prod.calories ?? 0),
-            carbs: Number(prod.metrics?.carbs ?? prod.carbs ?? 0),
-            sugars: Number(prod.metrics?.sugars ?? sugars),
-            fat: Number(prod.metrics?.fat ?? prod.fat ?? 0),
-            saturatedFat: Number(prod.metrics?.saturatedFat ?? satFat),
-            protein: Number(prod.metrics?.protein ?? prod.protein ?? 0),
-            fiber: Number(prod.metrics?.fiber ?? prod.fiber ?? 0),
-            salt: Number(prod.metrics?.salt ?? prod.salt ?? 0),
+            calories,
+            carbs,
+            sugars,
+            fat,
+            saturatedFat,
+            protein,
+            fiber,
+            salt,
           },
           additives: Array.isArray(prod.additives) ? prod.additives : additives,
           hasPalmOil: prod.hasPalmOil !== undefined ? Boolean(prod.hasPalmOil) : hasPalm,
@@ -863,3 +925,27 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
     ingredientsSummary: 'Grains, plant oils, mineral salts, natural flavorings and emulsifiers.',
   };
 }
+
+export async function fetchRandomProductFromDatabase(): Promise<string | null> {
+  try {
+    const jwt = await getStoredJwtToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (jwt) {
+      headers['Authorization'] = `Bearer ${jwt}`;
+    }
+    const res = await fetch(`${BACKEND_BASE}/items/random?limit=6`, {
+      method: 'GET',
+      headers,
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.items) && json.items.length > 0) {
+        const randomIndex = Math.floor(Math.random() * json.items.length);
+        const item = json.items[randomIndex];
+        return item.id || item.barcode || null;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+

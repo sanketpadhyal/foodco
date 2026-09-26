@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import ProductScanResultPanel from './ProductScanResultPanel';
-import { fetchProductByBarcode, ScannedProduct } from './productService';
+import { fetchProductByBarcode, fetchRandomProductFromDatabase, ScannedProduct } from './productService';
 import { ProductDetailPage } from '../product-detail';
 
 const CORNER_MASK_TL = require('../../assets/dashboard/masks/corner_tl.png');
@@ -310,27 +310,31 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   };
 
   const DEMO_BARCODES = [
-    '3017620422003', // Nutella Hazelnut Spread
-    '5449000000996', // Coca-Cola Original
-    '7622210449283', // Oreo Sandwich Cookies
-    '8901491101838', // Lay's Classic Salted Chips
-    '8901030383701', // Maggi 2-Minute Masala Noodles
-    '5000159461122', // Snickers Chocolate Bar
-    '8901725181222', // Amul Pure Butter
-    '3033490004523', // Activia Probiotic Natural Yogurt
-    '4005808811120', // Nivea Soft Light Moisturiser (Beauty)
-    '8901030704681', // Dove Deeply Nourishing Body Wash (Beauty)
-    '8901138834419', // Himalaya Purifying Neem Face Wash (Beauty)
-    '070501110003',  // Neutrogena Hydro Boost Water Gel (Beauty)
+    '0051111407592',
+    '3017620422003',
+    '5449000000996',
+    '7622210449283',
+    '8901491101838',
+    '8901030383701',
+    '5000159461122',
+    '8901725181222',
+    '3033490004523',
+    '4005808811120',
+    '8901030704681',
+    '8901138834419',
+    '070501110003',
   ];
 
   const lastRandomCodeRef = useRef<string>('');
 
-  const handleScanRandom = () => {
+  const handleScanRandom = async () => {
     isCooldownRef.current = false;
-    const candidates = DEMO_BARCODES.filter(code => code !== lastRandomCodeRef.current);
-    const randomIndex = Math.floor(Math.random() * candidates.length);
-    const chosenBarcode = candidates[randomIndex] || DEMO_BARCODES[0];
+    let chosenBarcode = await fetchRandomProductFromDatabase();
+    if (!chosenBarcode || chosenBarcode === lastRandomCodeRef.current) {
+      const candidates = DEMO_BARCODES.filter(code => code !== lastRandomCodeRef.current);
+      const randomIndex = Math.floor(Math.random() * candidates.length);
+      chosenBarcode = candidates[randomIndex] || DEMO_BARCODES[0];
+    }
     lastRandomCodeRef.current = chosenBarcode;
     processBarcode(chosenBarcode);
   };
