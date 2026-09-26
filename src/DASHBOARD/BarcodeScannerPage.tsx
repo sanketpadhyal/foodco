@@ -414,7 +414,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         loading={fetchingProduct}
         product={productData}
         errorMessage={scanError}
-        onClose={handleClose}
+        onClose={handleScanAnother}
         onScanAnother={handleScanAnother}
       />
     </Animated.View>

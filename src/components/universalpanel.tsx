@@ -192,7 +192,7 @@ export default function UniversalPanel({
   const translateY = Animated.add(slideAnim, panY);
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+    <View style={[StyleSheet.absoluteFill, styles.rootModalWrapper]} pointerEvents="box-none">
       <Animated.View
         style={[
           styles.backdrop,
@@ -297,6 +297,10 @@ export default function UniversalPanel({
 }
 
 const styles = StyleSheet.create({
+  rootModalWrapper: {
+    zIndex: 1000,
+    elevation: 50,
+  },
   backdrop: {
     position: 'absolute',
     top: 0,
