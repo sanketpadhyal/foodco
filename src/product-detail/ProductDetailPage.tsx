@@ -10,10 +10,17 @@ import {
   Platform,
   Share,
   StatusBar as RNStatusBar,
+  Animated,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScannedProduct } from '../DASHBOARD/productService';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export interface ProductDetailPageProps {
   visible: boolean;
@@ -290,6 +297,58 @@ export default function ProductDetailPage({
 }: ProductDetailPageProps) {
   const insets = useSafeAreaInsets();
   const [ingredientsView, setIngredientsView] = React.useState<'list' | 'text'>('list');
+
+  const toggleAnim = React.useRef(new Animated.Value(0)).current;
+  const contentFadeAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handleSwitchView = (mode: 'list' | 'text') => {
+    if (mode === ingredientsView) return;
+
+    LayoutAnimation.configureNext({
+      duration: 320,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.spring,
+        springDamping: 0.85,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+
+    Animated.parallel([
+      Animated.spring(toggleAnim, {
+        toValue: mode === 'list' ? 0 : 1,
+        damping: 18,
+        stiffness: 240,
+        mass: 0.8,
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(contentFadeAnim, {
+          toValue: 0.15,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentFadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    setIngredientsView(mode);
+  };
+
+  const togglePillTranslateX = toggleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 31],
+  });
 
   const parsedIngredients = React.useMemo(
     () => parseIngredients(product?.ingredientsSummary),
@@ -706,21 +765,31 @@ export default function ProductDetailPage({
 
               {parsedIngredients.length > 0 ? (
                 <View style={styles.viewToggleWrap}>
+                  {/* Sliding Active Dark Pill */}
+                  <Animated.View
+                    style={[
+                      styles.slidingActivePill,
+                      {
+                        transform: [{ translateX: togglePillTranslateX }],
+                      },
+                    ]}
+                  />
+
                   <TouchableOpacity
-                    style={[styles.viewToggleTab, ingredientsView === 'list' && styles.viewToggleTabActive]}
-                    onPress={() => setIngredientsView('list')}
+                    style={styles.viewToggleTab}
+                    onPress={() => handleSwitchView('list')}
                     activeOpacity={0.8}
                     accessibilityLabel="List View"
                   >
                     <Ionicons
-                      name="list-outline"
+                      name="list"
                       size={15}
                       color={ingredientsView === 'list' ? '#FFFFFF' : '#6B7280'}
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.viewToggleTab, ingredientsView === 'text' && styles.viewToggleTabActive]}
-                    onPress={() => setIngredientsView('text')}
+                    style={styles.viewToggleTab}
+                    onPress={() => handleSwitchView('text')}
                     activeOpacity={0.8}
                     accessibilityLabel="Full Label Text"
                   >
@@ -754,92 +823,94 @@ export default function ProductDetailPage({
               </View>
             ) : null}
 
-            {/* Ingredients Display */}
-            {parsedIngredients.length > 0 ? (
-              ingredientsView === 'list' ? (
-                <View style={styles.ingredientsListCard}>
-                  {parsedIngredients.map((item, idx) => (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.ingredientItemRow,
-                        idx < parsedIngredients.length - 1 && styles.ingredientItemDivider,
-                      ]}
-                    >
+            {/* Ingredients Display with Smooth Transition */}
+            <Animated.View style={{ opacity: contentFadeAnim }}>
+              {parsedIngredients.length > 0 ? (
+                ingredientsView === 'list' ? (
+                  <View style={styles.ingredientsListCard}>
+                    {parsedIngredients.map((item, idx) => (
                       <View
+                        key={idx}
                         style={[
-                          styles.ingredientRankCircle,
-                          item.isPalm
-                            ? styles.rankCirclePalm
-                            : item.isSugar && idx === 0
-                            ? styles.rankCircleSugar
-                            : null,
+                          styles.ingredientItemRow,
+                          idx < parsedIngredients.length - 1 && styles.ingredientItemDivider,
                         ]}
                       >
-                        <Text
+                        <View
                           style={[
-                            styles.ingredientRankText,
+                            styles.ingredientRankCircle,
                             item.isPalm
-                              ? styles.rankTextPalm
+                              ? styles.rankCirclePalm
                               : item.isSugar && idx === 0
-                              ? styles.rankTextSugar
+                              ? styles.rankCircleSugar
                               : null,
                           ]}
                         >
-                          {String(idx + 1).padStart(2, '0')}
-                        </Text>
-                      </View>
+                          <Text
+                            style={[
+                              styles.ingredientRankText,
+                              item.isPalm
+                                ? styles.rankTextPalm
+                                : item.isSugar && idx === 0
+                                ? styles.rankTextSugar
+                                : null,
+                            ]}
+                          >
+                            {String(idx + 1).padStart(2, '0')}
+                          </Text>
+                        </View>
 
-                      <View style={styles.ingredientTextInfo}>
-                        <Text style={styles.ingredientTitleText}>
-                          {item.cleanName}
-                        </Text>
-                        {(item.isPalm || (item.isSugar && idx === 0) || item.isAllergen) ? (
-                          <View style={styles.ingredientTagRow}>
-                            {item.isPalm ? (
-                              <View style={styles.pillPalm}>
-                                <Text style={styles.pillPalmText}>Refined Fat</Text>
-                              </View>
-                            ) : null}
-                            {item.isSugar && idx === 0 ? (
-                              <View style={styles.pillSugar}>
-                                <Text style={styles.pillSugarText}>Primary Base</Text>
-                              </View>
-                            ) : null}
-                            {item.isAllergen ? (
-                              <View style={styles.pillAllergen}>
-                                <Text style={styles.pillAllergenText}>
-                                  Allergen • {item.allergenLabel}
-                                </Text>
-                              </View>
-                            ) : null}
+                        <View style={styles.ingredientTextInfo}>
+                          <Text style={styles.ingredientTitleText}>
+                            {item.cleanName}
+                          </Text>
+                          {(item.isPalm || (item.isSugar && idx === 0) || item.isAllergen) ? (
+                            <View style={styles.ingredientTagRow}>
+                              {item.isPalm ? (
+                                <View style={styles.pillPalm}>
+                                  <Text style={styles.pillPalmText}>Refined Fat</Text>
+                                </View>
+                              ) : null}
+                              {item.isSugar && idx === 0 ? (
+                                <View style={styles.pillSugar}>
+                                  <Text style={styles.pillSugarText}>Primary Base</Text>
+                                </View>
+                              ) : null}
+                              {item.isAllergen ? (
+                                <View style={styles.pillAllergen}>
+                                  <Text style={styles.pillAllergenText}>
+                                    Allergen • {item.allergenLabel}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          ) : null}
+                        </View>
+
+                        {item.percentage ? (
+                          <View style={styles.percentageBadge}>
+                            <Text style={styles.percentageBadgeText}>{item.percentage}</Text>
                           </View>
                         ) : null}
                       </View>
-
-                      {item.percentage ? (
-                        <View style={styles.percentageBadge}>
-                          <Text style={styles.percentageBadgeText}>{item.percentage}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  ))}
-                </View>
-              ) : (
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.labelTypographyCard}>
+                    <Text style={styles.labelTextHeadline}>Packaging Statement:</Text>
+                    <Text style={styles.labelBodyText}>{product.ingredientsSummary}</Text>
+                  </View>
+                )
+              ) : product.ingredientsSummary ? (
                 <View style={styles.labelTypographyCard}>
-                  <Text style={styles.labelTextHeadline}>Packaging Statement:</Text>
                   <Text style={styles.labelBodyText}>{product.ingredientsSummary}</Text>
                 </View>
-              )
-            ) : product.ingredientsSummary ? (
-              <View style={styles.labelTypographyCard}>
-                <Text style={styles.labelBodyText}>{product.ingredientsSummary}</Text>
-              </View>
-            ) : (
-              <Text style={styles.ingredientsPlaceholderText}>
-                Ingredients details provided on packaging.
-              </Text>
-            )}
+              ) : (
+                <Text style={styles.ingredientsPlaceholderText}>
+                  Ingredients details provided on packaging.
+                </Text>
+              )}
+            </Animated.View>
 
             {/* Detected Additives Section */}
             {Array.isArray(product.additives) && product.additives.length > 0 ? (
@@ -1319,17 +1390,29 @@ const styles = StyleSheet.create({
   },
   viewToggleWrap: {
     flexDirection: 'row',
+    position: 'relative',
     backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    padding: 2,
+    borderRadius: 12,
+    padding: 3,
+    width: 68,
+    height: 34,
+    alignItems: 'center',
+  },
+  slidingActivePill: {
+    position: 'absolute',
+    left: 3,
+    top: 3,
+    width: 31,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: '#1E1D25',
   },
   viewToggleTab: {
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  viewToggleTabActive: {
-    backgroundColor: '#1E1D25',
+    width: 31,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   palmWarningCard: {
     flexDirection: 'row',
