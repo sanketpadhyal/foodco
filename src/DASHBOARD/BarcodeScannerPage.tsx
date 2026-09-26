@@ -118,18 +118,12 @@ function RealCameraComponent({
 }
 
 function CameraFallbackPlaceholder() {
-  return (
-    <View style={styles.darkCameraBackdrop}>
-      <Ionicons name="camera-outline" size={48} color="rgba(255, 255, 255, 0.4)" />
-    </View>
-  );
+  return <View style={styles.lightCameraBackdrop} />;
 }
 
 export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerPageProps) {
   const insets = useSafeAreaInsets();
   const [torch, setTorch] = useState<boolean>(false);
-  const [manualCode, setManualCode] = useState<string>('');
-  const [showManualInput, setShowManualInput] = useState<boolean>(false);
 
   // Result panel states
   const [resultVisible, setResultVisible] = useState<boolean>(false);
@@ -262,9 +256,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
   if (!visible) return null;
 
-  // Optimized bottom padding for Android 3-button navigation bar (triangle, circle, square)
-  const bottomBarPadding = Math.max(insets.bottom, 48) + 20;
-
   return (
     <Animated.View
       style={[
@@ -275,7 +266,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         },
       ]}
     >
-      {/* 100% Real Camera Fullscreen View (No fake image behind) */}
+      {/* 100% Real Camera Fullscreen View */}
       <View style={StyleSheet.absoluteFill}>
         <CameraErrorBoundary fallback={<CameraFallbackPlaceholder />}>
           <RealCameraComponent
@@ -285,9 +276,9 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </CameraErrorBoundary>
       </View>
 
-      {/* Top Floating Controls */}
+      {/* Top Floating Controls - Clean Light Theme */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        {/* Back Button: White Rounded Square with < Chevron */}
+        {/* Back Button: Clean White Rounded Square with < Chevron */}
         <TouchableOpacity
           style={styles.squareControlBtn}
           onPress={handleClose}
@@ -297,7 +288,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <Ionicons name="chevron-back" size={22} color="#1E1D25" />
         </TouchableOpacity>
 
-        {/* Clean Center Scanner Title (No extra subhead) */}
+        {/* Clean Center Scanner Title */}
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitleText}>Scan Barcode</Text>
         </View>
@@ -317,9 +308,13 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </TouchableOpacity>
       </View>
 
-      {/* PROPERLY CENTERED Viewfinder Target Frame (Exact Geometric Center of Screen) */}
+      {/* PROPERLY CENTERED Viewfinder Target Frame (Clean: NO icons inside) */}
       <View style={styles.centeredViewfinderWrapper} pointerEvents="box-none">
-        <View style={styles.viewfinderBox}>
+        <TouchableOpacity
+          activeOpacity={0.92}
+          onPress={() => processBarcode('3017620422003')}
+          style={styles.viewfinderBox}
+        >
           {/* 4 Clean Green Corner Brackets */}
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
@@ -335,77 +330,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           >
             <View style={styles.laserGlow} />
           </Animated.View>
-
-          {/* Clean Barcode Watermark in Center */}
-          <View style={styles.barcodeWatermark}>
-            <Ionicons name="barcode-outline" size={64} color="rgba(255, 255, 255, 0.4)" />
-          </View>
-        </View>
-      </View>
-
-      {/* Bottom Action Controls - Optimized for Android Navigation Buttons */}
-      <View
-        style={[styles.floatingBottomControls, { paddingBottom: bottomBarPadding }]}
-        pointerEvents="box-none"
-      >
-        {/* Manual Barcode Input Card if toggled */}
-        {showManualInput ? (
-          <View style={styles.floatingManualInputWrap}>
-            <TextInput
-              style={styles.floatingManualInput}
-              placeholder="Enter barcode number (e.g. 3017620422003)..."
-              placeholderTextColor="#9CA3AF"
-              keyboardType="numeric"
-              value={manualCode}
-              onChangeText={setManualCode}
-              autoFocus
-              onSubmitEditing={() => processBarcode(manualCode)}
-            />
-            <TouchableOpacity
-              style={styles.floatingManualSubmitBtn}
-              onPress={() => processBarcode(manualCode)}
-            >
-              <Text style={styles.floatingManualSubmitText}>Scan</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
-        {/* Shutter Button Row */}
-        <View style={styles.shutterActionRow} pointerEvents="box-none">
-          {/* Keypad Digits Toggle Button */}
-          <TouchableOpacity
-            style={[styles.glassCircleBtn, showManualInput && styles.glassCircleActive]}
-            onPress={() => setShowManualInput(prev => !prev)}
-            activeOpacity={0.8}
-            accessibilityLabel="Enter Digits"
-          >
-            <Ionicons
-              name="keypad"
-              size={22}
-              color={showManualInput ? '#5DB035' : '#1E1D25'}
-            />
-          </TouchableOpacity>
-
-          {/* Center Green Barcode Shutter Button */}
-          <TouchableOpacity
-            style={styles.centerShutterButton}
-            activeOpacity={0.85}
-            onPress={() => processBarcode('3017620422003')}
-            accessibilityLabel="Scan Product"
-          >
-            <Ionicons name="barcode-outline" size={32} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          {/* Info / Hint Button */}
-          <TouchableOpacity
-            style={styles.glassCircleBtn}
-            onPress={() => processBarcode('5449000000996')}
-            activeOpacity={0.8}
-            accessibilityLabel="Sample Scan"
-          >
-            <Ionicons name="sparkles" size={22} color="#5DB035" />
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Universal Panel Product Scan Result with Skeleton & Proper Graph */}
@@ -428,18 +353,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#000000',
+    backgroundColor: '#F8F9FA',
     zIndex: 999,
   },
-  darkCameraBackdrop: {
+  lightCameraBackdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#0A0C0E',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F8F9FA',
   },
   permissionContainer: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#111418',
+    backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
@@ -447,14 +370,14 @@ const styles = StyleSheet.create({
   permissionTitle: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#1E1D25',
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   permissionSub: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -485,14 +408,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   torchActiveBtn: {
     backgroundColor: '#F0FDF4',
@@ -501,15 +426,17 @@ const styles = StyleSheet.create({
   },
   headerTitleWrap: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   headerTitleText: {
     fontSize: 15,
@@ -529,9 +456,14 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(93, 176, 53, 0.45)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   corner: {
     position: 'absolute',
@@ -576,9 +508,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     shadowColor: '#5DB035',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.95,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 6,
   },
   laserGlow: {
     position: 'absolute',
@@ -586,96 +518,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 11,
-    backgroundColor: 'rgba(93, 176, 53, 0.4)',
+    backgroundColor: 'rgba(93, 176, 53, 0.3)',
     borderRadius: 4,
   },
-  barcodeWatermark: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  floatingBottomControls: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    zIndex: 25,
-  },
-  shutterActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    paddingHorizontal: 40,
-    gap: 32,
-  },
-  glassCircleBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  glassCircleActive: {
-    backgroundColor: '#F0FDF4',
-    borderWidth: 2,
-    borderColor: '#5DB035',
-  },
-  centerShutterButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#5DB035',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#5DB035',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 9,
-    borderWidth: 4,
-    borderColor: '#FFFFFF',
-  },
-  floatingManualInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 24,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  floatingManualInput: {
-    flex: 1,
-    height: 44,
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: '#1E1D25',
-    fontWeight: '600',
-  },
-  floatingManualSubmitBtn: {
-    backgroundColor: '#5DB035',
-    paddingHorizontal: 18,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  floatingManualSubmitText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
 });
+
