@@ -277,13 +277,13 @@ const styles = StyleSheet.create({
     height: 60,
   },
   aiIconSlot: {
-    width: 32,
-    height: 40,
+    width: 30,
+    height: 34,
     justifyContent: 'center',
     alignItems: 'center',
   },
   fodaiImage: {
-    width: 25,
-    height: 38,
+    width: 20,
+    height: 31,
   },
 });
