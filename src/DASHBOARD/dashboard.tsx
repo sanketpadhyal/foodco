@@ -41,6 +41,18 @@ const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: '
 const sansFont = Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' });
 const boldSansFont = Platform.select({ ios: 'System', android: 'sans-serif-bold', default: 'sans-serif' });
 
+let NativeBlurView: any = null;
+try {
+  const { UIManager } = require('react-native');
+  const hasBlur = !!(
+    UIManager.getViewManagerConfig?.('ExpoBlurView') ||
+    UIManager.getViewManagerConfig?.('ViewManagerAdapter_ExpoBlur_ExpoBlurView')
+  );
+  if (hasBlur) {
+    NativeBlurView = require('expo-blur').BlurView;
+  }
+} catch (_) {}
+
 interface CategoryItem {
   id: string;
   title: string;
@@ -212,6 +224,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
         {/* Sticky Search Bar Container */}
         <View style={styles.stickySearchContainer}>
+          {NativeBlurView && (
+            <NativeBlurView
+              intensity={70}
+              tint="light"
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           <View style={styles.searchBarWrapper}>
             <TextInput
               style={styles.searchInput}
@@ -463,19 +482,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   stickySearchContainer: {
-    backgroundColor: theme.white,
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
     paddingTop: 8,
     paddingBottom: 10,
     zIndex: 10,
+    overflow: 'hidden',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   searchBarWrapper: {
     marginHorizontal: 20,
     height: 54,
-    backgroundColor: '#F7F8FA',
+    backgroundColor: 'rgba(247, 248, 250, 0.85)',
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    shadowColor: '#1E222B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
   },
   searchInput: {
     width: '100%',
