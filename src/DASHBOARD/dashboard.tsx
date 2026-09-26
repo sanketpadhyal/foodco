@@ -27,14 +27,13 @@ const theme = {
   primary: '#FF6B35',
   primaryDark: '#E8502A',
   blue: '#1A73E8',
+  green: '#58B84F',
   bg: '#FFFFFF',
   white: '#FFFFFF',
-  textPrimary: '#0D0E11',
+  textPrimary: '#1E1D25',
   textSecondary: '#7F8489',
   border: '#E5E7EB',
 };
-
-const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 export default function Dashboard({ user, onLogout }: DashboardProps) {
   const insets = useSafeAreaInsets();
@@ -168,23 +167,26 @@ const styles = StyleSheet.create({
     backgroundColor: theme.white,
   },
   greetingContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.white,
   },
   greetingText: {
-    fontSize: 16,
-    color: theme.textSecondary,
-    marginBottom: 4,
-    fontWeight: '500',
+    fontSize: 20,
+    color: theme.green,
+    marginBottom: 6,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   subtitleText: {
     fontSize: 22,
-    fontFamily: serifFont,
     color: theme.textPrimary,
     fontWeight: '700',
-    lineHeight: 28,
+    lineHeight: 30,
+    textAlign: 'center',
   },
   subtitleHighlight: {
     color: theme.blue,
