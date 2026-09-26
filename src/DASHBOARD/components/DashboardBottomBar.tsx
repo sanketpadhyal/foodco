@@ -155,12 +155,12 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           accessibilityRole="button"
           accessibilityLabel="Fod AI Assistant"
         >
-          <View style={styles.iconSlot}>
+          <View style={styles.aiIconSlot}>
             <Image
               source={fodaiSource}
               style={[
                 styles.fodaiImage,
-                { opacity: activeTab === 'ai' || activeTab === 'cart' ? 1 : 0.55 },
+                { opacity: activeTab === 'ai' || activeTab === 'cart' ? 1 : 0.72 },
               ]}
               resizeMode="contain"
             />
@@ -276,8 +276,14 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
   },
+  aiIconSlot: {
+    width: 32,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   fodaiImage: {
-    width: 28,
-    height: 28,
+    width: 25,
+    height: 38,
   },
 });
