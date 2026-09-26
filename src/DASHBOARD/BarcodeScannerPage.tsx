@@ -150,16 +150,19 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
   useEffect(() => {
     if (visible) {
+      slideAnim.setValue(SCREEN_HEIGHT);
+      fadeAnim.setValue(0);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 220,
+          duration: 200,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.spring(slideAnim, {
+        Animated.timing(slideAnim, {
           toValue: 0,
-          friction: 9,
-          tension: 38,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
