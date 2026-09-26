@@ -188,8 +188,8 @@ const styles = StyleSheet.create({
   },
   greetingContainer: {
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 14,
+    paddingBottom: 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.white,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   searchBarWrapper: {
     marginHorizontal: 20,
-    marginTop: 24,
+    marginTop: 12,
     height: 54,
     backgroundColor: '#F7F8FA',
     borderRadius: 22,
