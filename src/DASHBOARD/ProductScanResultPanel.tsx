@@ -8,9 +8,13 @@ import {
   Easing,
   ScrollView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import UniversalPanel from '../components/universalpanel';
 import { ScannedProduct } from './productService';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const MAX_SCROLL_HEIGHT = Math.min(SCREEN_HEIGHT * 0.58, 480);
 
 const CAT_FALLBACKS: Record<string, any> = {
   drinks: require('../../assets/dashboard/cat_drinks.png'),
@@ -104,7 +108,7 @@ export default function ProductScanResultPanel({
   return (
     <UniversalPanel
       visible={visible}
-      title={loading ? 'Analyzing Product...' : product?.name || 'Scanned Product'}
+      title={loading ? 'Analyzing Product...' : 'Product Nutritional Insight'}
       dismissOnBackdropPress={!loading}
       onClose={onClose}
       actions={
@@ -509,10 +513,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   resultScroll: {
-    maxHeight: 460,
+    maxHeight: MAX_SCROLL_HEIGHT,
   },
   resultContent: {
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
   productHeader: {
     flexDirection: 'row',
@@ -705,11 +709,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   metricLabelCol: {
-    width: 82,
+    width: 115,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingRight: 8,
+    paddingRight: 10,
   },
   metricName: {
     fontSize: 12,
@@ -717,9 +721,10 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   metricValue: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#1E1D25',
+    marginLeft: 4,
   },
   barTrack: {
     flex: 1,
