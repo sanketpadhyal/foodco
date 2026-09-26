@@ -9,11 +9,17 @@ import {
   Dimensions,
   TextInput,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import ProductScanResultPanel from './ProductScanResultPanel';
 import { fetchProductByBarcode, ScannedProduct } from './productService';
+
+const CORNER_MASK_TL = require('../../assets/dashboard/masks/corner_tl.png');
+const CORNER_MASK_TR = require('../../assets/dashboard/masks/corner_tr.png');
+const CORNER_MASK_BL = require('../../assets/dashboard/masks/corner_bl.png');
+const CORNER_MASK_BR = require('../../assets/dashboard/masks/corner_br.png');
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -322,7 +328,13 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             onPress={() => processBarcode('3017620422003')}
             style={styles.viewfinderBox}
           >
-            {/* 4 Clean Green Corner Brackets */}
+            {/* 4 Corner Rounding Masks - Gives a smooth curved cutout */}
+            <Image source={CORNER_MASK_TL} style={[styles.cornerMask, styles.maskTL]} />
+            <Image source={CORNER_MASK_TR} style={[styles.cornerMask, styles.maskTR]} />
+            <Image source={CORNER_MASK_BL} style={[styles.cornerMask, styles.maskBL]} />
+            <Image source={CORNER_MASK_BR} style={[styles.cornerMask, styles.maskBR]} />
+
+            {/* 4 Clean Green Corner Brackets matching the curve */}
             <View style={[styles.corner, styles.cornerTL]} />
             <View style={[styles.corner, styles.cornerTR]} />
             <View style={[styles.corner, styles.cornerBL]} />
@@ -492,39 +504,62 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'transparent',
   },
+  cornerMask: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    zIndex: 5,
+  },
+  maskTL: {
+    top: 0,
+    left: 0,
+  },
+  maskTR: {
+    top: 0,
+    right: 0,
+  },
+  maskBL: {
+    bottom: 0,
+    left: 0,
+  },
+  maskBR: {
+    bottom: 0,
+    right: 0,
+  },
   corner: {
     position: 'absolute',
-    width: 26,
-    height: 26,
+    width: 32,
+    height: 32,
     borderColor: '#5DB035',
+    zIndex: 10,
   },
   cornerTL: {
     top: 0,
     left: 0,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderTopLeftRadius: 18,
+    borderTopLeftRadius: 26,
   },
   cornerTR: {
     top: 0,
     right: 0,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderTopRightRadius: 18,
+    borderTopRightRadius: 26,
   },
   cornerBL: {
     bottom: 0,
     left: 0,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderBottomLeftRadius: 18,
+    borderBottomLeftRadius: 26,
   },
   cornerBR: {
     bottom: 0,
     right: 0,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderBottomRightRadius: 18,
+    borderBottomRightRadius: 26,
   },
   laserLine: {
     position: 'absolute',
