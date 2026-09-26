@@ -308,29 +308,46 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </TouchableOpacity>
       </View>
 
-      {/* PROPERLY CENTERED Viewfinder Target Frame (Clean: NO icons inside) */}
-      <View style={styles.centeredViewfinderWrapper} pointerEvents="box-none">
-        <TouchableOpacity
-          activeOpacity={0.92}
-          onPress={() => processBarcode('3017620422003')}
-          style={styles.viewfinderBox}
-        >
-          {/* 4 Clean Green Corner Brackets */}
-          <View style={[styles.corner, styles.cornerTL]} />
-          <View style={[styles.corner, styles.cornerTR]} />
-          <View style={[styles.corner, styles.cornerBL]} />
-          <View style={[styles.corner, styles.cornerBR]} />
+      {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        {/* Top mask */}
+        <View style={styles.maskTop} />
 
-          {/* Sweeping Laser Scan Line */}
-          <Animated.View
-            style={[
-              styles.laserLine,
-              { transform: [{ translateY: laserTranslateY }] },
-            ]}
+        {/* Center row with left mask, transparent viewfinder window, and right mask */}
+        <View style={styles.maskRow} pointerEvents="box-none">
+          <View style={styles.maskSide} />
+
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => processBarcode('3017620422003')}
+            style={styles.viewfinderBox}
           >
-            <View style={styles.laserGlow} />
-          </Animated.View>
-        </TouchableOpacity>
+            {/* 4 Clean Green Corner Brackets */}
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+
+            {/* Sweeping Laser Scan Line */}
+            <Animated.View
+              style={[
+                styles.laserLine,
+                { transform: [{ translateY: laserTranslateY }] },
+              ]}
+            >
+              <View style={styles.laserGlow} />
+            </Animated.View>
+          </TouchableOpacity>
+
+          <View style={styles.maskSide} />
+        </View>
+
+        {/* Bottom mask */}
+        <View style={styles.maskBottom}>
+          <Text style={styles.scanInstructionText}>
+            Align product barcode within frame
+          </Text>
+        </View>
       </View>
 
       {/* Universal Panel Product Scan Result with Skeleton & Proper Graph */}
@@ -444,11 +461,29 @@ const styles = StyleSheet.create({
     color: '#1E1D25',
     letterSpacing: 0.2,
   },
-  centeredViewfinderWrapper: {
-    ...StyleSheet.absoluteFill,
+  maskTop: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  maskRow: {
+    height: 200,
+    flexDirection: 'row',
+  },
+  maskSide: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  maskBottom: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
+    paddingTop: 36,
+  },
+  scanInstructionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4B5563',
+    letterSpacing: 0.2,
   },
   viewfinderBox: {
     width: Math.min(SCREEN_WIDTH - 80, 280),
@@ -456,14 +491,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.55)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(93, 176, 53, 0.45)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 2,
+    borderColor: '#5DB035',
   },
   corner: {
     position: 'absolute',
