@@ -354,11 +354,49 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <View style={styles.maskSide} />
         </View>
 
-        {/* Bottom mask */}
+        {/* Bottom mask - FamPay Style Tilted Hashtag Stickers */}
         <View style={styles.maskBottom}>
-          <Text style={styles.scanInstructionText}>
-            Align product barcode within frame
-          </Text>
+          {/* Main Tilted Instruction Sticker */}
+          <View style={styles.heroStickerWrap}>
+            <View style={styles.heroStickerPill}>
+              <Text style={styles.heroStickerHash}>#</Text>
+              <Text style={styles.heroStickerText}>AlignBarcodeWithinFrame</Text>
+              <Text style={styles.heroStickerEmoji}> 🎯</Text>
+            </View>
+          </View>
+
+          {/* FamPay-style Tilted Hashtags Cluster */}
+          <View style={styles.stickersCluster}>
+            <View style={[styles.stickerPill, styles.stickerHealthy]}>
+              <Text style={[styles.stickerText, { color: '#15803D' }]}>#healthy</Text>
+              <Text style={styles.stickerEmoji}> 🌱</Text>
+            </View>
+
+            <View style={[styles.stickerPill, styles.stickerNutri]}>
+              <Text style={[styles.stickerText, { color: '#1D4ED8' }]}>#nutriscore</Text>
+              <Text style={styles.stickerEmoji}> 📊</Text>
+            </View>
+
+            <View style={[styles.stickerPill, styles.stickerZeroJunk]}>
+              <Text style={[styles.stickerText, { color: '#B91C1C' }]}>#zerojunk</Text>
+              <Text style={styles.stickerEmoji}> 🚫</Text>
+            </View>
+
+            <View style={[styles.stickerPill, styles.stickerInstant]}>
+              <Text style={[styles.stickerText, { color: '#6D28D9' }]}>#instantscan</Text>
+              <Text style={styles.stickerEmoji}> ⚡</Text>
+            </View>
+
+            <View style={[styles.stickerPill, styles.stickerCleanFood]}>
+              <Text style={[styles.stickerText, { color: '#047857' }]}>#cleanfood</Text>
+              <Text style={styles.stickerEmoji}> 🥑</Text>
+            </View>
+
+            <View style={[styles.stickerPill, styles.stickerAiScore]}>
+              <Text style={[styles.stickerText, { color: '#B45309' }]}>#aiscore</Text>
+              <Text style={styles.stickerEmoji}> ✨</Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -489,13 +527,102 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
     alignItems: 'center',
-    paddingTop: 36,
+    paddingTop: 26,
   },
-  scanInstructionText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#4B5563',
+  heroStickerWrap: {
+    transform: [{ rotate: '-2.5deg' }],
+    marginBottom: 16,
+  },
+  heroStickerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#5DB035',
+    shadowColor: '#5DB035',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  heroStickerHash: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#5DB035',
+    marginRight: 2,
+  },
+  heroStickerText: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    color: '#1E1D25',
     letterSpacing: 0.2,
+  },
+  heroStickerEmoji: {
+    fontSize: 14,
+  },
+  stickersCluster: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxWidth: 340,
+    gap: 10,
+    paddingHorizontal: 12,
+  },
+  stickerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  stickerText: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  stickerEmoji: {
+    fontSize: 12.5,
+    marginLeft: 3,
+  },
+  stickerHealthy: {
+    transform: [{ rotate: '3.2deg' }],
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
+  },
+  stickerNutri: {
+    transform: [{ rotate: '-2deg' }],
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  stickerZeroJunk: {
+    transform: [{ rotate: '2.5deg' }],
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  stickerInstant: {
+    transform: [{ rotate: '-3deg' }],
+    backgroundColor: '#F5F3FF',
+    borderColor: '#DDD6FE',
+  },
+  stickerCleanFood: {
+    transform: [{ rotate: '2.8deg' }],
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  stickerAiScore: {
+    transform: [{ rotate: '-1.8deg' }],
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
   },
   viewfinderBox: {
     width: Math.min(SCREEN_WIDTH - 80, 280),
