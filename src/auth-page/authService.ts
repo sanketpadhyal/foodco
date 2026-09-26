@@ -2,8 +2,8 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = Platform.select({
-  android: 'http://10.0.2.2:5000/api/auth',
-  default: 'http://localhost:5000/api/auth',
+  android: 'http://10.0.2.2:8080/api/auth',
+  default: 'http://localhost:8080/api/auth',
 });
 
 export interface AuthUser {
