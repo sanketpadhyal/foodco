@@ -73,7 +73,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       >
         <View style={styles.greetingContainer}>
           <Text style={styles.greetingText}>Hello, {user.displayName || 'User'}</Text>
-          <Text style={styles.subtitleText}>What would you like to eat?</Text>
+          <Text style={styles.subtitleText}>
+            What would you like to <Text style={styles.subtitleHighlight}>scan</Text>?
+          </Text>
         </View>
       </ScrollView>
 
@@ -183,6 +185,9 @@ const styles = StyleSheet.create({
     color: theme.textPrimary,
     fontWeight: '700',
     lineHeight: 28,
+  },
+  subtitleHighlight: {
+    color: theme.primary,
   },
   profilePanelCard: {
     flexDirection: 'row',
