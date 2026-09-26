@@ -11,6 +11,8 @@ export interface AuthUser {
   email: string;
   displayName: string;
   photoURL?: string | null;
+  token?: string;
+  jwt?: string;
 }
 
 export interface AuthResponse {
@@ -19,6 +21,13 @@ export interface AuthResponse {
   message?: string;
   user?: AuthUser;
   customToken?: string;
+  token?: string;
+  jwt?: string;
+  session?: {
+    sessionId?: string;
+    createdAt?: string;
+    status?: string;
+  };
 }
 
 export function parseAuthError(error: unknown): string {
@@ -85,6 +94,10 @@ export async function syncTokenWithBackend(
     if (!response.ok) {
       throw new Error(data.message || 'Session sync failed.');
     }
+    if (data.user && (data.token || data.jwt)) {
+      data.user.token = data.token || data.jwt;
+      data.user.jwt = data.jwt || data.token;
+    }
     return data;
   } catch (error) {
     throw new Error(parseAuthError(error));
@@ -106,6 +119,15 @@ export async function loadUserSession(): Promise<AuthUser | null> {
     const parsed = JSON.parse(raw);
     if (parsed && parsed.uid && parsed.email) return parsed as AuthUser;
     return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function getStoredJwtToken(): Promise<string | null> {
+  try {
+    const session = await loadUserSession();
+    return session?.jwt || session?.token || null;
   } catch (_) {
     return null;
   }
