@@ -31,8 +31,8 @@ export interface ScannedProduct {
 }
 
 const BACKEND_BASE = Platform.select({
-  android: 'http://10.0.2.2:8080/api',
-  default: 'http://localhost:8080/api',
+  android: 'https://foodco.heymimi.app/api',
+  default: 'https://foodco.heymimi.app/api',
 });
 
 // Curated database for mart barcode items
