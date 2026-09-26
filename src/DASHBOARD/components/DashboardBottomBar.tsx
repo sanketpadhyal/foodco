@@ -5,9 +5,9 @@ import {
   Image,
   StyleSheet,
   Platform,
+  UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 
 export type DashboardTab = 'home' | 'stats' | 'scan' | 'recipes' | 'cart';
@@ -19,6 +19,27 @@ export interface DashboardBottomBarProps {
 }
 
 const scannerBtnSource = require('../../../assets/scanner-btn.png');
+
+let BlurViewComponent: any = null;
+let hasNativeBlur = false;
+
+try {
+  const hasManager =
+    Platform.OS === 'ios' ||
+    (Platform.OS === 'android' &&
+      !!(
+        UIManager.getViewManagerConfig &&
+        (UIManager.getViewManagerConfig('ExpoBlurView') ||
+          UIManager.getViewManagerConfig('ViewManagerAdapter_ExpoBlur_ExpoBlurView'))
+      ));
+
+  if (hasManager) {
+    BlurViewComponent = require('expo-blur').BlurView;
+    hasNativeBlur = !!BlurViewComponent;
+  }
+} catch (_) {
+  hasNativeBlur = false;
+}
 
 export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
   activeTab = 'home',
@@ -40,11 +61,13 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
     <View style={styles.outerWrapper} pointerEvents="box-none">
       {/* Blurred Translucent Bottom Bar */}
       <View style={[styles.barContainer, { paddingBottom: bottomInset }]}>
-        <BlurView
-          intensity={Platform.OS === 'ios' ? 70 : 45}
-          tint="light"
-          style={StyleSheet.absoluteFill}
-        />
+        {hasNativeBlur && BlurViewComponent ? (
+          <BlurViewComponent
+            intensity={Platform.OS === 'ios' ? 70 : 45}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
         <View style={[StyleSheet.absoluteFill, styles.whiteGlassOverlay]} />
 
         {/* Tab 1: Home / Explore Grid */}
