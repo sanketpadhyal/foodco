@@ -9,7 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-export type DashboardTab = 'home' | 'stats' | 'scan' | 'recipes' | 'cart';
+export type DashboardTab = 'home' | 'stats' | 'scan' | 'recipes' | 'ai' | 'cart';
 
 export interface DashboardBottomBarProps {
   activeTab?: DashboardTab;
@@ -18,6 +18,7 @@ export interface DashboardBottomBarProps {
 }
 
 const scannerBtnSource = require('../../../assets/orange-scanner-btn.png');
+const fodaiSource = require('../../../assets/fodai.png');
 
 const THEME = {
   active: '#FF6B35',
@@ -146,19 +147,22 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           </View>
         </TouchableOpacity>
 
-        {/* Tab 5: Cart / Shopping Bag */}
+        {/* Tab 5: Fod AI */}
         <TouchableOpacity
           style={styles.tabButton}
-          onPress={() => handleTab('cart')}
+          onPress={() => handleTab('ai')}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Shopping Cart"
+          accessibilityLabel="Fod AI Assistant"
         >
           <View style={styles.iconSlot}>
-            <Ionicons
-              name={activeTab === 'cart' ? 'bag-handle' : 'bag-handle-outline'}
-              size={27}
-              color={activeTab === 'cart' ? THEME.active : THEME.inactive}
+            <Image
+              source={fodaiSource}
+              style={[
+                styles.fodaiImage,
+                { opacity: activeTab === 'ai' || activeTab === 'cart' ? 1 : 0.55 },
+              ]}
+              resizeMode="contain"
             />
           </View>
         </TouchableOpacity>
@@ -271,5 +275,9 @@ const styles = StyleSheet.create({
   scannerImage: {
     width: 60,
     height: 60,
+  },
+  fodaiImage: {
+    width: 28,
+    height: 28,
   },
 });
