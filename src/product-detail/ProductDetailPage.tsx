@@ -90,7 +90,7 @@ export default function ProductDetailPage({
 
   const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : insets.top;
   const headerPaddingTop = Math.max(insets.top, statusBarHeight) + 8;
-  const bottomNavPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 48 : 20) + 48;
+  const bottomNavPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 64 : 24) + 64;
 
   return (
     <Modal
@@ -101,6 +101,8 @@ export default function ProductDetailPage({
       statusBarTranslucent={true}
     >
       <View style={styles.fullContainer}>
+        <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
+
         {/* Top Header Bar */}
         <View style={[styles.headerBar, { paddingTop: headerPaddingTop }]}>
           <TouchableOpacity
@@ -133,6 +135,7 @@ export default function ProductDetailPage({
           showsVerticalScrollIndicator={true}
           bounces={true}
           overScrollMode="always"
+          nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled"
         >
           {/* Product Image */}
@@ -496,6 +499,8 @@ export default function ProductDetailPage({
 const styles = StyleSheet.create({
   fullContainer: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#F8F9FA',
   },
   headerBar: {
@@ -523,6 +528,7 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     flex: 1,
+    width: '100%',
   },
   scrollContent: {
     paddingHorizontal: 18,
