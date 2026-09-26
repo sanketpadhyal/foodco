@@ -199,6 +199,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[1]}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
       >
         {/* Header Greeting */}
@@ -209,18 +210,20 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </Text>
         </View>
 
-        {/* Centered Search Bar */}
-        <View style={styles.searchBarWrapper}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for healthy food..."
-            placeholderTextColor="#B5B9BC"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-            accessibilityRole="search"
-            accessibilityLabel="Search for healthy food"
-          />
+        {/* Sticky Search Bar Container */}
+        <View style={styles.stickySearchContainer}>
+          <View style={styles.searchBarWrapper}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for healthy food..."
+              placeholderTextColor="#B5B9BC"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              accessibilityRole="search"
+              accessibilityLabel="Search for healthy food"
+            />
+          </View>
         </View>
 
         {/* Categories Section */}
@@ -459,9 +462,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.4,
   },
+  stickySearchContainer: {
+    backgroundColor: theme.white,
+    paddingTop: 8,
+    paddingBottom: 10,
+    zIndex: 10,
+  },
   searchBarWrapper: {
     marginHorizontal: 20,
-    marginTop: 18,
     height: 54,
     backgroundColor: '#F7F8FA',
     borderRadius: 22,
@@ -478,7 +486,7 @@ const styles = StyleSheet.create({
     color: theme.textPrimary,
   },
   categoriesWrapper: {
-    marginTop: 22,
+    marginTop: 12,
   },
   categoriesScrollContent: {
     paddingHorizontal: 20,
