@@ -12,12 +12,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import FoodcoSplashScreen from './src/splash-screen/splashscreen';
 import LandingPage from './src/landing page/landingpage';
 import { AuthPage } from './src/auth-page';
-import HomePage from './src/home/homepage';
-import { AuthUser } from './src/auth-page/authService';
+import Dashboard from './src/DASHBOARD/dashboard';
+import { AuthUser, saveUserSession, loadUserSession, clearUserSession } from './src/auth-page/authService';
+import { clearNativeAuthState } from './src/auth-page/authPage';
 
 export default function App() {
   const [appReady, setAppReady] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'auth' | 'home'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'auth' | 'dashboard'>('landing');
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(null);
 
   const { width: screenWidth } = useWindowDimensions();
@@ -25,7 +26,11 @@ export default function App() {
 
   useEffect(() => {
     const prepare = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const savedUser = await loadUserSession();
+      if (savedUser) {
+        setAuthenticatedUser(savedUser);
+        setCurrentScreen('dashboard');
+      }
       setAppReady(true);
     };
     prepare();
@@ -67,12 +72,15 @@ export default function App() {
     return () => subscription.remove();
   }, [currentScreen, handleBackToLanding]);
 
-  const handleAuthSuccess = (user: AuthUser) => {
+  const handleAuthSuccess = async (user: AuthUser) => {
+    await saveUserSession(user);
     setAuthenticatedUser(user);
-    setCurrentScreen('home');
+    setCurrentScreen('dashboard');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await clearUserSession();
+    await clearNativeAuthState().catch(() => {});
     setAuthenticatedUser(null);
     handleBackToLanding();
   };
@@ -81,12 +89,12 @@ export default function App() {
     return <FoodcoSplashScreen isReady={false} />;
   }
 
-  if (currentScreen === 'home' && authenticatedUser) {
+  if (currentScreen === 'dashboard' && authenticatedUser) {
     return (
       <SafeAreaProvider>
         <View style={styles.root}>
           <StatusBar style="dark" />
-          <HomePage user={authenticatedUser} onLogout={handleLogout} />
+          <Dashboard user={authenticatedUser} onLogout={handleLogout} />
         </View>
       </SafeAreaProvider>
     );

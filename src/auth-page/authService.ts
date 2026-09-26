@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = Platform.select({
   android: 'http://10.0.2.2:5000/api/auth',
@@ -88,4 +89,30 @@ export async function syncTokenWithBackend(
   } catch (error) {
     throw new Error(parseAuthError(error));
   }
+}
+
+const SESSION_KEY = '@foodco_user_session';
+
+export async function saveUserSession(user: AuthUser): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user));
+  } catch (_) {}
+}
+
+export async function loadUserSession(): Promise<AuthUser | null> {
+  try {
+    const raw = await AsyncStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.uid && parsed.email) return parsed as AuthUser;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function clearUserSession(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(SESSION_KEY);
+  } catch (_) {}
 }

@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -9,
     right: 18,
-    backgroundColor: THEME.primary,
+    backgroundColor: '#1A73E8',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
