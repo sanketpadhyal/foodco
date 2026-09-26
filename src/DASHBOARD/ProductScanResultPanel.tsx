@@ -199,18 +199,7 @@ export default function ProductScanResultPanel({
 
           {/* Premium Quality Health Scorecard */}
           <View style={styles.scoreHeroCard}>
-            {/* Column 1: Nutri-Score */}
-            <View style={styles.scorePillarCard}>
-              <View style={[styles.nutriScoreBadge, { backgroundColor: nutriColor }]}>
-                <Text style={styles.nutriScoreLetter}>{product.nutriScore}</Text>
-              </View>
-              <Text style={styles.pillarTitle}>Nutri-Score</Text>
-              <Text style={styles.pillarSub}>Official Grade</Text>
-            </View>
-
-            <View style={styles.pillarDivider} />
-
-            {/* Column 2: Foodco AI Health Rating */}
+            {/* Foodco AI Health Rating */}
             <View style={[styles.scorePillarCard, styles.centerPillar]}>
               <View style={styles.scoreNumberRow}>
                 <Text style={[styles.scoreLargeNumber, { color: product.verdictColor }]}>
@@ -224,19 +213,6 @@ export default function ProductScanResultPanel({
                 </Text>
               </View>
               <Text style={styles.pillarSub}>Foodco Index</Text>
-            </View>
-
-            <View style={styles.pillarDivider} />
-
-            {/* Column 3: NOVA Ultra-Processed Grade */}
-            <View style={styles.scorePillarCard}>
-              <View style={[styles.novaBadge, { backgroundColor: product.novaGroup === 4 ? '#EF4444' : '#10B981' }]}>
-                <Text style={styles.novaNumber}>{product.novaGroup || 1}</Text>
-              </View>
-              <Text style={styles.pillarTitle}>NOVA</Text>
-              <Text style={styles.pillarSub}>
-                {product.novaGroup === 4 ? 'Processed' : 'Natural'}
-              </Text>
             </View>
           </View>
         </ScrollView>
