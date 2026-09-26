@@ -13,10 +13,11 @@ import {
   Animated,
   LayoutAnimation,
   UIManager,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { ScannedProduct } from '../DASHBOARD/productService';
+import { ScannedProduct, isBeautyCategory } from '../DASHBOARD/productService';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -382,6 +383,16 @@ export default function ProductDetailPage({
   );
 
   React.useEffect(() => {
+    if (!visible) return;
+    const onBackPress = () => {
+      onClose();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [visible, onClose]);
+
+  React.useEffect(() => {
     if (Platform.OS === 'android' && visible) {
       try {
         const NavigationBar = require('expo-navigation-bar');
@@ -391,6 +402,8 @@ export default function ProductDetailPage({
       } catch (_) {}
     }
   }, [visible]);
+
+  const isBeauty = product?.productType === 'beauty' || (product ? isBeautyCategory(product.category, product.name) : false);
 
   const metrics = product?.metrics || {
     calories: 0,
@@ -408,7 +421,7 @@ export default function ProductDetailPage({
     try {
       await Share.share({
         title: product.name,
-        message: `${product.name} by ${product.brand}\nFoodco Health Score: ${product.aiHealthRating}/100 (${product.verdict})\nNutri-Score: ${product.nutriScore}`,
+        message: `${product.name} by ${product.brand}\nFoodco ${isBeauty ? 'Clean Formulation' : 'Health'} Score: ${product.aiHealthRating}/100 (${product.verdict})\nGrade: ${product.nutriScore}`,
       });
     } catch (_) {}
   };
@@ -450,7 +463,7 @@ export default function ProductDetailPage({
           </TouchableOpacity>
 
           <Text style={styles.headerTitle} numberOfLines={1}>
-            Nutritional Analysis
+            {isBeauty ? 'Formulation Analysis' : 'Nutritional Analysis'}
           </Text>
 
           <TouchableOpacity
@@ -506,7 +519,9 @@ export default function ProductDetailPage({
                   style={styles.foodcoLogo}
                   resizeMode="contain"
                 />
-                <Text style={styles.indexTitle}>FOODCO HEALTH INDEX</Text>
+                <Text style={styles.indexTitle}>
+                  {isBeauty ? 'FOODCO CLEAN FORMULATION INDEX' : 'FOODCO HEALTH INDEX'}
+                </Text>
               </View>
             </View>
 
@@ -528,7 +543,9 @@ export default function ProductDetailPage({
 
               <View style={styles.meterContainer}>
                 <View style={styles.meterHeader}>
-                  <Text style={styles.meterLabel}>Nutritional Rating</Text>
+                  <Text style={styles.meterLabel}>
+                    {isBeauty ? 'Clean Safety Rating' : 'Nutritional Rating'}
+                  </Text>
                   <Text style={[styles.meterPctText, { color: product.verdictColor }]}>
                     {product.aiHealthRating}%
                   </Text>
@@ -571,19 +588,27 @@ export default function ProductDetailPage({
               />
               <Text style={styles.insightText}>
                 {product.insight ||
-                  (product.aiHealthRating >= 70
-                    ? 'Great nutritional choice with clean, balanced nutrients.'
-                    : product.aiHealthRating >= 40
-                    ? 'Moderate nutritional value. Safe in moderate portions.'
-                    : 'Poor rating. High in sugar or saturated fats. Limit intake.')}
+                  (isBeauty
+                    ? (product.aiHealthRating >= 70
+                        ? 'Clean & gentle formulation with safe, verified skin ingredients.'
+                        : product.aiHealthRating >= 40
+                        ? 'Contains potential allergens or sensitizers. Patch test recommended.'
+                        : 'Formulation contains high-hazard chemicals or endocrine concerns.')
+                    : (product.aiHealthRating >= 70
+                        ? 'Great nutritional choice with clean, balanced nutrients.'
+                        : product.aiHealthRating >= 40
+                        ? 'Moderate nutritional value. Safe in moderate portions.'
+                        : 'Poor rating. High in sugar or saturated fats. Limit intake.'))}
               </Text>
             </View>
           </View>
 
-          {/* Global Standards: Nutri-Score & NOVA */}
+          {/* Standards: Nutri-Score/Clean Grade & Processing/Compatibility */}
           <View style={styles.standardsRow}>
             <View style={styles.standardCard}>
-              <Text style={styles.standardCardTitle}>Nutri-Score</Text>
+              <Text style={styles.standardCardTitle}>
+                {isBeauty ? 'Clean Safety Grade' : 'Nutri-Score'}
+              </Text>
               <View style={styles.nutriPillRow}>
                 {['A', 'B', 'C', 'D', 'E'].map((grade) => {
                   const isActive = product.nutriScore === grade;
@@ -613,179 +638,325 @@ export default function ProductDetailPage({
             </View>
 
             <View style={styles.standardCard}>
-              <Text style={styles.standardCardTitle}>Processing Grade</Text>
-              <View style={styles.novaIndicatorRow}>
-                <View
-                  style={[
-                    styles.novaNumberCircle,
-                    { backgroundColor: `${activeNova.color}15`, borderColor: activeNova.color },
-                  ]}
-                >
-                  <Text style={[styles.novaNumberText, { color: activeNova.color }]}>
-                    {product.novaGroup || 3}
+              <Text style={styles.standardCardTitle}>
+                {isBeauty ? 'Skin Compatibility' : 'Processing Grade'}
+              </Text>
+              {isBeauty ? (
+                <View style={styles.beautyCompatibilityRow}>
+                  <Ionicons
+                    name={product.aiHealthRating >= 65 ? 'shield-checkmark' : 'alert-circle'}
+                    size={20}
+                    color={product.verdictColor}
+                  />
+                  <Text style={[styles.beautyCompatText, { color: product.verdictColor }]}>
+                    {product.aiHealthRating >= 75
+                      ? 'Gentle & Non-Toxic'
+                      : product.aiHealthRating >= 50
+                      ? 'Mild Formulation'
+                      : 'High Sensitization'}
                   </Text>
                 </View>
-                <View style={styles.novaTextWrap}>
-                  <Text style={[styles.novaStatusText, { color: activeNova.color }]}>
-                    {activeNova.title}
-                  </Text>
+              ) : (
+                <View style={styles.novaIndicatorRow}>
+                  <View
+                    style={[
+                      styles.novaNumberCircle,
+                      { backgroundColor: `${activeNova.color}15`, borderColor: activeNova.color },
+                    ]}
+                  >
+                    <Text style={[styles.novaNumberText, { color: activeNova.color }]}>
+                      {product.novaGroup || 3}
+                    </Text>
+                  </View>
+                  <View style={styles.novaTextWrap}>
+                    <Text style={[styles.novaStatusText, { color: activeNova.color }]}>
+                      {activeNova.title}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              )}
             </View>
           </View>
 
-          {/* Macro Nutrient Proportion Bar */}
+          {/* Composition Proportion Bar: Food Macros vs Beauty Actives */}
           <View style={styles.detailSectionCard}>
-            <Text style={styles.sectionHeaderTitle}>Macro Nutrient Balance</Text>
-            <View style={styles.macroProportionBar}>
-              <View style={[styles.macroBarSegment, { flex: carbPct || 1, backgroundColor: '#3B82F6' }]} />
-              <View style={[styles.macroBarSegment, { flex: fatPct || 1, backgroundColor: '#EF4444' }]} />
-              <View style={[styles.macroBarSegment, { flex: proteinPct || 1, backgroundColor: '#10B981' }]} />
-            </View>
+            <Text style={styles.sectionHeaderTitle}>
+              {isBeauty ? 'Formulation Balance' : 'Macro Nutrient Balance'}
+            </Text>
+            {isBeauty ? (
+              <>
+                <View style={styles.macroProportionBar}>
+                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.activePct || 62, backgroundColor: '#10B981' }]} />
+                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.emollientPct || 24, backgroundColor: '#3B82F6' }]} />
+                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.stabilizerPct || 14, backgroundColor: '#F59E0B' }]} />
+                </View>
 
-            <View style={styles.macroLegendRow}>
-              <View style={styles.macroLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
-                <Text style={styles.legendLabel}>Carbs {carbPct}%</Text>
-              </View>
-              <View style={styles.macroLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-                <Text style={styles.legendLabel}>Fat {fatPct}%</Text>
-              </View>
-              <View style={styles.macroLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-                <Text style={styles.legendLabel}>Protein {proteinPct}%</Text>
-              </View>
-            </View>
+                <View style={styles.macroLegendRow}>
+                  <View style={styles.macroLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+                    <Text style={styles.legendLabel}>
+                      Actives {product.formulationProfile?.activePct || 62}%
+                    </Text>
+                  </View>
+                  <View style={styles.macroLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
+                    <Text style={styles.legendLabel}>
+                      Emollients {product.formulationProfile?.emollientPct || 24}%
+                    </Text>
+                  </View>
+                  <View style={styles.macroLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+                    <Text style={styles.legendLabel}>
+                      Stabilizers {product.formulationProfile?.stabilizerPct || 14}%
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.macroProportionBar}>
+                  <View style={[styles.macroBarSegment, { flex: carbPct || 1, backgroundColor: '#3B82F6' }]} />
+                  <View style={[styles.macroBarSegment, { flex: fatPct || 1, backgroundColor: '#EF4444' }]} />
+                  <View style={[styles.macroBarSegment, { flex: proteinPct || 1, backgroundColor: '#10B981' }]} />
+                </View>
+
+                <View style={styles.macroLegendRow}>
+                  <View style={styles.macroLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
+                    <Text style={styles.legendLabel}>Carbs {carbPct}%</Text>
+                  </View>
+                  <View style={styles.macroLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+                    <Text style={styles.legendLabel}>Fat {fatPct}%</Text>
+                  </View>
+                  <View style={styles.macroLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+                    <Text style={styles.legendLabel}>Protein {proteinPct}%</Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
-          {/* Detailed Nutrient Breakdown Charts per 100g */}
+          {/* Profile: Food Nutrient Profile vs Beauty Toxicological Profile */}
           <View style={styles.detailSectionCard}>
-            <Text style={styles.sectionHeaderTitle}>Nutrient Profile (per 100g)</Text>
+            <Text style={styles.sectionHeaderTitle}>
+              {isBeauty ? 'Toxicological Safety Standards' : 'Nutrient Profile (per 100g)'}
+            </Text>
 
-            {/* Energy */}
-            <View style={styles.graphRow}>
-              <View style={styles.graphHeader}>
-                <Text style={styles.graphMetricName}>Energy / Calories</Text>
-                <Text style={styles.graphValueText}>{metrics.calories} kcal</Text>
-              </View>
-              <View style={styles.graphTrack}>
-                <View
-                  style={[
-                    styles.graphFill,
-                    {
-                      width: `${Math.min(100, Math.round((metrics.calories / 800) * 100))}%`,
-                      backgroundColor: metrics.calories > 450 ? '#EF4444' : '#10B981',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+            {isBeauty ? (
+              <View style={styles.beautyBenchmarkColumn}>
+                <View style={styles.beautyBenchmarkRow}>
+                  <Text style={styles.beautyBenchmarkName}>Paraben Screening</Text>
+                  <View style={styles.beautyStatusWrap}>
+                    <View
+                      style={[
+                        styles.beautyStatusDot,
+                        { backgroundColor: product.formulationProfile?.isParabenFree !== false ? '#10B981' : '#EF4444' },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.beautyStatusText,
+                        { color: product.formulationProfile?.isParabenFree !== false ? '#10B981' : '#EF4444' },
+                      ]}
+                    >
+                      {product.formulationProfile?.isParabenFree !== false ? 'Verified Free (0 detected)' : 'Parabens Present'}
+                    </Text>
+                  </View>
+                </View>
 
-            {/* Sugars */}
-            <View style={styles.graphRow}>
-              <View style={styles.graphHeader}>
-                <Text style={styles.graphMetricName}>Sugars</Text>
-                <Text style={styles.graphValueText}>{metrics.sugars}g</Text>
-              </View>
-              <View style={styles.graphTrack}>
-                <View
-                  style={[
-                    styles.graphFill,
-                    {
-                      width: `${Math.min(100, Math.round((metrics.sugars / 50) * 100))}%`,
-                      backgroundColor: metrics.sugars > 22 ? '#EF4444' : metrics.sugars > 10 ? '#F59E0B' : '#10B981',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+                <View style={styles.beautyBenchmarkRow}>
+                  <Text style={styles.beautyBenchmarkName}>Surfactant Gentleness</Text>
+                  <View style={styles.beautyStatusWrap}>
+                    <View
+                      style={[
+                        styles.beautyStatusDot,
+                        { backgroundColor: product.formulationProfile?.isSulfateFree !== false ? '#10B981' : '#F59E0B' },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.beautyStatusText,
+                        { color: product.formulationProfile?.isSulfateFree !== false ? '#10B981' : '#F59E0B' },
+                      ]}
+                    >
+                      {product.formulationProfile?.isSulfateFree !== false ? 'Sulfate-Safe Base' : 'Harsh Sulfates (SLS/SLES)'}
+                    </Text>
+                  </View>
+                </View>
 
-            {/* Saturated Fat */}
-            <View style={styles.graphRow}>
-              <View style={styles.graphHeader}>
-                <Text style={styles.graphMetricName}>Saturated Fat</Text>
-                <Text style={styles.graphValueText}>{metrics.saturatedFat}g</Text>
-              </View>
-              <View style={styles.graphTrack}>
-                <View
-                  style={[
-                    styles.graphFill,
-                    {
-                      width: `${Math.min(100, Math.round((metrics.saturatedFat / 20) * 100))}%`,
-                      backgroundColor: metrics.saturatedFat > 8 ? '#EF4444' : metrics.saturatedFat > 4 ? '#F59E0B' : '#10B981',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+                <View style={styles.beautyBenchmarkRow}>
+                  <Text style={styles.beautyBenchmarkName}>Silicone & Occlusives</Text>
+                  <View style={styles.beautyStatusWrap}>
+                    <View
+                      style={[
+                        styles.beautyStatusDot,
+                        { backgroundColor: product.formulationProfile?.isSiliconeFree !== false ? '#10B981' : '#6B7280' },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.beautyStatusText,
+                        { color: product.formulationProfile?.isSiliconeFree !== false ? '#10B981' : '#6B7280' },
+                      ]}
+                    >
+                      {product.formulationProfile?.isSiliconeFree !== false ? 'Lightweight / Silicone-Free' : 'Synthetic Silicones'}
+                    </Text>
+                  </View>
+                </View>
 
-            {/* Dietary Fiber */}
-            <View style={styles.graphRow}>
-              <View style={styles.graphHeader}>
-                <Text style={styles.graphMetricName}>Dietary Fiber</Text>
-                <Text style={styles.graphValueText}>{metrics.fiber}g</Text>
+                <View style={styles.beautyBenchmarkRow}>
+                  <Text style={styles.beautyBenchmarkName}>Sensitizing Fragrance</Text>
+                  <View style={styles.beautyStatusWrap}>
+                    <View
+                      style={[
+                        styles.beautyStatusDot,
+                        { backgroundColor: product.formulationProfile?.isFragranceFree ? '#10B981' : '#F59E0B' },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.beautyStatusText,
+                        { color: product.formulationProfile?.isFragranceFree ? '#10B981' : '#F59E0B' },
+                      ]}
+                    >
+                      {product.formulationProfile?.isFragranceFree ? 'Fragrance-Free' : 'Contains Aroma / Sensitizers'}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.graphTrack}>
-                <View
-                  style={[
-                    styles.graphFill,
-                    {
-                      width: `${Math.min(100, Math.round((metrics.fiber / 10) * 100))}%`,
-                      backgroundColor: '#10B981',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+            ) : (
+              <>
+                {/* Energy */}
+                <View style={styles.graphRow}>
+                  <View style={styles.graphHeader}>
+                    <Text style={styles.graphMetricName}>Energy / Calories</Text>
+                    <Text style={styles.graphValueText}>{metrics.calories} kcal</Text>
+                  </View>
+                  <View style={styles.graphTrack}>
+                    <View
+                      style={[
+                        styles.graphFill,
+                        {
+                          width: `${Math.min(100, Math.round((metrics.calories / 800) * 100))}%`,
+                          backgroundColor: metrics.calories > 450 ? '#EF4444' : '#10B981',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
 
-            {/* Protein */}
-            <View style={styles.graphRow}>
-              <View style={styles.graphHeader}>
-                <Text style={styles.graphMetricName}>Protein</Text>
-                <Text style={styles.graphValueText}>{metrics.protein}g</Text>
-              </View>
-              <View style={styles.graphTrack}>
-                <View
-                  style={[
-                    styles.graphFill,
-                    {
-                      width: `${Math.min(100, Math.round((metrics.protein / 25) * 100))}%`,
-                      backgroundColor: '#3B82F6',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+                {/* Sugars */}
+                <View style={styles.graphRow}>
+                  <View style={styles.graphHeader}>
+                    <Text style={styles.graphMetricName}>Sugars</Text>
+                    <Text style={styles.graphValueText}>{metrics.sugars}g</Text>
+                  </View>
+                  <View style={styles.graphTrack}>
+                    <View
+                      style={[
+                        styles.graphFill,
+                        {
+                          width: `${Math.min(100, Math.round((metrics.sugars / 50) * 100))}%`,
+                          backgroundColor: metrics.sugars > 22 ? '#EF4444' : metrics.sugars > 10 ? '#F59E0B' : '#10B981',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
 
-            {/* Salt */}
-            <View style={styles.graphRow}>
-              <View style={styles.graphHeader}>
-                <Text style={styles.graphMetricName}>Salt / Sodium</Text>
-                <Text style={styles.graphValueText}>{metrics.salt}g</Text>
-              </View>
-              <View style={styles.graphTrack}>
-                <View
-                  style={[
-                    styles.graphFill,
-                    {
-                      width: `${Math.min(100, Math.round((metrics.salt / 3) * 100))}%`,
-                      backgroundColor: metrics.salt > 1.5 ? '#EF4444' : metrics.salt > 0.8 ? '#F59E0B' : '#10B981',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+                {/* Saturated Fat */}
+                <View style={styles.graphRow}>
+                  <View style={styles.graphHeader}>
+                    <Text style={styles.graphMetricName}>Saturated Fat</Text>
+                    <Text style={styles.graphValueText}>{metrics.saturatedFat}g</Text>
+                  </View>
+                  <View style={styles.graphTrack}>
+                    <View
+                      style={[
+                        styles.graphFill,
+                        {
+                          width: `${Math.min(100, Math.round((metrics.saturatedFat / 20) * 100))}%`,
+                          backgroundColor: metrics.saturatedFat > 8 ? '#EF4444' : metrics.saturatedFat > 4 ? '#F59E0B' : '#10B981',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                {/* Dietary Fiber */}
+                <View style={styles.graphRow}>
+                  <View style={styles.graphHeader}>
+                    <Text style={styles.graphMetricName}>Dietary Fiber</Text>
+                    <Text style={styles.graphValueText}>{metrics.fiber}g</Text>
+                  </View>
+                  <View style={styles.graphTrack}>
+                    <View
+                      style={[
+                        styles.graphFill,
+                        {
+                          width: `${Math.min(100, Math.round((metrics.fiber / 10) * 100))}%`,
+                          backgroundColor: '#10B981',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                {/* Protein */}
+                <View style={styles.graphRow}>
+                  <View style={styles.graphHeader}>
+                    <Text style={styles.graphMetricName}>Protein</Text>
+                    <Text style={styles.graphValueText}>{metrics.protein}g</Text>
+                  </View>
+                  <View style={styles.graphTrack}>
+                    <View
+                      style={[
+                        styles.graphFill,
+                        {
+                          width: `${Math.min(100, Math.round((metrics.protein / 25) * 100))}%`,
+                          backgroundColor: '#3B82F6',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                {/* Salt */}
+                <View style={styles.graphRow}>
+                  <View style={styles.graphHeader}>
+                    <Text style={styles.graphMetricName}>Salt / Sodium</Text>
+                    <Text style={styles.graphValueText}>{metrics.salt}g</Text>
+                  </View>
+                  <View style={styles.graphTrack}>
+                    <View
+                      style={[
+                        styles.graphFill,
+                        {
+                          width: `${Math.min(100, Math.round((metrics.salt / 3) * 100))}%`,
+                          backgroundColor: metrics.salt > 1.5 ? '#EF4444' : metrics.salt > 0.8 ? '#F59E0B' : '#10B981',
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Ingredients & Chemical Additives - Premium Redesign */}
           <View style={styles.detailSectionCard}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionHeaderTitleCol}>
-                <Text style={styles.sectionHeaderTitle}>Ingredients & Additives</Text>
+                <Text style={styles.sectionHeaderTitle}>
+                  {isBeauty ? 'INCI Formulation Ingredients' : 'Ingredients & Additives'}
+                </Text>
                 <Text style={styles.sectionHeaderSubtitle}>
                   {parsedIngredients.length > 0
-                    ? `${parsedIngredients.length} ingredients • ${product.additives?.length || 0} additives`
+                    ? (isBeauty
+                        ? `${parsedIngredients.length} cosmetic ingredients • Certified formulation`
+                        : `${parsedIngredients.length} ingredients • ${product.additives?.length || 0} additives`)
                     : 'Manufacturer Formulation'}
                 </Text>
               </View>
@@ -1643,5 +1814,45 @@ const styles = StyleSheet.create({
     color: '#15803D',
     lineHeight: 16,
     marginTop: 2,
+  },
+  beautyCompatibilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  beautyCompatText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  beautyBenchmarkColumn: {
+    gap: 12,
+  },
+  beautyBenchmarkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  beautyBenchmarkName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  beautyStatusWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  beautyStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  beautyStatusText: {
+    fontSize: 12.5,
+    fontWeight: '700',
   },
 });

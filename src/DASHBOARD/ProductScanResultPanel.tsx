@@ -220,7 +220,7 @@ export default function ProductScanResultPanel({
             </View>
           </View>
 
-          {/* Modern Health Score Card */}
+          {/* Modern Health / Clean Score Card */}
           <View style={styles.scoreHeroCard}>
             {/* Header: Tag */}
             <View style={styles.scoreCardTopRow}>
@@ -230,7 +230,9 @@ export default function ProductScanResultPanel({
                   style={styles.logoTagIcon}
                   resizeMode="contain"
                 />
-                <Text style={styles.scoreTagText}>FOODCO HEALTH INDEX</Text>
+                <Text style={styles.scoreTagText}>
+                  {product.productType === 'beauty' ? 'FOODCO CLEAN INDEX' : 'FOODCO HEALTH INDEX'}
+                </Text>
               </View>
             </View>
 
@@ -245,7 +247,9 @@ export default function ProductScanResultPanel({
 
               <View style={styles.meterContainer}>
                 <View style={styles.meterHeader}>
-                  <Text style={styles.meterTitle}>Nutritional Rating</Text>
+                  <Text style={styles.meterTitle}>
+                    {product.productType === 'beauty' ? 'Clean Safety Rating' : 'Nutritional Rating'}
+                  </Text>
                   <Text style={[styles.meterPercent, { color: product.verdictColor }]}>
                     {product.aiHealthRating}%
                   </Text>
@@ -281,11 +285,17 @@ export default function ProductScanResultPanel({
               />
               <Text style={styles.scoreDescText}>
                 {product.insight ||
-                  (product.aiHealthRating >= 70
-                    ? 'Great nutritional choice with clean, balanced nutrients.'
-                    : product.aiHealthRating >= 40
-                    ? 'Moderate nutritional value. Safe in moderate portions.'
-                    : 'Poor rating. High in sugar or saturated fats. Limit intake.')}
+                  (product.productType === 'beauty'
+                    ? (product.aiHealthRating >= 70
+                        ? 'Clean & gentle formulation with safe, verified skin ingredients.'
+                        : product.aiHealthRating >= 40
+                        ? 'Contains potential allergens or sensitizers. Patch test recommended.'
+                        : 'Formulation contains high-hazard chemicals or endocrine concerns.')
+                    : (product.aiHealthRating >= 70
+                        ? 'Great nutritional choice with clean, balanced nutrients.'
+                        : product.aiHealthRating >= 40
+                        ? 'Moderate nutritional value. Safe in moderate portions.'
+                        : 'Poor rating. High in sugar or saturated fats. Limit intake.'))}
               </Text>
             </View>
           </View>

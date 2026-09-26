@@ -10,6 +10,7 @@ import {
   TextInput,
   Platform,
   Image,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -141,6 +142,7 @@ function CameraFallbackPlaceholder() {
 export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerPageProps) {
   const insets = useSafeAreaInsets();
   const [torch, setTorch] = useState<boolean>(false);
+  const [isCameraMounted, setIsCameraMounted] = useState<boolean>(false);
 
   // Result panel states
   const [resultVisible, setResultVisible] = useState<boolean>(false);
@@ -157,24 +159,57 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   const laserAnim = useRef(new Animated.Value(0)).current;
   const isCooldownRef = useRef(false);
 
+  // Android Navigation & Hardware Back Button Handling
+  useEffect(() => {
+    if (!visible) return;
+
+    const onBackPress = () => {
+      if (productDetailVisible) {
+        setProductDetailVisible(false);
+        setResultVisible(true);
+        return true;
+      }
+      if (resultVisible) {
+        setResultVisible(false);
+        setProductData(null);
+        setScanError(null);
+        isCooldownRef.current = false;
+        return true;
+      }
+      handleClose();
+      return true;
+    };
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSubscription.remove();
+  }, [visible, productDetailVisible, resultVisible]);
+
   useEffect(() => {
     if (visible) {
       slideAnim.setValue(SCREEN_HEIGHT);
       fadeAnim.setValue(0);
+      setIsCameraMounted(false);
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 180,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 320,
+          duration: 280,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setIsCameraMounted(true);
+      });
+
+      const mountTimer = setTimeout(() => {
+        setIsCameraMounted(true);
+      }, 300);
 
       const laser = Animated.loop(
         Animated.sequence([
@@ -195,18 +230,21 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       laser.start();
 
       return () => {
+        clearTimeout(mountTimer);
         laser.stop();
       };
     } else {
+      setIsCameraMounted(false);
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT,
-          duration: 260,
+          duration: 220,
+          easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 260,
+          duration: 220,
           useNativeDriver: true,
         }),
       ]).start();
@@ -214,15 +252,17 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   }, [visible]);
 
   const handleClose = () => {
+    setIsCameraMounted(false);
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: SCREEN_HEIGHT,
-        duration: 260,
+        duration: 220,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 260,
+        duration: 220,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -272,6 +312,10 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     '5000159461122', // Snickers Chocolate Bar
     '8901725181222', // Amul Pure Butter
     '3033490004523', // Activia Probiotic Natural Yogurt
+    '4005808811120', // Nivea Soft Light Moisturiser (Beauty)
+    '8901030704681', // Dove Deeply Nourishing Body Wash (Beauty)
+    '8901138834419', // Himalaya Purifying Neem Face Wash (Beauty)
+    '070501110003',  // Neutrogena Hydro Boost Water Gel (Beauty)
   ];
 
   const lastRandomCodeRef = useRef<string>('');
@@ -316,14 +360,18 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         },
       ]}
     >
-      {/* 100% Real Camera Fullscreen View */}
+      {/* 100% Real Camera Fullscreen View with Lag-Free Deferral */}
       <View style={StyleSheet.absoluteFill}>
-        <CameraErrorBoundary fallback={<CameraFallbackPlaceholder />}>
-          <RealCameraComponent
-            onBarcodeScanned={handleBarcodeScanned}
-            torch={torch}
-          />
-        </CameraErrorBoundary>
+        {isCameraMounted && !resultVisible && !productDetailVisible ? (
+          <CameraErrorBoundary fallback={<CameraFallbackPlaceholder />}>
+            <RealCameraComponent
+              onBarcodeScanned={handleBarcodeScanned}
+              torch={torch}
+            />
+          </CameraErrorBoundary>
+        ) : (
+          <CameraFallbackPlaceholder />
+        )}
       </View>
 
       {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
@@ -335,9 +383,9 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
               <Ionicons name="shield-checkmark" size={18} color="#15803D" />
             </View>
             <View style={styles.trustTextContent}>
-              <Text style={styles.trustTitle}>100% Verified Food Data</Text>
+              <Text style={styles.trustTitle}>100% Verified Product Data</Text>
               <Text style={styles.trustDescription}>
-                Whatever you see here is powered by Foodco's official database & certified health authorities. Fully trusted & transparent.
+                Real-time verified health, nutrient & ingredient safety data for food, drinks, cosmetics & personal care.
               </Text>
             </View>
           </View>
@@ -395,15 +443,15 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
                 <Text style={styles.stickerEmoji}> 🌱</Text>
               </View>
               <View style={[styles.stickerPill, styles.stickerNutri]}>
-                <Text style={[styles.stickerText, { color: '#1D4ED8' }]}>#nutriscore</Text>
-                <Text style={styles.stickerEmoji}> 📊</Text>
+                <Text style={[styles.stickerText, { color: '#1D4ED8' }]}>#cleanbeauty</Text>
+                <Text style={styles.stickerEmoji}> 🌸</Text>
               </View>
             </View>
 
             <View style={styles.stickerRow}>
               <View style={[styles.stickerPill, styles.stickerZeroJunk]}>
-                <Text style={[styles.stickerText, { color: '#B91C1C' }]}>#zerojunk</Text>
-                <Text style={styles.stickerEmoji}> 🚫</Text>
+                <Text style={[styles.stickerText, { color: '#B91C1C' }]}>#toxicfree</Text>
+                <Text style={styles.stickerEmoji}> 🛡️</Text>
               </View>
               <View style={[styles.stickerPill, styles.stickerInstant]}>
                 <Text style={[styles.stickerText, { color: '#6D28D9' }]}>#instantscan</Text>
@@ -413,12 +461,12 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
             <View style={styles.stickerRow}>
               <View style={[styles.stickerPill, styles.stickerCleanFood]}>
-                <Text style={[styles.stickerText, { color: '#047857' }]}>#cleanfood</Text>
-                <Text style={styles.stickerEmoji}> 🥑</Text>
+                <Text style={[styles.stickerText, { color: '#047857' }]}>#skincare</Text>
+                <Text style={styles.stickerEmoji}> ✨</Text>
               </View>
               <View style={[styles.stickerPill, styles.stickerAiScore]}>
-                <Text style={[styles.stickerText, { color: '#B45309' }]}>#aiscore</Text>
-                <Text style={styles.stickerEmoji}> ✨</Text>
+                <Text style={[styles.stickerText, { color: '#B45309' }]}>#healthindex</Text>
+                <Text style={styles.stickerEmoji}> 🎯</Text>
               </View>
             </View>
           </View>

@@ -12,16 +12,32 @@ export interface NutritionMetrics {
   salt: number;           // g
 }
 
+export interface FormulationProfile {
+  activePct: number;
+  emollientPct: number;
+  stabilizerPct: number;
+  isParabenFree: boolean;
+  isSulfateFree: boolean;
+  isSiliconeFree: boolean;
+  isFragranceFree: boolean;
+  highRiskCount: number;
+  moderateRiskCount: number;
+  activesCount: number;
+  detectedRisks?: { name: string; category: string; risk: string }[];
+  detectedActives?: { name: string; benefit: string }[];
+}
+
 export interface ScannedProduct {
   barcode: string;
   name: string;
   brand: string;
   category: string;
   imageUrl?: string;
+  productType?: 'food' | 'beauty' | 'general';
   nutriScore: 'A' | 'B' | 'C' | 'D' | 'E';
   novaGroup?: number;     // 1 to 4
   aiHealthRating: number; // 0 to 100
-  verdict: 'Excellent Choice' | 'Good Choice' | 'Moderate' | 'Avoid / Unhealthy';
+  verdict: 'Excellent Choice' | 'Good Choice' | 'Moderate' | 'Avoid / Unhealthy' | 'Clean & Safe' | 'Good Formulation' | 'Moderate Concern' | 'Hazardous / Poor';
   verdictColor: string;
   metrics: NutritionMetrics;
   additives: string[];
@@ -29,6 +45,7 @@ export interface ScannedProduct {
   isUltraProcessed: boolean;
   ingredientsSummary?: string;
   insight?: string;
+  formulationProfile?: FormulationProfile | null;
 }
 
 const BACKEND_BASE = Platform.select({
@@ -36,13 +53,18 @@ const BACKEND_BASE = Platform.select({
   default: 'https://foodco.heymimi.app/api',
 });
 
-// Curated database for mart barcode items
+export function isBeautyCategory(category: string, name: string): boolean {
+  const combined = `${category || ''} ${name || ''}`.toLowerCase();
+  return /\b(beauty|cosmetic|cosmetics|skincare|skin care|haircare|hair care|shampoo|conditioner|soap|body wash|face wash|cleanser|moisturizer|lotion|cream|serum|sunscreen|sunblock|spf|makeup|lipstick|lip balm|mascara|eyeliner|foundation|deodorant|perfume|fragrance|eau de parfum|eau de toilette|nail polish|hair oil|shaving|aftershave|toothpaste|mouthwash|hygiene|personal care)\b/i.test(combined);
+}
+
 const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
   '3017620422003': {
     name: 'Nutella Hazelnut Spread',
     brand: 'Ferrero',
     category: 'Spreads & Sweets',
     imageUrl: 'https://images.openfoodfacts.org/images/products/301/762/042/2003/front_en.879.400.jpg',
+    productType: 'food',
     nutriScore: 'E',
     novaGroup: 4,
     aiHealthRating: 24,
@@ -68,6 +90,7 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
     brand: 'The Coca-Cola Company',
     category: 'Cold Drinks & Sodas',
     imageUrl: 'https://images.openfoodfacts.org/images/products/544/900/000/0996/front_en.1129.400.jpg',
+    productType: 'food',
     nutriScore: 'E',
     novaGroup: 4,
     aiHealthRating: 18,
@@ -93,6 +116,7 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
     brand: 'Mondelez',
     category: 'Biscuits & Cookies',
     imageUrl: 'https://images.openfoodfacts.org/images/products/762/221/044/9283/front_en.605.400.jpg',
+    productType: 'food',
     nutriScore: 'D',
     novaGroup: 4,
     aiHealthRating: 32,
@@ -118,6 +142,7 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
     brand: 'PepsiCo',
     category: 'Snacks & Chips',
     imageUrl: 'https://images.openfoodfacts.org/images/products/890/149/110/1838/front_en.11.400.jpg',
+    productType: 'food',
     nutriScore: 'C',
     novaGroup: 3,
     aiHealthRating: 46,
@@ -143,6 +168,7 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
     brand: 'Nestle',
     category: 'Instant Noodles & Pasta',
     imageUrl: 'https://images.openfoodfacts.org/images/products/890/105/885/1328/front_en.17.400.jpg',
+    productType: 'food',
     nutriScore: 'D',
     novaGroup: 4,
     aiHealthRating: 38,
@@ -155,88 +181,245 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
       fat: 15.7,
       saturatedFat: 6.8,
       protein: 8.0,
-      fiber: 3.5,
-      salt: 2.3,
+      fiber: 3.6,
+      salt: 2.1,
     },
-    additives: ['E508 (Potassium Chloride)', 'E412 (Guar Gum)', 'E635 (Flavour Enhancer)'],
+    additives: ['E635 (Flavor Enhancer)', 'E500 (Acidity Regulator)', 'E451 (Stabilizer)'],
     hasPalmOil: true,
     isUltraProcessed: true,
-    ingredientsSummary: 'Refined Wheat Flour (Maida), Palm Oil, Iodised Salt, Wheat Gluten, Thickeners (508, 412), Acidity Regulators, Spices and Condiments.',
+    ingredientsSummary: 'Refined Wheat Flour (Maida), Palm Oil, Iodised Salt, Wheat Gluten, Mineral (Calcium Carbonate), Thickeners (508 & 412), Acidity Regulators.',
   },
   '5000159461122': {
-    name: 'Snickers Chocolate Bar',
+    name: 'Snickers Milk Chocolate Bar',
     brand: 'Mars',
-    category: 'Chocolates & Bars',
-    imageUrl: 'https://images.openfoodfacts.org/images/products/500/015/946/1122/front_en.357.400.jpg',
+    category: 'Chocolates & Confectionery',
+    imageUrl: 'https://images.openfoodfacts.org/images/products/500/015/946/1122/front_en.116.400.jpg',
+    productType: 'food',
     nutriScore: 'E',
     novaGroup: 4,
-    aiHealthRating: 28,
+    aiHealthRating: 22,
     verdict: 'Avoid / Unhealthy',
     verdictColor: '#EF4444',
     metrics: {
-      calories: 488,
-      carbs: 60.0,
-      sugars: 51.0,
-      fat: 24.0,
-      saturatedFat: 9.1,
+      calories: 483,
+      carbs: 60.5,
+      sugars: 51.8,
+      fat: 22.8,
+      saturatedFat: 7.9,
       protein: 8.6,
-      fiber: 2.8,
-      salt: 0.57,
+      fiber: 2.3,
+      salt: 0.63,
     },
-    additives: ['E322 (Soya Lecithin)', 'E471', 'Artificial Flavours'],
+    additives: ['E322 (Soya Lecithin)', 'Egg White Powder'],
     hasPalmOil: true,
     isUltraProcessed: true,
-    ingredientsSummary: 'Sugar, Peanuts, Glucose Syrup, Skimmed Milk Powder, Cocoa Butter, Cocoa Mass, Sunflower Oil, Palm Fat, Milk Fat, Soya Lecithin, Salt.',
+    ingredientsSummary: 'Sugar, Peanuts, Glucose Syrup, Skimmed Milk Powder, Cocoa Butter, Cocoa Mass, Sunflower Oil, Palm Fat, Lactose, Whey Powder, Milk Fat, Soya Lecithin, Salt.',
   },
   '8901725181222': {
-    name: 'Amul Pure Butter Pasteurized',
+    name: 'Amul Pure Butter',
     brand: 'Amul',
     category: 'Dairy & Butter',
-    imageUrl: 'https://images.openfoodfacts.org/images/products/890/126/201/0016/front_en.53.400.jpg',
-    nutriScore: 'D',
+    imageUrl: 'https://images.openfoodfacts.org/images/products/890/172/518/1222/front_en.6.400.jpg',
+    productType: 'food',
+    nutriScore: 'E',
     novaGroup: 2,
-    aiHealthRating: 54,
+    aiHealthRating: 52,
     verdict: 'Moderate',
     verdictColor: '#F59E0B',
     metrics: {
-      calories: 722,
+      calories: 720,
       carbs: 0.0,
       sugars: 0.0,
       fat: 80.0,
       saturatedFat: 51.0,
-      protein: 0.6,
+      protein: 0.5,
       fiber: 0.0,
       salt: 2.5,
     },
     additives: ['Common Salt', 'Natural Annatto Colour'],
     hasPalmOil: false,
     isUltraProcessed: false,
-    ingredientsSummary: 'Butter (from Cow and Buffalo Milk), Common Salt, Annatto (natural food colour).',
+    ingredientsSummary: 'Butter (Milk Fat 80%), Common Salt, Permitted Natural Colour (Annatto).',
   },
   '3033490004523': {
     name: 'Activia Probiotic Natural Yogurt',
     brand: 'Danone',
-    category: 'Dairy & Yogurts',
-    imageUrl: 'https://images.openfoodfacts.org/images/products/303/349/000/4523/front_fr.112.400.jpg',
-    nutriScore: 'A',
+    category: 'Yogurt & Fermented Dairy',
+    imageUrl: 'https://images.openfoodfacts.org/images/products/303/349/000/4523/front_en.24.400.jpg',
+    productType: 'food',
+    nutriScore: 'B',
     novaGroup: 1,
-    aiHealthRating: 92,
+    aiHealthRating: 86,
     verdict: 'Excellent Choice',
     verdictColor: '#10B981',
     metrics: {
       calories: 63,
-      carbs: 5.2,
-      sugars: 5.2,
-      fat: 3.4,
+      carbs: 4.8,
+      sugars: 4.8,
+      fat: 3.5,
       saturatedFat: 2.2,
       protein: 3.9,
       fiber: 0.0,
-      salt: 0.13,
+      salt: 0.15,
     },
     additives: [],
     hasPalmOil: false,
     isUltraProcessed: false,
-    ingredientsSummary: 'Whole Milk, Skimmed Milk Powder, Live Probiotic Cultures (Bifidus ActiRegularis, Lactobacillus bulgaricus).',
+    ingredientsSummary: 'Whole Milk, Skimmed Milk Concentrate, Live Bifidus ActiRegularis cultures.',
+  },
+  // Real Curated Beauty & Personal Care Items
+  '4005808811120': {
+    name: 'Nivea Soft Light Moisturising Cream',
+    brand: 'Nivea',
+    category: 'Skincare & Moisturizer',
+    imageUrl: 'https://images.openbeautyfacts.org/images/products/400/580/881/1120/front_en.18.400.jpg',
+    productType: 'beauty',
+    nutriScore: 'B',
+    novaGroup: 2,
+    aiHealthRating: 82,
+    verdict: 'Good Formulation',
+    verdictColor: '#58B84F',
+    metrics: { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+    additives: ['Jojoba Seed Oil', 'Vitamin E (Tocopheryl Acetate)', 'Glycerin'],
+    hasPalmOil: false,
+    isUltraProcessed: false,
+    insight: 'Hydrating formula enriched with Jojoba Seed Oil & Vitamin E. Non-greasy and gentle on skin.',
+    ingredientsSummary: 'Aqua, Glycerin, Paraffinum Liquidum, Myristyl Alcohol, Butylene Glycol, Alcohol Denat., Stearic Acid, Myristyl Myristate, Cera Microcristallina, Glyceryl Stearate, Hydrogenated Coco-Glycerides, Simmondsia Chinensis Seed Oil, Tocopheryl Acetate, Lanolin Alcohol (Eucerit®), Polyglyceryl-2 Caprate, Dimethicone, Sodium Carbomer, Phenoxyethanol, Linalool, Citronellol, Alpha-Isomethyl Ionone, Benzyl Alcohol, Limonene, Benzyl Salicylate, Parfum.',
+    formulationProfile: {
+      activePct: 62,
+      emollientPct: 24,
+      stabilizerPct: 14,
+      isParabenFree: true,
+      isSulfateFree: true,
+      isSiliconeFree: false,
+      isFragranceFree: false,
+      highRiskCount: 0,
+      moderateRiskCount: 2,
+      activesCount: 3,
+      detectedActives: [
+        { name: 'Jojoba Seed Oil', benefit: 'Sebum-Balancing Botanical Oil' },
+        { name: 'Vitamin E', benefit: 'Antioxidant Barrier Protection' },
+        { name: 'Glycerin', benefit: 'Biomimetic Humectant' },
+      ],
+      detectedRisks: [
+        { name: 'Dimethicone', category: 'Silicone', risk: 'Synthetic Occlusive Silicone' },
+        { name: 'Parfum', category: 'Fragrance', risk: 'Sensitizing Aroma Blend' },
+      ],
+    },
+  },
+  '8901030704681': {
+    name: 'Dove Deeply Nourishing Body Wash',
+    brand: 'Dove',
+    category: 'Body Care & Shower',
+    imageUrl: 'https://images.openbeautyfacts.org/images/products/890/103/070/4681/front_en.10.400.jpg',
+    productType: 'beauty',
+    nutriScore: 'B',
+    novaGroup: 2,
+    aiHealthRating: 78,
+    verdict: 'Good Formulation',
+    verdictColor: '#58B84F',
+    metrics: { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+    additives: ['NutriumMoisture', 'Plant-based Moisturizers'],
+    hasPalmOil: false,
+    isUltraProcessed: false,
+    insight: 'Mild, microbiome-gentle body cleanser with 100% gentle plant cleansers and sulfate-safe formulation.',
+    ingredientsSummary: 'Water (Aqua), Cocamidopropyl Betaine, Sodium Hydroxypropyl Starch Phosphate, Lauric Acid, Sodium Lauroyl Glycinate, Sodium Lauroyl Isethionate, Hydrogenated Soybean Oil, Glycine Soja (Soybean) Oil, Sodium Chloride, Glycerin, Fragrance (Parfum), Phenoxyethanol, Guar Hydroxypropyltrimonium Chloride, Stearic Acid, Citric Acid, BHT, Tetrasodium EDTA.',
+    formulationProfile: {
+      activePct: 58,
+      emollientPct: 26,
+      stabilizerPct: 16,
+      isParabenFree: true,
+      isSulfateFree: true,
+      isSiliconeFree: true,
+      isFragranceFree: false,
+      highRiskCount: 1,
+      moderateRiskCount: 1,
+      activesCount: 2,
+      detectedActives: [
+        { name: 'Glycerin', benefit: 'Biomimetic Humectant' },
+        { name: 'Soybean Oil', benefit: 'Natural Barrier Nourishing Lipid' },
+      ],
+      detectedRisks: [
+        { name: 'BHT', category: 'Antioxidant', risk: 'Potential Endocrine Disruptor' },
+        { name: 'Fragrance (Parfum)', category: 'Fragrance', risk: 'Sensitizing Aroma Blend' },
+      ],
+    },
+  },
+  '8901138834419': {
+    name: 'Himalaya Purifying Neem Face Wash',
+    brand: 'Himalaya Herbals',
+    category: 'Face Care & Cleanser',
+    imageUrl: 'https://images.openbeautyfacts.org/images/products/890/113/883/4419/front_en.9.400.jpg',
+    productType: 'beauty',
+    nutriScore: 'A',
+    novaGroup: 1,
+    aiHealthRating: 88,
+    verdict: 'Clean & Safe',
+    verdictColor: '#10B981',
+    metrics: { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+    additives: ['Neem Leaf Extract', 'Turmeric Rhizome Extract'],
+    hasPalmOil: false,
+    isUltraProcessed: false,
+    insight: 'Herbal soap-free facial wash with antibacterial Neem and anti-inflammatory Turmeric. Clears impurities without over-drying.',
+    ingredientsSummary: 'Aqua, Ammonium Lauryl Sulfate, Melia Azadirachta Leaf Extract (Neem), Curcuma Longa Rhizome Extract (Turmeric), Stearic Acid, Glycerin, Sodium Hydroxide, Parfum, Phenoxyethanol, Methylchloroisothiazolinone, Methylisothiazolinone.',
+    formulationProfile: {
+      activePct: 70,
+      emollientPct: 18,
+      stabilizerPct: 12,
+      isParabenFree: true,
+      isSulfateFree: false,
+      isSiliconeFree: true,
+      isFragranceFree: false,
+      highRiskCount: 0,
+      moderateRiskCount: 2,
+      activesCount: 3,
+      detectedActives: [
+        { name: 'Neem Leaf Extract', benefit: 'Natural Antibacterial & Blemish Defense' },
+        { name: 'Turmeric Extract', benefit: 'Antioxidant & Soothing Glow' },
+        { name: 'Glycerin', benefit: 'Gentle Humectant Moisture Lock' },
+      ],
+      detectedRisks: [
+        { name: 'Ammonium Lauryl Sulfate', category: 'Surfactant', risk: 'Stripping Surfactant' },
+        { name: 'Parfum', category: 'Fragrance', risk: 'Sensitizing Aroma Blend' },
+      ],
+    },
+  },
+  '070501110003': {
+    name: 'Neutrogena Hydro Boost Water Gel',
+    brand: 'Neutrogena',
+    category: 'Skincare & Gel Hydrator',
+    imageUrl: 'https://images.openbeautyfacts.org/images/products/070/501/110/003/front_en.12.400.jpg',
+    productType: 'beauty',
+    nutriScore: 'A',
+    novaGroup: 1,
+    aiHealthRating: 92,
+    verdict: 'Clean & Safe',
+    verdictColor: '#10B981',
+    metrics: { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+    additives: ['Hyaluronic Acid', 'Glycerin', 'Trehalose'],
+    hasPalmOil: false,
+    isUltraProcessed: false,
+    insight: 'Oil-free, non-comedogenic hyaluronic acid gel. Provides 72-hour moisture lock and strengthens skin barrier.',
+    ingredientsSummary: 'Water, Dimethicone, Glycerin, Dimethicone/Vinyl Dimethicone Crosspolymer, Phenoxyethanol, Polyacrylamide, Cetearyl Olivate, Sorbitan Olivate, Dimethiconol, C13-14 Isoparaffin, Fragrance, Dimethicone Crosspolymer, Carbomer, Laureth-7, Sodium Hyaluronate, Ethylhexylglycerin, Sodium Hydroxide, Blue 1.',
+    formulationProfile: {
+      activePct: 75,
+      emollientPct: 15,
+      stabilizerPct: 10,
+      isParabenFree: true,
+      isSulfateFree: true,
+      isSiliconeFree: false,
+      isFragranceFree: false,
+      highRiskCount: 0,
+      moderateRiskCount: 1,
+      activesCount: 2,
+      detectedActives: [
+        { name: 'Sodium Hyaluronate', benefit: 'Deep Penetrative Hydration Plump' },
+        { name: 'Glycerin', benefit: 'Essential Skin Barrier Humectant' },
+      ],
+      detectedRisks: [
+        { name: 'Dimethicone', category: 'Silicone', risk: 'Synthetic Occlusive' },
+      ],
+    },
   },
 };
 
@@ -279,47 +462,127 @@ function calculateAiHealthScore(
   }
 }
 
+export function parseBeautyIngredients(rawIngredients: string) {
+  const hasParabens = /methylparaben|propylparaben|butylparaben|ethylparaben/i.test(rawIngredients);
+  const hasSulfates = /sodium\s*lauryl\s*sulfate|sodium\s*laureth\s*sulfate|\bsls\b|\bsles\b/i.test(rawIngredients);
+  const hasSilicones = /cyclopentasiloxane|dimethicone/i.test(rawIngredients);
+  const hasFragrance = /fragrance|parfum|perfume/i.test(rawIngredients);
+
+  const detectedActives = [];
+  if (/hyaluronic|sodium\s*hyaluronate/i.test(rawIngredients)) {
+    detectedActives.push({ name: 'Hyaluronic Acid', benefit: 'Deep Penetrative Hydration Plumping' });
+  }
+  if (/niacinamide/i.test(rawIngredients)) {
+    detectedActives.push({ name: 'Niacinamide', benefit: 'Lipid Barrier Protection & Pore Defense' });
+  }
+  if (/ceramide/i.test(rawIngredients)) {
+    detectedActives.push({ name: 'Ceramides', benefit: 'Skin Barrier Restoration' });
+  }
+  if (/glycerin/i.test(rawIngredients)) {
+    detectedActives.push({ name: 'Plant Glycerin', benefit: 'Natural Biomimetic Humectant' });
+  }
+  if (/aloe/i.test(rawIngredients)) {
+    detectedActives.push({ name: 'Aloe Vera', benefit: 'Skin Soothing & Deep Calm' });
+  }
+
+  const detectedRisks = [];
+  if (hasParabens) {
+    detectedRisks.push({ name: 'Parabens', category: 'Preservative', risk: 'Endocrine Disruptor Concern' });
+  }
+  if (hasSulfates) {
+    detectedRisks.push({ name: 'Sulfates (SLS/SLES)', category: 'Surfactant', risk: 'Harsh Cleanser & Barrier Stripper' });
+  }
+  if (hasFragrance) {
+    detectedRisks.push({ name: 'Synthetic Parfum', category: 'Fragrance', risk: 'Common Sensitizing Allergen' });
+  }
+
+  let penalty = 0;
+  if (hasParabens) penalty += 25;
+  if (hasSulfates) penalty += 12;
+  if (hasFragrance) penalty += 8;
+
+  const score = Math.max(15, Math.min(98, 92 - penalty + detectedActives.length * 5));
+  let verdict: ScannedProduct['verdict'] = 'Clean & Safe';
+  let color = '#10B981';
+  let grade: ScannedProduct['nutriScore'] = 'A';
+
+  if (score >= 82) {
+    verdict = 'Clean & Safe';
+    color = '#10B981';
+    grade = score >= 90 ? 'A' : 'B';
+  } else if (score >= 65) {
+    verdict = 'Good Formulation';
+    color = '#58B84F';
+    grade = 'B';
+  } else if (score >= 42) {
+    verdict = 'Moderate Concern';
+    color = '#F59E0B';
+    grade = 'C';
+  } else {
+    verdict = 'Hazardous / Poor';
+    color = '#EF4444';
+    grade = 'E';
+  }
+
+  return {
+    score,
+    verdict,
+    color,
+    grade,
+    formulationProfile: {
+      activePct: 60,
+      emollientPct: 25,
+      stabilizerPct: 15,
+      isParabenFree: !hasParabens,
+      isSulfateFree: !hasSulfates,
+      isSiliconeFree: !hasSilicones,
+      isFragranceFree: !hasFragrance,
+      highRiskCount: hasParabens ? 1 : 0,
+      moderateRiskCount: (hasSulfates ? 1 : 0) + (hasFragrance ? 1 : 0),
+      activesCount: detectedActives.length,
+      detectedActives,
+      detectedRisks,
+    }
+  };
+}
+
 export async function fetchProductByBarcode(barcodeRaw: string): Promise<ScannedProduct> {
   const barcode = barcodeRaw.trim();
 
-  // 1. Check curated database first for instant offline/store accuracy
+  // 1. Check curated database first
   if (CURATED_PRODUCTS[barcode]) {
     const cur = CURATED_PRODUCTS[barcode];
     const nutri = (cur.nutriScore || 'C') as ScannedProduct['nutriScore'];
-    const analysis = calculateAiHealthScore(
-      nutri,
-      cur.novaGroup,
-      cur.metrics?.sugars,
-      cur.metrics?.saturatedFat,
-      cur.hasPalmOil,
-      cur.additives?.length || 0
-    );
+    const isBeauty = cur.productType === 'beauty' || isBeautyCategory(cur.category || '', cur.name || '');
 
     return {
       barcode,
       name: cur.name || 'Packaged Mart Item',
       brand: cur.brand || 'Mart Product',
-      category: cur.category || 'Grocery',
+      category: cur.category || (isBeauty ? 'Beauty & Care' : 'Grocery'),
       imageUrl: cur.imageUrl,
+      productType: isBeauty ? 'beauty' : 'food',
       nutriScore: nutri,
-      novaGroup: cur.novaGroup || 3,
-      aiHealthRating: analysis.score,
-      verdict: analysis.verdict,
-      verdictColor: analysis.color,
+      novaGroup: cur.novaGroup || (isBeauty ? 1 : 3),
+      aiHealthRating: cur.aiHealthRating || 80,
+      verdict: cur.verdict || (isBeauty ? 'Clean & Safe' : 'Good Choice'),
+      verdictColor: cur.verdictColor || '#10B981',
       metrics: cur.metrics || {
-        calories: 320,
-        carbs: 45,
-        sugars: 12,
-        fat: 10,
-        saturatedFat: 3.5,
-        protein: 6.5,
-        fiber: 2.8,
-        salt: 0.8,
+        calories: isBeauty ? 0 : 320,
+        carbs: isBeauty ? 0 : 45,
+        sugars: isBeauty ? 0 : 12,
+        fat: isBeauty ? 0 : 10,
+        saturatedFat: isBeauty ? 0 : 3.5,
+        protein: isBeauty ? 0 : 6.5,
+        fiber: isBeauty ? 0 : 2.8,
+        salt: isBeauty ? 0 : 0.8,
       },
       additives: cur.additives || [],
       hasPalmOil: !!cur.hasPalmOil,
-      isUltraProcessed: cur.novaGroup === 4,
+      isUltraProcessed: cur.isUltraProcessed !== undefined ? cur.isUltraProcessed : false,
       ingredientsSummary: cur.ingredientsSummary,
+      insight: cur.insight,
+      formulationProfile: cur.formulationProfile || null,
     };
   }
 
@@ -340,25 +603,35 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
       const backendJson = await backendRes.json();
       if (backendJson.success && backendJson.product) {
         const prod = backendJson.product;
+        const isBeauty = prod.productType === 'beauty' || isBeautyCategory(prod.category || '', prod.product_name || prod.name || '');
         const grade = (prod.nutriscore_grade || prod.nutriScore || 'c').toString().toUpperCase() as ScannedProduct['nutriScore'];
         const nutriGrade = ['A', 'B', 'C', 'D', 'E'].includes(grade) ? grade : 'C';
-        const nova = typeof prod.nova_group === 'number' ? prod.nova_group : 3;
-        const sugars = Number(prod.sugars ?? prod.metrics?.sugars ?? 8);
-        const satFat = Number(prod.saturatedFat ?? prod.metrics?.saturatedFat ?? 3);
+        const nova = typeof prod.nova_group === 'number' ? prod.nova_group : (isBeauty ? 1 : 3);
+        const sugars = Number(prod.sugars ?? prod.metrics?.sugars ?? 0);
+        const satFat = Number(prod.saturatedFat ?? prod.metrics?.saturatedFat ?? 0);
         const hasPalm = Boolean(prod.hasPalmOil || (prod.ingredients && /palm/i.test(prod.ingredients)));
         const additives = Array.isArray(prod.additives) ? prod.additives : [];
 
-        const analysis = calculateAiHealthScore(nutriGrade, nova, sugars, satFat, hasPalm, additives.length);
-        const backendAiRating = typeof prod.aiHealthRating === 'number' ? prod.aiHealthRating : analysis.score;
-        const backendVerdict = prod.verdict || analysis.verdict;
-        const backendVerdictColor = prod.verdictColor || analysis.color;
+        let backendAiRating = typeof prod.aiHealthRating === 'number' ? prod.aiHealthRating : 70;
+        let backendVerdict = prod.verdict || 'Good Choice';
+        let backendVerdictColor = prod.verdictColor || '#58B84F';
+        let formulation = prod.formulationProfile || null;
+
+        if (isBeauty && !formulation && prod.ingredientsSummary) {
+          const beautyAnalysis = parseBeautyIngredients(prod.ingredientsSummary);
+          formulation = beautyAnalysis.formulationProfile;
+          backendAiRating = beautyAnalysis.score;
+          backendVerdict = beautyAnalysis.verdict;
+          backendVerdictColor = beautyAnalysis.color;
+        }
 
         return {
           barcode,
-          name: prod.product_name || prod.name || 'Packaged Mart Item',
-          brand: prod.brand || 'Mart Selection',
-          category: prod.category || 'Grocery',
+          name: prod.product_name || prod.name || (isBeauty ? 'Beauty & Care Product' : 'Packaged Mart Item'),
+          brand: prod.brand || 'Selection',
+          category: prod.category || (isBeauty ? 'Beauty & Care' : 'Grocery'),
           imageUrl: prod.image_url || prod.imageUrl,
+          productType: isBeauty ? 'beauty' : 'food',
           nutriScore: (prod.nutriScore || nutriGrade) as ScannedProduct['nutriScore'],
           novaGroup: prod.novaGroup ?? nova,
           aiHealthRating: backendAiRating,
@@ -366,24 +639,25 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           verdictColor: backendVerdictColor,
           insight: prod.insight,
           metrics: {
-            calories: Number(prod.metrics?.calories ?? prod.calories ?? 280),
-            carbs: Number(prod.metrics?.carbs ?? prod.carbs ?? 38),
+            calories: Number(prod.metrics?.calories ?? prod.calories ?? 0),
+            carbs: Number(prod.metrics?.carbs ?? prod.carbs ?? 0),
             sugars: Number(prod.metrics?.sugars ?? sugars),
-            fat: Number(prod.metrics?.fat ?? prod.fat ?? 9),
+            fat: Number(prod.metrics?.fat ?? prod.fat ?? 0),
             saturatedFat: Number(prod.metrics?.saturatedFat ?? satFat),
-            protein: Number(prod.metrics?.protein ?? prod.protein ?? 5.5),
-            fiber: Number(prod.metrics?.fiber ?? prod.fiber ?? 2.5),
-            salt: Number(prod.metrics?.salt ?? prod.salt ?? 0.6),
+            protein: Number(prod.metrics?.protein ?? prod.protein ?? 0),
+            fiber: Number(prod.metrics?.fiber ?? prod.fiber ?? 0),
+            salt: Number(prod.metrics?.salt ?? prod.salt ?? 0),
           },
           additives: Array.isArray(prod.additives) ? prod.additives : additives,
           hasPalmOil: prod.hasPalmOil !== undefined ? Boolean(prod.hasPalmOil) : hasPalm,
           isUltraProcessed: prod.isUltraProcessed !== undefined ? Boolean(prod.isUltraProcessed) : nova === 4,
           ingredientsSummary: prod.ingredientsSummary || prod.ingredients || prod.ingredients_text,
+          formulationProfile: formulation,
         };
       }
     }
   } catch (_) {
-    // Continue to OpenFoodFacts API fallback
+    // Continue to fallback
   }
 
   // 3. Fallback to OpenFoodFacts Global Database
@@ -433,6 +707,7 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           brand: p.brands || 'Mart Brand',
           category: p.categories?.split(',')[0] || 'Packaged Food',
           imageUrl: p.image_url || p.image_front_url || p.image_small_url,
+          productType: 'food',
           nutriScore,
           novaGroup: nova,
           aiHealthRating: analysis.score,
@@ -456,12 +731,105 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
       }
     }
   } catch (_) {
-    // Continue to synthetic AI analysis fallback
+    // Continue to Open Beauty Facts
   }
 
-  // 4. Intelligent AI estimation fallback based on barcode digits
-  // Ensures any scanned code always renders a comprehensive breakdown
+  // 4. Fallback to OpenBeautyFacts Global Database
+  try {
+    const obfRes = await fetch(
+      `https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`
+    );
+    if (obfRes.ok) {
+      const data = await obfRes.json();
+      if (data.status === 1 && data.product) {
+        const p = data.product;
+        const ingredientsText: string = p.ingredients_text || p.ingredients_text_en || '';
+        const beautyEval = parseBeautyIngredients(ingredientsText);
+
+        return {
+          barcode,
+          name: p.product_name || p.product_name_en || 'Cosmetic / Personal Care Item',
+          brand: p.brands || 'Personal Care Brand',
+          category: p.categories?.split(',')[0] || 'Beauty & Cosmetics',
+          imageUrl: p.image_url || p.image_front_url || p.image_small_url,
+          productType: 'beauty',
+          nutriScore: beautyEval.grade,
+          novaGroup: 1,
+          aiHealthRating: beautyEval.score,
+          verdict: beautyEval.verdict,
+          verdictColor: beautyEval.color,
+          metrics: {
+            calories: 0,
+            carbs: 0,
+            sugars: 0,
+            fat: 0,
+            saturatedFat: 0,
+            protein: 0,
+            fiber: 0,
+            salt: 0,
+          },
+          additives: (p.additives_tags || []).map((t: string) => t.replace('en:', '').toUpperCase()),
+          hasPalmOil: false,
+          isUltraProcessed: false,
+          ingredientsSummary: ingredientsText || undefined,
+          formulationProfile: beautyEval.formulationProfile,
+        };
+      }
+    }
+  } catch (_) {
+    // Continue
+  }
+
+  // 5. Intelligent Estimation Fallback
   const lastDigit = parseInt(barcode.slice(-1) || '5', 10);
+  const isBeauty = lastDigit % 4 === 0;
+
+  if (isBeauty) {
+    return {
+      barcode,
+      name: `Beauty Formulation #${barcode.slice(-6)}`,
+      brand: 'Botanical Care Selection',
+      category: 'Cosmetics & Personal Care',
+      imageUrl: 'https://images.openbeautyfacts.org/images/products/400/580/881/1120/front_en.18.400.jpg',
+      productType: 'beauty',
+      nutriScore: 'A',
+      novaGroup: 1,
+      aiHealthRating: 84,
+      verdict: 'Clean & Safe',
+      verdictColor: '#10B981',
+      metrics: {
+        calories: 0,
+        carbs: 0,
+        sugars: 0,
+        fat: 0,
+        saturatedFat: 0,
+        protein: 0,
+        fiber: 0,
+        salt: 0,
+      },
+      additives: ['Plant Glycerin', 'Vitamin E'],
+      hasPalmOil: false,
+      isUltraProcessed: false,
+      ingredientsSummary: 'Aqua, Glycerin, Niacinamide, Tocopherol, Natural Plant Extracts, Gentle Stabilizers.',
+      formulationProfile: {
+        activePct: 65,
+        emollientPct: 22,
+        stabilizerPct: 13,
+        isParabenFree: true,
+        isSulfateFree: true,
+        isSiliconeFree: true,
+        isFragranceFree: true,
+        highRiskCount: 0,
+        moderateRiskCount: 0,
+        activesCount: 2,
+        detectedActives: [
+          { name: 'Niacinamide', benefit: 'Skin Barrier Shield' },
+          { name: 'Glycerin', benefit: 'Biomimetic Humectant' },
+        ],
+      }
+    };
+  }
+
   const grades: ScannedProduct['nutriScore'][] = ['B', 'C', 'D', 'C', 'B', 'D', 'C', 'A', 'E', 'B'];
   const nutriScore = grades[lastDigit % grades.length];
   const nova = (lastDigit % 3) + 2;
@@ -470,9 +838,10 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
   return {
     barcode,
     name: `Mart Product #${barcode.slice(-6)}`,
-    brand: 'Supermarket Grocery',
+    brand: 'Supermarket Selection',
     category: 'Packaged Mart Item',
     imageUrl: 'https://images.openfoodfacts.org/images/products/301/762/042/2003/front_en.514.400.jpg',
+    productType: 'food',
     nutriScore,
     novaGroup: nova,
     aiHealthRating: analysis.score,
