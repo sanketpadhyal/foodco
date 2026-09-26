@@ -36,6 +36,10 @@ const theme = {
   border: '#E5E7EB',
 };
 
+const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+const sansFont = Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' });
+const boldSansFont = Platform.select({ ios: 'System', android: 'sans-serif-bold', default: 'sans-serif' });
+
 export default function Dashboard({ user, onLogout }: DashboardProps) {
   const insets = useSafeAreaInsets();
   
@@ -191,21 +195,27 @@ const styles = StyleSheet.create({
     backgroundColor: theme.white,
   },
   greetingText: {
+    fontFamily: sansFont,
     fontSize: 20,
     color: theme.green,
     marginBottom: 6,
     fontWeight: '700',
+    letterSpacing: 0.3,
     textAlign: 'center',
   },
   subtitleText: {
-    fontSize: 22,
+    fontFamily: serifFont,
+    fontSize: 23,
     color: theme.textPrimary,
     fontWeight: '700',
     lineHeight: 30,
     textAlign: 'center',
   },
   subtitleHighlight: {
+    fontFamily: boldSansFont,
     color: theme.blue,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   searchBarWrapper: {
     marginHorizontal: 20,
