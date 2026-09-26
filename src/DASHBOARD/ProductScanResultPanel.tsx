@@ -394,8 +394,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   resultScroll: {
-    maxHeight: MAX_SCROLL_HEIGHT,
-    flexGrow: 0,
+    flexShrink: 1,
   },
   resultContent: {
     paddingBottom: 0,
@@ -482,7 +481,9 @@ const styles = StyleSheet.create({
   scoreHeroCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
-    padding: 16,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     borderWidth: 1,
     borderColor: '#EEF0F4',
     marginBottom: 0,
