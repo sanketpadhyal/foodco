@@ -129,20 +129,20 @@ export default function UniversalPanel({
     if (visible) {
       setMounted(true);
       panY.setValue(0);
-      slideAnim.setValue(400);
+      slideAnim.setValue(420);
       backdropAnim.setValue(0);
 
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 320,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 220,
-          easing: Easing.out(Easing.cubic),
+          duration: 420,
+          easing: Easing.out(Easing.exp),
           useNativeDriver: true,
         }),
       ]).start();
@@ -150,14 +150,14 @@ export default function UniversalPanel({
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 0,
-          duration: 160,
-          easing: Easing.out(Easing.quad),
+          duration: 260,
+          easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
-          toValue: 400,
-          duration: 180,
-          easing: Easing.out(Easing.quad),
+          toValue: 420,
+          duration: 300,
+          easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start(() => {
