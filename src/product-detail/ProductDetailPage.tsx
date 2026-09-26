@@ -150,11 +150,37 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Lecithins (Soya / Sunflower)',
       role: 'Emulsifier & Stabilizer',
       risk: 'safe',
-      riskLabel: 'No Risk',
+      riskLabel: 'Safe',
       color: '#10B981',
       bgColor: '#ECFDF5',
       borderColor: '#D1FAE5',
       description: 'Plant-derived natural lipid that bonds fats and water. Safe and digestible.',
+    };
+  }
+  if (lower.includes('annatto') || lower.includes('160b')) {
+    return {
+      code: 'E160b',
+      name: 'Natural Annatto Color',
+      role: 'Plant-Derived Natural Food Color',
+      risk: 'safe',
+      riskLabel: 'Safe',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      borderColor: '#D1FAE5',
+      description: 'Natural reddish-orange carotenoid pigment extracted from achiote tree seeds.',
+    };
+  }
+  if (lower.includes('salt') || lower.includes('sodium chloride')) {
+    return {
+      code: 'Common Salt',
+      name: 'Common Salt (Sodium Chloride)',
+      role: 'Natural Seasoning & Mineral',
+      risk: 'safe',
+      riskLabel: 'Safe',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      borderColor: '#D1FAE5',
+      description: 'Essential dietary mineral used for natural seasoning and taste enhancement.',
     };
   }
   if (lower.includes('vanillin')) {
@@ -163,7 +189,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Vanillin',
       role: 'Aroma & Flavor Compound',
       risk: 'safe',
-      riskLabel: 'No Risk',
+      riskLabel: 'Safe',
       color: '#10B981',
       bgColor: '#ECFDF5',
       borderColor: '#D1FAE5',
@@ -176,7 +202,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Citric Acid',
       role: 'Acidity Regulator & Antioxidant',
       risk: 'safe',
-      riskLabel: 'No Risk',
+      riskLabel: 'Safe',
       color: '#10B981',
       bgColor: '#ECFDF5',
       borderColor: '#D1FAE5',
@@ -189,7 +215,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Sodium Carbonates (Baking Soda)',
       role: 'Raising & Leavening Agent',
       risk: 'safe',
-      riskLabel: 'No Risk',
+      riskLabel: 'Safe',
       color: '#10B981',
       bgColor: '#ECFDF5',
       borderColor: '#D1FAE5',
@@ -202,7 +228,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Ammonium Carbonates',
       role: 'Crisp Leavening Agent',
       risk: 'safe',
-      riskLabel: 'No Risk',
+      riskLabel: 'Safe',
       color: '#10B981',
       bgColor: '#ECFDF5',
       borderColor: '#D1FAE5',
@@ -215,7 +241,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Mono- & Diglycerides of Fatty Acids',
       role: 'Texture Stabilizer',
       risk: 'moderate',
-      riskLabel: 'Moderate Caution',
+      riskLabel: 'Moderate',
       color: '#F59E0B',
       bgColor: '#FFFBEB',
       borderColor: '#FEF3C7',
@@ -228,7 +254,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Monosodium Glutamate (MSG)',
       role: 'Umami Flavor Enhancer',
       risk: 'moderate',
-      riskLabel: 'Moderate Caution',
+      riskLabel: 'Moderate',
       color: '#F59E0B',
       bgColor: '#FFFBEB',
       borderColor: '#FEF3C7',
@@ -241,7 +267,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Ammonia Sulfite Caramel (Caramel IV)',
       role: 'Deep Brown Colorant',
       risk: 'moderate',
-      riskLabel: 'Moderate Caution',
+      riskLabel: 'Moderate',
       color: '#F59E0B',
       bgColor: '#FFFBEB',
       borderColor: '#FEF3C7',
@@ -267,7 +293,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
       name: 'Carrageenan',
       role: 'Gelling & Thickening Agent',
       risk: 'moderate',
-      riskLabel: 'Moderate Caution',
+      riskLabel: 'Moderate',
       color: '#F59E0B',
       bgColor: '#FFFBEB',
       borderColor: '#FEF3C7',
@@ -282,7 +308,7 @@ function getAdditiveDetails(raw: string): AdditiveDetail {
     name: clean,
     role: 'Regulated Food Additive',
     risk: 'safe',
-    riskLabel: 'Evaluated Safe',
+    riskLabel: 'Safe',
     color: '#10B981',
     bgColor: '#ECFDF5',
     borderColor: '#D1FAE5',
@@ -811,12 +837,7 @@ export default function ProductDetailPage({
                   <Ionicons name="warning" size={17} color="#DC2626" />
                 </View>
                 <View style={styles.palmWarningBody}>
-                  <View style={styles.palmWarningHeaderRow}>
-                    <Text style={styles.palmWarningTitle}>Contains Palm Oil</Text>
-                    <View style={styles.palmWarningBadge}>
-                      <Text style={styles.palmWarningBadgeText}>Saturated Fat</Text>
-                    </View>
-                  </View>
+                  <Text style={styles.palmWarningTitle}>Contains Palm Oil</Text>
                   <Text style={styles.palmWarningDesc}>
                     Formulated with refined palm oil / vegetable fats, rich in palmitic acid.
                   </Text>
@@ -866,32 +887,16 @@ export default function ProductDetailPage({
                             {item.cleanName}
                           </Text>
                           {(item.isPalm || (item.isSugar && idx === 0) || item.isAllergen) ? (
-                            <View style={styles.ingredientTagRow}>
-                              {item.isPalm ? (
-                                <View style={styles.pillPalm}>
-                                  <Text style={styles.pillPalmText}>Refined Fat</Text>
-                                </View>
-                              ) : null}
-                              {item.isSugar && idx === 0 ? (
-                                <View style={styles.pillSugar}>
-                                  <Text style={styles.pillSugarText}>Primary Base</Text>
-                                </View>
-                              ) : null}
-                              {item.isAllergen ? (
-                                <View style={styles.pillAllergen}>
-                                  <Text style={styles.pillAllergenText}>
-                                    Allergen • {item.allergenLabel}
-                                  </Text>
-                                </View>
-                              ) : null}
-                            </View>
+                            <Text style={styles.ingredientSubDetailText}>
+                              {item.isPalm ? 'Refined vegetable fat' : null}
+                              {item.isSugar && idx === 0 ? 'Primary sweetening base' : null}
+                              {item.isAllergen ? `${(item.isPalm || (item.isSugar && idx === 0)) ? ' • ' : ''}Allergen: ${item.allergenLabel}` : null}
+                            </Text>
                           ) : null}
                         </View>
 
                         {item.percentage ? (
-                          <View style={styles.percentageBadge}>
-                            <Text style={styles.percentageBadgeText}>{item.percentage}</Text>
-                          </View>
+                          <Text style={styles.percentageTextClean}>{item.percentage}</Text>
                         ) : null}
                       </View>
                     ))}
@@ -931,46 +936,24 @@ export default function ProductDetailPage({
                         key={idx}
                         style={[
                           styles.additiveDetailCard,
-                          { borderColor: detail.borderColor },
+                          idx < product.additives.length - 1 && styles.additiveCardDivider,
                         ]}
                       >
                         <View style={styles.additiveTopLine}>
-                          <View style={styles.additiveCodeGroup}>
-                            <View
-                              style={[
-                                styles.additiveCodeChip,
-                                { backgroundColor: detail.bgColor },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.additiveCodeChipText,
-                                  { color: detail.color },
-                                ]}
-                              >
-                                {detail.code}
-                              </Text>
-                            </View>
-                            <Text style={styles.additiveFullName} numberOfLines={1}>
-                              {detail.name}
-                            </Text>
-                          </View>
+                          <Text style={styles.additiveFullName} numberOfLines={1}>
+                            {detail.name}
+                          </Text>
 
-                          <View
-                            style={[
-                              styles.additiveRiskPill,
-                              { backgroundColor: detail.bgColor },
-                            ]}
-                          >
+                          <View style={styles.additiveStatusWrap}>
                             <View
                               style={[
-                                styles.additiveRiskIndicatorDot,
+                                styles.additiveStatusDot,
                                 { backgroundColor: detail.color },
                               ]}
                             />
                             <Text
                               style={[
-                                styles.additiveRiskPillText,
+                                styles.additiveStatusText,
                                 { color: detail.color },
                               ]}
                             >
@@ -980,9 +963,9 @@ export default function ProductDetailPage({
                         </View>
 
                         <Text style={styles.additiveFunctionRole}>
-                          Role: <Text style={styles.additiveRoleValue}>{detail.role}</Text>
+                          {detail.role}
                         </Text>
-                        <Text style={styles.additiveDetailedDesc}>
+                        <Text style={styles.additiveDescText}>
                           {detail.description}
                         </Text>
                       </View>
@@ -1518,53 +1501,14 @@ const styles = StyleSheet.create({
     color: '#1E1D25',
     lineHeight: 18,
   },
-  ingredientTagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4,
+  ingredientSubDetailText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginTop: 2,
   },
-  pillPalm: {
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  pillPalmText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#DC2626',
-  },
-  pillSugar: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  pillSugarText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#D97706',
-  },
-  pillAllergen: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  pillAllergenText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#2563EB',
-  },
-  percentageBadge: {
-    backgroundColor: '#E5E7EB',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  percentageBadgeText: {
-    fontSize: 11.5,
+  percentageTextClean: {
+    fontSize: 13,
     fontWeight: '800',
     color: '#1E1D25',
   },
@@ -1614,73 +1558,57 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   additivesCardsColumn: {
-    gap: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEF0F4',
+    overflow: 'hidden',
   },
   additiveDetailCard: {
-    backgroundColor: '#FAFAFA',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  additiveCardDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0F4',
   },
   additiveTopLine: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 3,
   },
-  additiveCodeGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  additiveFullName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#1E1D25',
     flex: 1,
     marginRight: 8,
   },
-  additiveCodeChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  additiveCodeChipText: {
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  additiveFullName: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1E1D25',
-    flex: 1,
-  },
-  additiveRiskPill: {
+  additiveStatusWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 4,
+    gap: 5,
   },
-  additiveRiskIndicatorDot: {
+  additiveStatusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
   },
-  additiveRiskPillText: {
-    fontSize: 10.5,
-    fontWeight: '800',
+  additiveStatusText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   additiveFunctionRole: {
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#4B5563',
-    marginBottom: 4,
-  },
-  additiveRoleValue: {
-    fontWeight: '700',
-    color: '#1E1D25',
-  },
-  additiveDetailedDesc: {
-    fontSize: 12,
-    fontWeight: '500',
     color: '#6B7280',
+    marginBottom: 3,
+  },
+  additiveDescText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#4B5563',
     lineHeight: 16,
   },
   cleanAdditivesCard: {
