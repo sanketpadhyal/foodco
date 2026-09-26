@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Component, ReactNode } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,47 @@ import { fetchProductByBarcode, ScannedProduct } from './productService';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Dynamically and safely resolve expo-camera to prevent native module crash on older APK builds
+let SafeCameraView: any = null;
+let safeUseCameraPermissions: any = null;
+
+try {
+  const ExpoCam = require('expo-camera');
+  if (ExpoCam && ExpoCam.CameraView) {
+    SafeCameraView = ExpoCam.CameraView;
+    safeUseCameraPermissions = ExpoCam.useCameraPermissions;
+  }
+} catch (_) {
+  SafeCameraView = null;
+  safeUseCameraPermissions = null;
+}
+
+interface ErrorBoundaryProps {
+  fallback: ReactNode;
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class CameraErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch() {}
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 export interface BarcodeScannerPageProps {
   visible: boolean;
   onClose: () => void;
@@ -32,6 +73,67 @@ const DEMO_MART_PRODUCTS = [
   { barcode: '3033490004523', label: '🥣 Activia Yogurt' },
   { barcode: '5000159461122', label: '🥜 Snickers' },
 ];
+
+function NativeCameraInner({
+  onBarcodeScanned,
+}: {
+  onBarcodeScanned: (result: { type: string; data: string }) => void;
+}) {
+  if (!safeUseCameraPermissions || !SafeCameraView) {
+    return <RealMartCameraView />;
+  }
+
+  const [permission, requestPermission] = safeUseCameraPermissions();
+
+  if (!permission?.granted) {
+    return <RealMartCameraView onRequestPermission={requestPermission} />;
+  }
+
+  return (
+    <SafeCameraView
+      style={StyleSheet.absoluteFill}
+      facing="back"
+      barcodeScannerSettings={{
+        barcodeTypes: [
+          'ean13',
+          'ean8',
+          'upc_a',
+          'upc_e',
+          'code128',
+          'code39',
+          'qr',
+          'datamatrix',
+        ],
+      }}
+      onBarcodeScanned={onBarcodeScanned}
+    />
+  );
+}
+
+function RealMartCameraView({ onRequestPermission }: { onRequestPermission?: () => void }) {
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      {/* 100% Fullscreen Photorealistic Mart Camera View */}
+      <Image
+        source={require('../../assets/dashboard/real_mart_camera_portrait.jpg')}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      />
+      {onRequestPermission ? (
+        <View style={styles.permissionBar}>
+          <TouchableOpacity
+            style={styles.permissionPill}
+            activeOpacity={0.82}
+            onPress={onRequestPermission}
+          >
+            <Ionicons name="camera" size={14} color="#FFFFFF" />
+            <Text style={styles.permissionPillText}>Tap for Live Camera</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerPageProps) {
   const insets = useSafeAreaInsets();
@@ -52,6 +154,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   const laserAnim = useRef(new Animated.Value(0)).current;
   // Pulse animation for HUD distance badge
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isCooldownRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
@@ -143,9 +246,10 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   };
 
   const processBarcode = async (rawCode: string) => {
-    if (!rawCode.trim()) return;
-    const cleaned = rawCode.trim();
+    if (isCooldownRef.current || !rawCode.trim()) return;
+    isCooldownRef.current = true;
 
+    const cleaned = rawCode.trim();
     setResultVisible(true);
     setFetchingProduct(true);
     setScanError(null);
@@ -158,6 +262,16 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       setScanError(err?.message || 'Could not fetch product details.');
     } finally {
       setFetchingProduct(false);
+      setTimeout(() => {
+        isCooldownRef.current = false;
+      }, 1500);
+    }
+  };
+
+  const handleBarcodeScanned = (result: { type: string; data: string }) => {
+    if (resultVisible || fetchingProduct || isCooldownRef.current) return;
+    if (result && result.data) {
+      processBarcode(result.data);
     }
   };
 
@@ -165,6 +279,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     setResultVisible(false);
     setProductData(null);
     setScanError(null);
+    isCooldownRef.current = false;
   };
 
   const laserTranslateY = laserAnim.interpolate({
@@ -184,14 +299,18 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         },
       ]}
     >
-      {/* High-res Realistic Supermarket AR Camera Background with Green Perspective Path */}
-      <Image
-        source={require('../../assets/dashboard/foodco_ar_scanner_bg.jpg')}
-        style={styles.cameraBackground}
-        resizeMode="cover"
-      />
+      {/* 100% Fullscreen Proper Camera View (No green triangles, no roads, full viewport) */}
+      <View style={StyleSheet.absoluteFill}>
+        <CameraErrorBoundary fallback={<RealMartCameraView />}>
+          {SafeCameraView && safeUseCameraPermissions ? (
+            <NativeCameraInner onBarcodeScanned={handleBarcodeScanned} />
+          ) : (
+            <RealMartCameraView />
+          )}
+        </CameraErrorBoundary>
+      </View>
 
-      {/* Top Controls Row */}
+      {/* Top Floating Controls */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         {/* Back Button: White Rounded Square with < Chevron */}
         <TouchableOpacity
@@ -208,11 +327,11 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <Text style={styles.headerTitleText}>Foodco AI Scanner</Text>
           <View style={styles.liveIndicatorRow}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveIndicatorText}>Live Mart Camera</Text>
+            <Text style={styles.liveIndicatorText}>Live Camera Feed</Text>
           </View>
         </View>
 
-        {/* Right Action Button: White Rounded Square with Scan/Compass Icon */}
+        {/* Right Action Button: White Rounded Square with Scan Icon */}
         <TouchableOpacity
           style={styles.squareControlBtn}
           activeOpacity={0.82}
@@ -223,7 +342,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </TouchableOpacity>
       </View>
 
-      {/* Center AR Scanning Frame & HUD Distance Pill */}
+      {/* Center Viewfinder Target Box on Fullscreen Camera */}
       <View style={styles.viewfinderCenterWrap} pointerEvents="box-none">
         {/* Floating HUD Pill: Themed with green icon and scanner guide */}
         <Animated.View style={[styles.hudBadgePill, { transform: [{ scale: pulseAnim }] }]}>
@@ -233,7 +352,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <Text style={styles.hudDistanceText}>Align Mart Barcode</Text>
         </Animated.View>
 
-        {/* High-Tech Viewfinder Target Box */}
+        {/* Viewfinder Target Box */}
         <View style={styles.viewfinderBox}>
           {/* 4 Green Corner Brackets */}
           <View style={[styles.corner, styles.cornerTL]} />
@@ -253,12 +372,12 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
           {/* Barcode Watermark Icon */}
           <View style={styles.barcodeWatermark}>
-            <Ionicons name="barcode-outline" size={60} color="rgba(93, 176, 53, 0.35)" />
+            <Ionicons name="barcode-outline" size={60} color="rgba(255, 255, 255, 0.45)" />
           </View>
         </View>
       </View>
 
-      {/* Bottom Sheet - Beautiful Themed White Card with High Border Radius */}
+      {/* Bottom Sheet - Floating over the camera view with rounded top corners */}
       <View style={[styles.bottomSheet, { paddingBottom: insets.bottom + 18 }]}>
         {/* Foodco AI Assistant Profile Row */}
         <View style={styles.profileRow}>
@@ -396,12 +515,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     zIndex: 999,
   },
-  cameraBackground: {
-    width: '100%',
-    height: '62%',
+  permissionBar: {
     position: 'absolute',
-    top: 0,
+    top: 100,
     left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  permissionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  permissionPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
   },
   topBar: {
     flexDirection: 'row',
@@ -419,19 +553,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.16,
     shadowRadius: 10,
     elevation: 4,
   },
   headerTitleWrap: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
     elevation: 2,
   },
@@ -468,14 +602,14 @@ const styles = StyleSheet.create({
   hudBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 14,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.16,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -494,9 +628,9 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   corner: {
     position: 'absolute',
@@ -571,7 +705,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.14,
     shadowRadius: 16,
     elevation: 10,
   },
