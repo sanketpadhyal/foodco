@@ -55,31 +55,33 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           accessibilityRole="button"
           accessibilityLabel="Home"
         >
-          <View style={styles.gridIconWrap}>
-            <View
-              style={[
-                styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
-              ]}
-            />
-            <View
-              style={[
-                styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? THEME.activeAccent : THEME.inactiveAccent },
-              ]}
-            />
-            <View
-              style={[
-                styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
-              ]}
-            />
-            <View
-              style={[
-                styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
-              ]}
-            />
+          <View style={styles.iconSlot}>
+            <View style={styles.gridIconWrap}>
+              <View
+                style={[
+                  styles.gridBlock,
+                  { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
+                ]}
+              />
+              <View
+                style={[
+                  styles.gridBlock,
+                  { backgroundColor: activeTab === 'home' ? THEME.activeAccent : THEME.inactiveAccent },
+                ]}
+              />
+              <View
+                style={[
+                  styles.gridBlock,
+                  { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
+                ]}
+              />
+              <View
+                style={[
+                  styles.gridBlock,
+                  { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
+                ]}
+              />
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -91,34 +93,36 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           accessibilityRole="button"
           accessibilityLabel="Stats"
         >
-          <View style={styles.chartIconWrap}>
-            <View
-              style={[
-                styles.chartBar,
-                {
-                  height: 11,
-                  backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.chartBar,
-                {
-                  height: 18,
-                  backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.chartBar,
-                {
-                  height: 9,
-                  backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
-                },
-              ]}
-            />
+          <View style={styles.iconSlot}>
+            <View style={styles.chartIconWrap}>
+              <View
+                style={[
+                  styles.chartBar,
+                  {
+                    height: 12,
+                    backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.chartBar,
+                  {
+                    height: 20,
+                    backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.chartBar,
+                  {
+                    height: 15,
+                    backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
+                  },
+                ]}
+              />
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -133,11 +137,13 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           accessibilityRole="button"
           accessibilityLabel="Recipes"
         >
-          <Ionicons
-            name={activeTab === 'recipes' ? 'document-text' : 'document-text-outline'}
-            size={24}
-            color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
-          />
+          <View style={styles.iconSlot}>
+            <Ionicons
+              name={activeTab === 'recipes' ? 'document-text' : 'document-text-outline'}
+              size={22}
+              color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
+            />
+          </View>
         </TouchableOpacity>
 
         {/* Tab 5: Cart / Shopping Bag */}
@@ -148,11 +154,13 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           accessibilityRole="button"
           accessibilityLabel="Shopping Cart"
         >
-          <Ionicons
-            name={activeTab === 'cart' ? 'bag-handle' : 'bag-handle-outline'}
-            size={24}
-            color={activeTab === 'cart' ? THEME.active : THEME.inactive}
-          />
+          <View style={styles.iconSlot}>
+            <Ionicons
+              name={activeTab === 'cart' ? 'bag-handle' : 'bag-handle-outline'}
+              size={22}
+              color={activeTab === 'cart' ? THEME.active : THEME.inactive}
+            />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -211,30 +219,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  iconSlot: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   gridIconWrap: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignContent: 'space-between',
   },
   gridBlock: {
-    width: 9.5,
-    height: 9.5,
-    borderRadius: 3.5,
+    width: 8.8,
+    height: 8.8,
+    borderRadius: 2.8,
   },
   chartIconWrap: {
-    width: 24,
-    height: 22,
+    width: 20,
+    height: 20,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    gap: 3.5,
+    gap: 3,
   },
   chartBar: {
-    width: 4.2,
-    borderRadius: 2.5,
+    width: 4.4,
+    borderRadius: 2.2,
   },
   centerSpace: {
     width: 60,
