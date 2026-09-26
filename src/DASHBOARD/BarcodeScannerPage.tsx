@@ -22,6 +22,8 @@ const CORNER_MASK_BL = require('../../assets/dashboard/masks/corner_bl.png');
 const CORNER_MASK_BR = require('../../assets/dashboard/masks/corner_br.png');
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const VIEWFINDER_WIDTH = Math.min(SCREEN_WIDTH - 56, 310);
+const VIEWFINDER_HEIGHT = 195;
 
 // Dynamic resolution of expo-camera
 let SafeCameraView: any = null;
@@ -257,8 +259,11 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
   const laserTranslateY = laserAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [10, 180],
+    outputRange: [10, VIEWFINDER_HEIGHT - 20],
   });
+
+  const topBarHeight = insets.top + 58;
+  const topMaskHeight = topBarHeight + 18 + 74 + 18;
 
   if (!visible) return null;
 
@@ -317,20 +322,16 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
       {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {/* Top mask with Verified Foodco DB Trust Note */}
-        <View style={styles.maskTop} pointerEvents="box-none">
-          <View style={styles.trustCardWrap}>
-            <View style={styles.trustCard}>
-              <View style={styles.trustIconWrap}>
-                <Ionicons name="shield-checkmark" size={20} color="#15803D" />
-              </View>
-              <View style={styles.trustTextContent}>
-                <View style={styles.trustHeaderRow}>
-                  <Text style={styles.trustTitle}>100% Verified Food Data</Text>
-                </View>
-                <Text style={styles.trustDescription}>
-                  Whatever you see here is powered by Foodco's official database & certified health authorities. Fully trusted & transparent.
-                </Text>
-              </View>
+        <View style={[styles.maskTop, { height: topMaskHeight }]} pointerEvents="box-none">
+          <View style={styles.trustCard}>
+            <View style={styles.trustIconWrap}>
+              <Ionicons name="shield-checkmark" size={18} color="#15803D" />
+            </View>
+            <View style={styles.trustTextContent}>
+              <Text style={styles.trustTitle}>100% Verified Food Data</Text>
+              <Text style={styles.trustDescription}>
+                Whatever you see here is powered by Foodco's official database & certified health authorities. Fully trusted & transparent.
+              </Text>
             </View>
           </View>
         </View>
@@ -381,37 +382,46 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             </View>
           </View>
 
-          {/* FamPay-style Tilted Hashtags Cluster */}
-          <View style={styles.stickersCluster}>
-            <View style={[styles.stickerPill, styles.stickerHealthy]}>
-              <Text style={[styles.stickerText, { color: '#15803D' }]}>#healthy</Text>
-              <Text style={styles.stickerEmoji}> 🌱</Text>
+          {/* FamPay-style Tilted Hashtags Cluster - 3 Balanced Rows */}
+          <View style={styles.stickersContainer}>
+            <View style={styles.stickerRow}>
+              <View style={[styles.stickerPill, styles.stickerHealthy]}>
+                <Text style={[styles.stickerText, { color: '#15803D' }]}>#healthy</Text>
+                <Text style={styles.stickerEmoji}> 🌱</Text>
+              </View>
+              <View style={[styles.stickerPill, styles.stickerNutri]}>
+                <Text style={[styles.stickerText, { color: '#1D4ED8' }]}>#nutriscore</Text>
+                <Text style={styles.stickerEmoji}> 📊</Text>
+              </View>
             </View>
 
-            <View style={[styles.stickerPill, styles.stickerNutri]}>
-              <Text style={[styles.stickerText, { color: '#1D4ED8' }]}>#nutriscore</Text>
-              <Text style={styles.stickerEmoji}> 📊</Text>
+            <View style={styles.stickerRow}>
+              <View style={[styles.stickerPill, styles.stickerZeroJunk]}>
+                <Text style={[styles.stickerText, { color: '#B91C1C' }]}>#zerojunk</Text>
+                <Text style={styles.stickerEmoji}> 🚫</Text>
+              </View>
+              <View style={[styles.stickerPill, styles.stickerInstant]}>
+                <Text style={[styles.stickerText, { color: '#6D28D9' }]}>#instantscan</Text>
+                <Text style={styles.stickerEmoji}> ⚡</Text>
+              </View>
             </View>
 
-            <View style={[styles.stickerPill, styles.stickerZeroJunk]}>
-              <Text style={[styles.stickerText, { color: '#B91C1C' }]}>#zerojunk</Text>
-              <Text style={styles.stickerEmoji}> 🚫</Text>
+            <View style={styles.stickerRow}>
+              <View style={[styles.stickerPill, styles.stickerCleanFood]}>
+                <Text style={[styles.stickerText, { color: '#047857' }]}>#cleanfood</Text>
+                <Text style={styles.stickerEmoji}> 🥑</Text>
+              </View>
+              <View style={[styles.stickerPill, styles.stickerAiScore]}>
+                <Text style={[styles.stickerText, { color: '#B45309' }]}>#aiscore</Text>
+                <Text style={styles.stickerEmoji}> ✨</Text>
+              </View>
             </View>
+          </View>
 
-            <View style={[styles.stickerPill, styles.stickerInstant]}>
-              <Text style={[styles.stickerText, { color: '#6D28D9' }]}>#instantscan</Text>
-              <Text style={styles.stickerEmoji}> ⚡</Text>
-            </View>
-
-            <View style={[styles.stickerPill, styles.stickerCleanFood]}>
-              <Text style={[styles.stickerText, { color: '#047857' }]}>#cleanfood</Text>
-              <Text style={styles.stickerEmoji}> 🥑</Text>
-            </View>
-
-            <View style={[styles.stickerPill, styles.stickerAiScore]}>
-              <Text style={[styles.stickerText, { color: '#B45309' }]}>#aiscore</Text>
-              <Text style={styles.stickerEmoji}> ✨</Text>
-            </View>
+          {/* Bottom Security / Trust Anchor */}
+          <View style={styles.footerTrustWrap}>
+            <Ionicons name="shield-checkmark" size={13} color="#9CA3AF" />
+            <Text style={styles.footerTrustText}>Official Foodco Database • 100% Trusted</Text>
           </View>
         </View>
       </View>
@@ -528,33 +538,26 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   maskTop: {
-    flex: 1,
     backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 16,
-  },
-  trustCardWrap: {
-    paddingHorizontal: 20,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingBottom: 18,
   },
   trustCard: {
+    width: VIEWFINDER_WIDTH,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1.5,
     borderColor: '#BBF7D0',
     shadowColor: '#16A34A',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 3,
-    maxWidth: 360,
   },
   trustIconWrap: {
     width: 32,
@@ -564,33 +567,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
-    marginTop: 1,
     borderWidth: 1,
     borderColor: '#86EFAC',
   },
   trustTextContent: {
     flex: 1,
   },
-  trustHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 3,
-  },
   trustTitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#14532D',
     letterSpacing: 0.1,
+    marginBottom: 2,
   },
   trustDescription: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
     color: '#4B5563',
-    lineHeight: 15.5,
+    lineHeight: 14.5,
   },
   maskRow: {
-    height: 200,
+    height: VIEWFINDER_HEIGHT,
     flexDirection: 'row',
   },
   maskSide: {
@@ -601,106 +598,121 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
     alignItems: 'center',
-    paddingTop: 26,
+    paddingTop: 16,
   },
   heroStickerWrap: {
-    transform: [{ rotate: '-2.5deg' }],
-    marginBottom: 16,
+    transform: [{ rotate: '-1.5deg' }],
+    marginBottom: 12,
   },
   heroStickerPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#5DB035',
     shadowColor: '#5DB035',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    elevation: 3,
   },
   heroStickerHash: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: '#5DB035',
     marginRight: 2,
   },
   heroStickerText: {
-    fontSize: 14.5,
+    fontSize: 13.5,
     fontWeight: '800',
     color: '#1E1D25',
     letterSpacing: 0.2,
   },
   heroStickerEmoji: {
-    fontSize: 14,
+    fontSize: 13,
   },
-  stickersCluster: {
+  stickersContainer: {
+    width: VIEWFINDER_WIDTH,
+    gap: 8,
+  },
+  stickerRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxWidth: 340,
-    gap: 10,
-    paddingHorizontal: 12,
+    width: VIEWFINDER_WIDTH,
+    gap: 8,
   },
   stickerPill: {
+    flex: 1,
+    height: 38,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 16,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    borderRadius: 15,
     borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
     elevation: 2,
   },
   stickerText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   stickerEmoji: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     marginLeft: 3,
   },
   stickerHealthy: {
-    transform: [{ rotate: '3.2deg' }],
+    transform: [{ rotate: '-1.2deg' }],
     backgroundColor: '#F0FDF4',
     borderColor: '#86EFAC',
   },
   stickerNutri: {
-    transform: [{ rotate: '-2deg' }],
+    transform: [{ rotate: '1.2deg' }],
     backgroundColor: '#EFF6FF',
     borderColor: '#BFDBFE',
   },
   stickerZeroJunk: {
-    transform: [{ rotate: '2.5deg' }],
+    transform: [{ rotate: '1.2deg' }],
     backgroundColor: '#FEF2F2',
     borderColor: '#FECACA',
   },
   stickerInstant: {
-    transform: [{ rotate: '-3deg' }],
+    transform: [{ rotate: '-1.2deg' }],
     backgroundColor: '#F5F3FF',
     borderColor: '#DDD6FE',
   },
   stickerCleanFood: {
-    transform: [{ rotate: '2.8deg' }],
+    transform: [{ rotate: '-1.2deg' }],
     backgroundColor: '#ECFDF5',
     borderColor: '#A7F3D0',
   },
   stickerAiScore: {
-    transform: [{ rotate: '-1.8deg' }],
+    transform: [{ rotate: '1.2deg' }],
     backgroundColor: '#FFFBEB',
     borderColor: '#FDE68A',
   },
+  footerTrustWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    gap: 6,
+  },
+  footerTrustText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 0.2,
+  },
   viewfinderBox: {
-    width: Math.min(SCREEN_WIDTH - 80, 280),
-    height: 200,
+    width: VIEWFINDER_WIDTH,
+    height: VIEWFINDER_HEIGHT,
     position: 'relative',
     overflow: 'hidden',
     backgroundColor: 'transparent',
