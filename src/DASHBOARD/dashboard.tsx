@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
 import { DashboardNavbar, DashboardBottomBar, DashboardTab } from './components';
 import UniversalPanel from '../components/universalpanel';
 
@@ -256,12 +255,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           activeOpacity={0.92}
           onPress={() => setScannerPanelVisible(true)}
         >
-          <LinearGradient
-            colors={['#62D54F', '#43B033']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.bannerGradient}
-          >
+          <View style={styles.bannerCard}>
             <View style={styles.bannerContent}>
               <View style={styles.bannerTextCol}>
                 <Text style={styles.bannerHeading}>Health body comes with good nutrients</Text>
@@ -278,7 +272,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 resizeMode="contain"
               />
             </View>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
 
         {/* Section Header */}
@@ -540,7 +534,8 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
-  bannerGradient: {
+  bannerCard: {
+    backgroundColor: '#52BF38',
     borderRadius: 24,
     padding: 18,
     overflow: 'hidden',
