@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   stickySearchContainer: {
     backgroundColor: theme.white,
     paddingTop: 8,
-    paddingBottom: 10,
+    paddingBottom: 16,
     zIndex: 10,
   },
   searchBarWrapper: {
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   categoriesWrapper: {
-    marginTop: 12,
+    marginTop: 34,
   },
   categoriesScrollContent: {
     paddingHorizontal: 20,
