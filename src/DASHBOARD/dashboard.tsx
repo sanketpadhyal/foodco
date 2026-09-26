@@ -458,7 +458,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       <UniversalPanel
         visible={sessionExpiredVisible}
         title="Session Expired"
-        message="Your session is expired. You are logged out."
         dismissOnBackdropPress={false}
         onClose={async () => {
           setSessionExpiredVisible(false);
@@ -476,7 +475,18 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             },
           },
         ]}
-      />
+      >
+        <View style={styles.expiredIllustrationWrap}>
+          <Image
+            source={require('../../assets/dashboard/session_expired.png')}
+            style={styles.expiredIllustration}
+            resizeMode="contain"
+          />
+          <Text style={styles.expiredMessageText}>
+            Your session is expired. You are logged out.
+          </Text>
+        </View>
+      </UniversalPanel>
 
       {/* Dashboard Bottom Bar */}
       <DashboardBottomBar
@@ -815,5 +825,23 @@ const styles = StyleSheet.create({
     color: theme.textSecondary,
     marginBottom: 8,
     lineHeight: 20,
+  },
+  expiredIllustrationWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 8,
+  },
+  expiredIllustration: {
+    width: 140,
+    height: 140,
+  },
+  expiredMessageText: {
+    fontSize: 15,
+    color: '#656A72',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    fontWeight: '500',
   },
 });
