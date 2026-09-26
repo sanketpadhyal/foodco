@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import ProductScanResultPanel from './ProductScanResultPanel';
 import { fetchProductByBarcode, ScannedProduct } from './productService';
+import { ProductDetailPage } from '../product-detail';
 
 const CORNER_MASK_TL = require('../../assets/dashboard/masks/corner_tl.png');
 const CORNER_MASK_TR = require('../../assets/dashboard/masks/corner_tr.png');
@@ -146,6 +147,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   const [fetchingProduct, setFetchingProduct] = useState<boolean>(false);
   const [productData, setProductData] = useState<ScannedProduct | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [productDetailVisible, setProductDetailVisible] = useState<boolean>(false);
 
   // Down-to-up transition animation
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -484,6 +486,14 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         errorMessage={scanError}
         onClose={handleScanAnother}
         onScanAnother={handleScanAnother}
+        onGetMoreInfo={() => setProductDetailVisible(true)}
+      />
+
+      {/* Full Deep-Dive Product Detail Page with Complete Nutrient Graphs & Transitions */}
+      <ProductDetailPage
+        visible={productDetailVisible}
+        product={productData}
+        onClose={() => setProductDetailVisible(false)}
       />
     </Animated.View>
   );
