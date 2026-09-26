@@ -165,24 +165,8 @@ export default function ProductScanResultPanel({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.resultContent}
         >
-          {/* Header Row: Image & Info */}
+          {/* Header Row: Info only */}
           <View style={styles.productHeader}>
-            <View style={styles.productImageWrapper}>
-              {product.imageUrl && !imageLoadError ? (
-                <Image
-                  source={{ uri: product.imageUrl }}
-                  style={styles.productImage}
-                  resizeMode="contain"
-                  onError={() => setImageLoadError(true)}
-                />
-              ) : (
-                <Image
-                  source={getCategoryFallback(product.category, product.name)}
-                  style={styles.productImage}
-                  resizeMode="contain"
-                />
-              )}
-            </View>
             <View style={styles.productMeta}>
               <Text style={styles.productName} numberOfLines={2}>
                 {product.name}
