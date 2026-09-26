@@ -488,12 +488,9 @@ const styles = StyleSheet.create({
   viewfinderBox: {
     width: Math.min(SCREEN_WIDTH - 80, 280),
     height: 200,
-    borderRadius: 24,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderWidth: 2,
-    borderColor: '#5DB035',
+    backgroundColor: 'transparent',
   },
   corner: {
     position: 'absolute',
