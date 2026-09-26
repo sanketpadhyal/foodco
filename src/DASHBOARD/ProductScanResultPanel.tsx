@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     maxHeight: MAX_SCROLL_HEIGHT,
   },
   resultContent: {
-    paddingBottom: 12,
+    paddingBottom: 0,
   },
   productImageBanner: {
     width: '100%',
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#EEF0F4',
-    marginBottom: 10,
+    marginBottom: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,

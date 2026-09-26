@@ -398,14 +398,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   body: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
-    marginTop: 4,
+    marginTop: 0,
   },
   actionBtn: {
     flex: 1,
