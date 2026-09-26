@@ -20,6 +20,7 @@ const CORNER_MASK_TL = require('../../assets/dashboard/masks/corner_tl.png');
 const CORNER_MASK_TR = require('../../assets/dashboard/masks/corner_tr.png');
 const CORNER_MASK_BL = require('../../assets/dashboard/masks/corner_bl.png');
 const CORNER_MASK_BR = require('../../assets/dashboard/masks/corner_br.png');
+const MYSTERY_RANDOM_ICON = require('../../assets/dashboard/icon_mystery_random.png');
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEWFINDER_WIDTH = Math.min(SCREEN_WIDTH - 56, 310);
@@ -338,7 +339,11 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             onPress={handleScanRandom}
             accessibilityLabel="Scan Random Shopping Item"
           >
-            <Ionicons name="bag-handle-outline" size={21} color="#5DB035" />
+            <Image
+              source={MYSTERY_RANDOM_ICON}
+              style={styles.randomMysteryIcon}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -553,6 +558,10 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+  randomMysteryIcon: {
+    width: 27,
+    height: 27,
   },
   torchActiveBtn: {
     backgroundColor: '#F0FDF4',
