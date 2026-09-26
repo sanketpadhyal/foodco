@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
   Platform,
-  UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,34 +19,13 @@ export interface DashboardBottomBarProps {
 
 const scannerBtnSource = require('../../../assets/scanner-btn.png');
 
-let BlurViewComponent: any = null;
-let hasNativeBlur = false;
-
-try {
-  const hasManager =
-    Platform.OS === 'ios' ||
-    (Platform.OS === 'android' &&
-      !!(
-        UIManager.getViewManagerConfig &&
-        (UIManager.getViewManagerConfig('ExpoBlurView') ||
-          UIManager.getViewManagerConfig('ViewManagerAdapter_ExpoBlur_ExpoBlurView'))
-      ));
-
-  if (hasManager) {
-    BlurViewComponent = require('expo-blur').BlurView;
-    hasNativeBlur = !!BlurViewComponent;
-  }
-} catch (_) {
-  hasNativeBlur = false;
-}
-
 export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
   activeTab = 'home',
   onTabPress,
   onScanPress,
 }) => {
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, 12);
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 12);
 
   const handleTab = (tab: DashboardTab) => {
     if (tab === 'scan') {
@@ -59,17 +37,8 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
 
   return (
     <View style={styles.outerWrapper} pointerEvents="box-none">
-      {/* Blurred Translucent Bottom Bar */}
+      {/* Solid Pure White Bottom Bar */}
       <View style={[styles.barContainer, { paddingBottom: bottomInset }]}>
-        {hasNativeBlur && BlurViewComponent ? (
-          <BlurViewComponent
-            intensity={Platform.OS === 'ios' ? 70 : 45}
-            tint="light"
-            style={StyleSheet.absoluteFill}
-          />
-        ) : null}
-        <View style={[StyleSheet.absoluteFill, styles.whiteGlassOverlay]} />
-
         {/* Tab 1: Home / Explore Grid */}
         <TouchableOpacity
           style={styles.tabButton}
@@ -219,12 +188,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255, 255, 255, 0.6)',
-  },
-  whiteGlassOverlay: {
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F2F5',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 10,
   },
   tabButton: {
     width: 48,
@@ -273,7 +244,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.38,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 12,
   },
   scannerImage: {
     width: 58,
