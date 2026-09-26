@@ -197,38 +197,46 @@ export default function ProductScanResultPanel({
             </View>
           </View>
 
-          {/* AI Health Score & Nutri-Score Card */}
-          <View style={[styles.scoreHeroCard, { borderColor: `${nutriColor}33` }]}>
-            <View style={styles.scoreRow}>
-              <View style={styles.scoreBadgeWrap}>
-                <View style={[styles.nutriScoreBadge, { backgroundColor: nutriColor }]}>
-                  <Text style={styles.nutriScoreLetter}>{product.nutriScore}</Text>
-                </View>
-                <Text style={styles.nutriScoreLabel}>Nutri-Score</Text>
+          {/* Premium Quality Health Scorecard */}
+          <View style={styles.scoreHeroCard}>
+            {/* Column 1: Nutri-Score */}
+            <View style={styles.scorePillarCard}>
+              <View style={[styles.nutriScoreBadge, { backgroundColor: nutriColor }]}>
+                <Text style={styles.nutriScoreLetter}>{product.nutriScore}</Text>
               </View>
+              <Text style={styles.pillarTitle}>Nutri-Score</Text>
+              <Text style={styles.pillarSub}>Official Grade</Text>
+            </View>
 
-              <View style={styles.aiRatingCenter}>
-                <View style={styles.scoreNumberRow}>
-                  <Text style={[styles.scoreLargeNumber, { color: product.verdictColor }]}>
-                    {product.aiHealthRating}
-                  </Text>
-                  <Text style={styles.scoreMaxText}>/100</Text>
-                </View>
-                <View style={[styles.verdictPill, { backgroundColor: `${product.verdictColor}18` }]}>
-                  <Text style={[styles.verdictText, { color: product.verdictColor }]}>
-                    {product.verdict}
-                  </Text>
-                </View>
+            <View style={styles.pillarDivider} />
+
+            {/* Column 2: Foodco AI Health Rating */}
+            <View style={[styles.scorePillarCard, styles.centerPillar]}>
+              <View style={styles.scoreNumberRow}>
+                <Text style={[styles.scoreLargeNumber, { color: product.verdictColor }]}>
+                  {product.aiHealthRating}
+                </Text>
+                <Text style={styles.scoreMaxText}>/100</Text>
               </View>
+              <View style={[styles.verdictPill, { backgroundColor: `${product.verdictColor}14` }]}>
+                <Text style={[styles.verdictText, { color: product.verdictColor }]}>
+                  {product.verdict}
+                </Text>
+              </View>
+              <Text style={styles.pillarSub}>Foodco Index</Text>
+            </View>
 
-              {product.novaGroup ? (
-                <View style={styles.novaBadgeWrap}>
-                  <View style={[styles.novaBadge, { backgroundColor: product.novaGroup === 4 ? '#EF4444' : '#10B981' }]}>
-                    <Text style={styles.novaNumber}>{product.novaGroup}</Text>
-                  </View>
-                  <Text style={styles.novaLabel}>NOVA Group</Text>
-                </View>
-              ) : null}
+            <View style={styles.pillarDivider} />
+
+            {/* Column 3: NOVA Ultra-Processed Grade */}
+            <View style={styles.scorePillarCard}>
+              <View style={[styles.novaBadge, { backgroundColor: product.novaGroup === 4 ? '#EF4444' : '#10B981' }]}>
+                <Text style={styles.novaNumber}>{product.novaGroup || 1}</Text>
+              </View>
+              <Text style={styles.pillarTitle}>NOVA</Text>
+              <Text style={styles.pillarSub}>
+                {product.novaGroup === 4 ? 'Processed' : 'Natural'}
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -400,59 +408,68 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   scoreHeroCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1.5,
-    marginBottom: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  scoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAFAFC',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#EEF0F4',
+    marginBottom: 8,
   },
-  scoreBadgeWrap: {
+  scorePillarCard: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 2,
+  },
+  centerPillar: {
+    flex: 1.35,
+  },
+  pillarDivider: {
+    width: 1,
+    height: 48,
+    backgroundColor: '#E5E7EB',
   },
   nutriScoreBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
     elevation: 3,
   },
   nutriScoreLetter: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
   },
-  nutriScoreLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginTop: 4,
+  pillarTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E1D25',
+    marginTop: 6,
   },
-  aiRatingCenter: {
-    alignItems: 'center',
+  pillarSub: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    marginTop: 2,
   },
   scoreNumberRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   scoreLargeNumber: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '900',
-    fontFamily: serifFont,
+    letterSpacing: -1,
   },
   scoreMaxText: {
     fontSize: 13,
@@ -463,32 +480,30 @@ const styles = StyleSheet.create({
   verdictPill: {
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 10,
-    marginTop: 3,
+    borderRadius: 12,
+    marginTop: 4,
+    marginBottom: 2,
   },
   verdictText: {
     fontSize: 11,
     fontWeight: '800',
-  },
-  novaBadgeWrap: {
-    alignItems: 'center',
+    letterSpacing: 0.1,
   },
   novaBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
   },
   novaNumber: {
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
-  },
-  novaLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginTop: 4,
   },
 });
