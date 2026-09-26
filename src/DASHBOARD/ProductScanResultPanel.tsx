@@ -108,7 +108,7 @@ export default function ProductScanResultPanel({
   return (
     <UniversalPanel
       visible={visible}
-      title={loading ? 'Analyzing Product...' : 'Product Nutritional Insight'}
+      title={loading ? 'Analyzing Product...' : undefined}
       dismissOnBackdropPress={!loading}
       onClose={onClose}
       actions={
