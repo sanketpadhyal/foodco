@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, AntDesign } from '@expo/vector-icons';
-import { DashboardNavbar } from './components';
+import { DashboardNavbar, DashboardBottomBar, DashboardTab } from './components';
 import UniversalPanel from '../components/universalpanel';
 
 export interface DashboardProps {
@@ -71,6 +71,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [profilePanelVisible, setProfilePanelVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<DashboardTab>('home');
+  const [scannerPanelVisible, setScannerPanelVisible] = useState(false);
 
   const fetchItems = async () => {
     try {
@@ -203,7 +205,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
@@ -337,6 +339,28 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           Are you sure you want to log out of your account?
         </Text>
       </UniversalPanel>
+
+      {/* Scanner Info Panel */}
+      <UniversalPanel
+        visible={scannerPanelVisible}
+        title="Food & Barcode Scanner"
+        message="Scan any packaged food barcode or dish to analyze nutritional score, calories, allergens, and ultra-processed status instantly."
+        onClose={() => setScannerPanelVisible(false)}
+        actions={[
+          {
+            label: 'Got It',
+            variant: 'primary',
+            onPress: () => setScannerPanelVisible(false),
+          },
+        ]}
+      />
+
+      {/* Frosted Glass Bottom Bar */}
+      <DashboardBottomBar
+        activeTab={activeTab}
+        onTabPress={setActiveTab}
+        onScanPress={() => setScannerPanelVisible(true)}
+      />
     </View>
   );
 }
