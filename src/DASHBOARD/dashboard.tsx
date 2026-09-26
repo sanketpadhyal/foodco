@@ -72,6 +72,13 @@ const CATEGORIES: CategoryItem[] = [
     bgColor: '#FFF0F2',
     image: require('../../assets/dashboard/cat_beauty.png'),
   },
+  {
+    id: 'food',
+    title: 'Food',
+    subtitle: 'Grocery & Snacks',
+    bgColor: '#FFF8E7',
+    image: require('../../assets/dashboard/cat_food.png'),
+  },
 ];
 
 const HEALTHY_DISHES: FoodItem[] = [
