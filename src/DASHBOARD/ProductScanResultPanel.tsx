@@ -202,9 +202,6 @@ export default function ProductScanResultPanel({
             {/* Top label row */}
             <View style={styles.scoreCardTopRow}>
               <Text style={styles.scoreCardLabel}>HEALTH SCORE</Text>
-              <View style={[styles.aiBadge, { backgroundColor: `${product.verdictColor}15` }]}>
-                <Text style={[styles.aiBadgeText, { color: product.verdictColor }]}>⚡ Foodco AI</Text>
-              </View>
             </View>
 
             {/* Score + Verdict */}
