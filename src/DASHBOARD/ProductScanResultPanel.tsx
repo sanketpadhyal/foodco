@@ -483,11 +483,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EEF0F4',
     marginBottom: 0,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
   },
   scoreCardTopRow: {
     flexDirection: 'row',
