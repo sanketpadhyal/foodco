@@ -236,6 +236,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               style={styles.searchInput}
               placeholder="Search for healthy food..."
               placeholderTextColor="#B5B9BC"
+              underlineColorAndroid="transparent"
               value={searchQuery}
               onChangeText={setSearchQuery}
               returnKeyType="search"
@@ -487,8 +488,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     zIndex: 10,
     overflow: 'hidden',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   searchBarWrapper: {
     marginHorizontal: 20,
@@ -513,6 +512,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: theme.textPrimary,
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   categoriesWrapper: {
     marginTop: 12,
