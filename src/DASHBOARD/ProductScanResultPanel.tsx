@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderWidth: 1,
     borderColor: '#EEF0F4',
-    marginBottom: 0,
+    marginBottom: 12,
   },
   scoreCardTopRow: {
     flexDirection: 'row',
