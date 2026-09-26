@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { DashboardNavbar, DashboardBottomBar, DashboardTab } from './components';
 import UniversalPanel from '../components/universalpanel';
+import { checkSessionStatus, clearUserSession } from '../auth-page/authService';
 
 export interface DashboardProps {
   user: {
@@ -153,10 +154,25 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [scannerPanelVisible, setScannerPanelVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDish, setSelectedDish] = useState<FoodItem | null>(null);
+  const [sessionExpiredVisible, setSessionExpiredVisible] = useState(false);
 
   const pageFade = useRef(new Animated.Value(0)).current;
   const pageSlide = useRef(new Animated.Value(32)).current;
   const cardScale = useRef(new Animated.Value(0.92)).current;
+
+  useEffect(() => {
+    let isMounted = true;
+    async function verifySession() {
+      const status = await checkSessionStatus();
+      if (isMounted && !status.valid) {
+        setSessionExpiredVisible(true);
+      }
+    }
+    verifySession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -437,6 +453,30 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           ]}
         />
       )}
+
+      {/* Session Expired Universal Panel */}
+      <UniversalPanel
+        visible={sessionExpiredVisible}
+        title="Session Expired"
+        message="Your session is expired. You are logged out."
+        dismissOnBackdropPress={false}
+        onClose={async () => {
+          setSessionExpiredVisible(false);
+          await clearUserSession();
+          onLogout();
+        }}
+        actions={[
+          {
+            label: 'Continue',
+            variant: 'primary',
+            onPress: async () => {
+              setSessionExpiredVisible(false);
+              await clearUserSession();
+              onLogout();
+            },
+          },
+        ]}
+      />
 
       {/* Dashboard Bottom Bar */}
       <DashboardBottomBar

@@ -133,6 +133,69 @@ export async function getStoredJwtToken(): Promise<string | null> {
   }
 }
 
+export function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const parsed = JSON.parse(jsonPayload);
+    if (parsed.exp && typeof parsed.exp === 'number') {
+      return Date.now() >= parsed.exp * 1000;
+    }
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function checkSessionStatus(): Promise<{ valid: boolean; reason?: string }> {
+  try {
+    const session = await loadUserSession();
+    if (!session) {
+      return { valid: false, reason: 'no_session' };
+    }
+    const token = session.jwt || session.token;
+    if (!token) {
+      return { valid: false, reason: 'missing_token' };
+    }
+
+    if (isTokenExpired(token)) {
+      return { valid: false, reason: 'token_expired' };
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+    const response = await fetch(`${BACKEND_URL}/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
+
+    if (response.status === 401 || response.status === 403) {
+      return { valid: false, reason: 'session_expired' };
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      return { valid: false, reason: data.code || 'invalid_session' };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return { valid: true };
+  }
+}
+
 export async function clearUserSession(): Promise<void> {
   try {
     await AsyncStorage.removeItem(SESSION_KEY);
