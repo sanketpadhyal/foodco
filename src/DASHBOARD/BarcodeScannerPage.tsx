@@ -262,8 +262,12 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     outputRange: [10, VIEWFINDER_HEIGHT - 20],
   });
 
-  const topBarHeight = insets.top + 58;
-  const topMaskHeight = topBarHeight + 18 + 74 + 18;
+  const topBarHeight = insets.top + 56;
+  const bottomBarHeight = Math.max(insets.bottom, 48);
+  const totalContentHeight = 74 + 16 + VIEWFINDER_HEIGHT + 16 + 42 + 12 + 135 + 16 + 20;
+  const availableVertical = SCREEN_HEIGHT - topBarHeight - bottomBarHeight;
+  const extraMargin = Math.max(16, Math.floor((availableVertical - totalContentHeight) / 2));
+  const topMaskHeight = topBarHeight + extraMargin + 24 + 74 + 16;
 
   if (!visible) return null;
 
@@ -541,7 +545,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 18,
+    paddingBottom: 16,
   },
   trustCard: {
     width: VIEWFINDER_WIDTH,
