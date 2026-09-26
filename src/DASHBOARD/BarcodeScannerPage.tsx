@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 16,
+    paddingBottom: 48,
   },
   trustCard: {
     width: VIEWFINDER_WIDTH,
