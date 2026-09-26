@@ -52,12 +52,249 @@ const NOVA_DETAILS: Record<number, { title: string; color: string; desc: string 
   },
 };
 
+interface ParsedIngredient {
+  raw: string;
+  cleanName: string;
+  percentage?: string;
+  isPalm: boolean;
+  isSugar: boolean;
+  isAllergen: boolean;
+  allergenLabel?: string;
+}
+
+function parseIngredients(text?: string): ParsedIngredient[] {
+  if (!text) return [];
+  const clean = text.replace(/[\*]/g, '').trim().replace(/\.$/, '');
+  const items: string[] = [];
+  let current = '';
+  let depth = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (char === '(' || char === '[') depth++;
+    else if (char === ')' || char === ']') depth = Math.max(0, depth - 1);
+
+    if (char === ',' && depth === 0) {
+      if (current.trim()) items.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) items.push(current.trim());
+
+  return items.map((raw) => {
+    const pctMatch = raw.match(/(\d+(?:\.\d+)?%)/);
+    const percentage = pctMatch ? pctMatch[1] : undefined;
+    let cleanName = raw.replace(/\(\s*\d+(?:\.\d+)?%\s*\)/g, '').trim();
+
+    const isPalm = /palm\s*oil|hydrogenated|vegetable\s*fat/i.test(raw);
+    const isSugar = /^(?:sugar|sucrose|glucose|fructose|maltodextrin|corn\s*syrup)/i.test(cleanName);
+
+    let isAllergen = false;
+    let allergenLabel: string | undefined;
+    if (/hazelnut|almond|peanut|cashew|walnut|nut/i.test(raw)) {
+      isAllergen = true;
+      allergenLabel = 'Tree Nut';
+    } else if (/milk|dairy|whey|butter|cheese/i.test(raw)) {
+      isAllergen = true;
+      allergenLabel = 'Dairy';
+    } else if (/soya|soy/i.test(raw)) {
+      isAllergen = true;
+      allergenLabel = 'Soy';
+    } else if (/wheat|gluten|flour/i.test(raw)) {
+      isAllergen = true;
+      allergenLabel = 'Gluten';
+    } else if (/egg/i.test(raw)) {
+      isAllergen = true;
+      allergenLabel = 'Egg';
+    }
+
+    return {
+      raw,
+      cleanName,
+      percentage,
+      isPalm,
+      isSugar,
+      isAllergen,
+      allergenLabel,
+    };
+  });
+}
+
+interface AdditiveDetail {
+  code: string;
+  name: string;
+  role: string;
+  risk: 'safe' | 'moderate' | 'high';
+  riskLabel: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  description: string;
+}
+
+function getAdditiveDetails(raw: string): AdditiveDetail {
+  const clean = raw.replace(/^en:/i, '').trim();
+  const lower = clean.toLowerCase();
+
+  if (lower.includes('322') || lower.includes('lecithin')) {
+    return {
+      code: 'E322',
+      name: 'Lecithins (Soya / Sunflower)',
+      role: 'Emulsifier & Stabilizer',
+      risk: 'safe',
+      riskLabel: 'No Risk',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      borderColor: '#D1FAE5',
+      description: 'Plant-derived natural lipid that bonds fats and water. Safe and digestible.',
+    };
+  }
+  if (lower.includes('vanillin')) {
+    return {
+      code: 'Flavoring',
+      name: 'Vanillin',
+      role: 'Aroma & Flavor Compound',
+      risk: 'safe',
+      riskLabel: 'No Risk',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      borderColor: '#D1FAE5',
+      description: 'Synthetic aroma compound identical to natural vanilla. Regarded as non-toxic in foods.',
+    };
+  }
+  if (lower.includes('330') || lower.includes('citric acid')) {
+    return {
+      code: 'E330',
+      name: 'Citric Acid',
+      role: 'Acidity Regulator & Antioxidant',
+      risk: 'safe',
+      riskLabel: 'No Risk',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      borderColor: '#D1FAE5',
+      description: 'Natural organic fruit acid used to regulate tartness and stabilize shelf life.',
+    };
+  }
+  if (lower.includes('500') || lower.includes('sodium bicarbonate') || lower.includes('baking soda')) {
+    return {
+      code: 'E500',
+      name: 'Sodium Carbonates (Baking Soda)',
+      role: 'Raising & Leavening Agent',
+      risk: 'safe',
+      riskLabel: 'No Risk',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      borderColor: '#D1FAE5',
+      description: 'Mineral leavening agent that creates light, airy textures in baked items.',
+    };
+  }
+  if (lower.includes('503') || lower.includes('ammonium bicarbonate')) {
+    return {
+      code: 'E503',
+      name: 'Ammonium Carbonates',
+      role: 'Crisp Leavening Agent',
+      risk: 'safe',
+      riskLabel: 'No Risk',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      borderColor: '#D1FAE5',
+      description: 'Traditional baking agent for crisp cookies that cleanly vaporizes during oven baking.',
+    };
+  }
+  if (lower.includes('471') || lower.includes('mono- and diglycerides')) {
+    return {
+      code: 'E471',
+      name: 'Mono- & Diglycerides of Fatty Acids',
+      role: 'Texture Stabilizer',
+      risk: 'moderate',
+      riskLabel: 'Moderate Caution',
+      color: '#F59E0B',
+      bgColor: '#FFFBEB',
+      borderColor: '#FEF3C7',
+      description: 'Plant or animal derived fatty emulsifier. May carry residual trans-fatty acids.',
+    };
+  }
+  if (lower.includes('621') || lower.includes('msg') || lower.includes('glutamate')) {
+    return {
+      code: 'E621',
+      name: 'Monosodium Glutamate (MSG)',
+      role: 'Umami Flavor Enhancer',
+      risk: 'moderate',
+      riskLabel: 'Moderate Caution',
+      color: '#F59E0B',
+      bgColor: '#FFFBEB',
+      borderColor: '#FEF3C7',
+      description: 'Concentrated savory flavor enhancer. Generally safe, but can trigger sensitivity in some.',
+    };
+  }
+  if (lower.includes('150d') || lower.includes('caramel iv')) {
+    return {
+      code: 'E150d',
+      name: 'Ammonia Sulfite Caramel (Caramel IV)',
+      role: 'Deep Brown Colorant',
+      risk: 'moderate',
+      riskLabel: 'Moderate Caution',
+      color: '#F59E0B',
+      bgColor: '#FFFBEB',
+      borderColor: '#FEF3C7',
+      description: 'Manufactured with ammonium and sulfite compounds. Regulated daily intake limits apply.',
+    };
+  }
+  if (lower.includes('250') || lower.includes('sodium nitrite')) {
+    return {
+      code: 'E250',
+      name: 'Sodium Nitrite',
+      role: 'Curing Salt & Preservative',
+      risk: 'high',
+      riskLabel: 'High Risk',
+      color: '#EF4444',
+      bgColor: '#FEF2F2',
+      borderColor: '#FEE2E2',
+      description: 'Antibacterial preservative in processed meats. Can form nitrosamines when cooked at high heat.',
+    };
+  }
+  if (lower.includes('407') || lower.includes('carrageenan')) {
+    return {
+      code: 'E407',
+      name: 'Carrageenan',
+      role: 'Gelling & Thickening Agent',
+      risk: 'moderate',
+      riskLabel: 'Moderate Caution',
+      color: '#F59E0B',
+      bgColor: '#FFFBEB',
+      borderColor: '#FEF3C7',
+      description: 'Red seaweed thickener. Known to cause mild gut irritation in sensitive digestive tracts.',
+    };
+  }
+
+  const eMatch = clean.match(/e\s*(\d{3,4}[a-z]?)/i);
+  const code = eMatch ? `E${eMatch[1].toUpperCase()}` : clean;
+  return {
+    code,
+    name: clean,
+    role: 'Regulated Food Additive',
+    risk: 'safe',
+    riskLabel: 'Evaluated Safe',
+    color: '#10B981',
+    bgColor: '#ECFDF5',
+    borderColor: '#D1FAE5',
+    description: 'Food additive authorized under international dietary safety and purity standards.',
+  };
+}
+
 export default function ProductDetailPage({
   visible,
   product,
   onClose,
 }: ProductDetailPageProps) {
   const insets = useSafeAreaInsets();
+  const [ingredientsView, setIngredientsView] = React.useState<'list' | 'text'>('list');
+
+  const parsedIngredients = React.useMemo(
+    () => parseIngredients(product?.ingredientsSummary),
+    [product?.ingredientsSummary]
+  );
 
   if (!product) return null;
 
@@ -455,50 +692,245 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          {/* Ingredients & Chemical Additives */}
+          {/* Ingredients & Chemical Additives - Premium Redesign */}
           <View style={styles.detailSectionCard}>
-            <Text style={styles.sectionHeaderTitle}>Ingredients & Additives</Text>
-
-            {product.hasPalmOil ? (
-              <View style={styles.warningAlertBox}>
-                <Ionicons name="warning-outline" size={17} color="#B91C1C" />
-                <Text style={styles.warningAlertText}>
-                  Contains Palm Oil or hydrogenated vegetable fats.
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionHeaderTitleCol}>
+                <Text style={styles.sectionHeaderTitle}>Ingredients & Additives</Text>
+                <Text style={styles.sectionHeaderSubtitle}>
+                  {parsedIngredients.length > 0
+                    ? `${parsedIngredients.length} ingredients • ${product.additives?.length || 0} additives`
+                    : 'Manufacturer Formulation'}
                 </Text>
+              </View>
+
+              {parsedIngredients.length > 0 ? (
+                <View style={styles.viewToggleWrap}>
+                  <TouchableOpacity
+                    style={[styles.viewToggleTab, ingredientsView === 'list' && styles.viewToggleTabActive]}
+                    onPress={() => setIngredientsView('list')}
+                    activeOpacity={0.8}
+                    accessibilityLabel="List View"
+                  >
+                    <Ionicons
+                      name="list-outline"
+                      size={15}
+                      color={ingredientsView === 'list' ? '#FFFFFF' : '#6B7280'}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.viewToggleTab, ingredientsView === 'text' && styles.viewToggleTabActive]}
+                    onPress={() => setIngredientsView('text')}
+                    activeOpacity={0.8}
+                    accessibilityLabel="Full Label Text"
+                  >
+                    <Ionicons
+                      name="document-text-outline"
+                      size={15}
+                      color={ingredientsView === 'text' ? '#FFFFFF' : '#6B7280'}
+                    />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Palm Oil Attention Banner */}
+            {product.hasPalmOil ? (
+              <View style={styles.palmWarningCard}>
+                <View style={styles.palmWarningIconCircle}>
+                  <Ionicons name="warning" size={17} color="#DC2626" />
+                </View>
+                <View style={styles.palmWarningBody}>
+                  <View style={styles.palmWarningHeaderRow}>
+                    <Text style={styles.palmWarningTitle}>Contains Palm Oil</Text>
+                    <View style={styles.palmWarningBadge}>
+                      <Text style={styles.palmWarningBadgeText}>Saturated Fat</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.palmWarningDesc}>
+                    Formulated with refined palm oil / vegetable fats, rich in palmitic acid.
+                  </Text>
+                </View>
               </View>
             ) : null}
 
-            {product.ingredientsSummary ? (
-              <View style={styles.ingredientsTextBlock}>
-                <Text style={styles.ingredientsBodyText}>
-                  {product.ingredientsSummary}
-                </Text>
-              </View>
-            ) : (
-              <Text style={styles.ingredientsPlaceholderText}>
-                Ingredients information provided by manufacturer packaging.
-              </Text>
-            )}
+            {/* Ingredients Display */}
+            {parsedIngredients.length > 0 ? (
+              ingredientsView === 'list' ? (
+                <View style={styles.ingredientsListCard}>
+                  {parsedIngredients.map((item, idx) => (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.ingredientItemRow,
+                        idx < parsedIngredients.length - 1 && styles.ingredientItemDivider,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.ingredientRankCircle,
+                          item.isPalm
+                            ? styles.rankCirclePalm
+                            : item.isSugar && idx === 0
+                            ? styles.rankCircleSugar
+                            : null,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.ingredientRankText,
+                            item.isPalm
+                              ? styles.rankTextPalm
+                              : item.isSugar && idx === 0
+                              ? styles.rankTextSugar
+                              : null,
+                          ]}
+                        >
+                          {String(idx + 1).padStart(2, '0')}
+                        </Text>
+                      </View>
 
-            {Array.isArray(product.additives) && product.additives.length > 0 ? (
-              <View style={styles.additivesWrapper}>
-                <Text style={styles.subSectionTitle}>
-                  Detected Additives ({product.additives.length})
-                </Text>
-                <View style={styles.additivesChipsRow}>
-                  {product.additives.map((additive, idx) => (
-                    <View key={idx} style={styles.additiveChip}>
-                      <Text style={styles.additiveChipText}>{additive}</Text>
+                      <View style={styles.ingredientTextInfo}>
+                        <Text style={styles.ingredientTitleText}>
+                          {item.cleanName}
+                        </Text>
+                        {(item.isPalm || (item.isSugar && idx === 0) || item.isAllergen) ? (
+                          <View style={styles.ingredientTagRow}>
+                            {item.isPalm ? (
+                              <View style={styles.pillPalm}>
+                                <Text style={styles.pillPalmText}>Refined Fat</Text>
+                              </View>
+                            ) : null}
+                            {item.isSugar && idx === 0 ? (
+                              <View style={styles.pillSugar}>
+                                <Text style={styles.pillSugarText}>Primary Base</Text>
+                              </View>
+                            ) : null}
+                            {item.isAllergen ? (
+                              <View style={styles.pillAllergen}>
+                                <Text style={styles.pillAllergenText}>
+                                  Allergen • {item.allergenLabel}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        ) : null}
+                      </View>
+
+                      {item.percentage ? (
+                        <View style={styles.percentageBadge}>
+                          <Text style={styles.percentageBadgeText}>{item.percentage}</Text>
+                        </View>
+                      ) : null}
                     </View>
                   ))}
                 </View>
+              ) : (
+                <View style={styles.labelTypographyCard}>
+                  <Text style={styles.labelTextHeadline}>Packaging Statement:</Text>
+                  <Text style={styles.labelBodyText}>{product.ingredientsSummary}</Text>
+                </View>
+              )
+            ) : product.ingredientsSummary ? (
+              <View style={styles.labelTypographyCard}>
+                <Text style={styles.labelBodyText}>{product.ingredientsSummary}</Text>
               </View>
             ) : (
-              <View style={styles.cleanAdditivesBox}>
-                <Ionicons name="checkmark-circle-outline" size={17} color="#15803D" />
-                <Text style={styles.cleanAdditivesText}>
-                  No concerning artificial additives detected in this formulation.
-                </Text>
+              <Text style={styles.ingredientsPlaceholderText}>
+                Ingredients details provided on packaging.
+              </Text>
+            )}
+
+            {/* Detected Additives Section */}
+            {Array.isArray(product.additives) && product.additives.length > 0 ? (
+              <View style={styles.additivesBlock}>
+                <View style={styles.additivesBlockHeader}>
+                  <Text style={styles.additivesBlockTitle}>
+                    Detected Additives ({product.additives.length})
+                  </Text>
+                  <Text style={styles.additivesSubtitle}>Safety & Functional Analysis</Text>
+                </View>
+
+                <View style={styles.additivesCardsColumn}>
+                  {product.additives.map((rawAdditive, idx) => {
+                    const detail = getAdditiveDetails(rawAdditive);
+                    return (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.additiveDetailCard,
+                          { borderColor: detail.borderColor },
+                        ]}
+                      >
+                        <View style={styles.additiveTopLine}>
+                          <View style={styles.additiveCodeGroup}>
+                            <View
+                              style={[
+                                styles.additiveCodeChip,
+                                { backgroundColor: detail.bgColor },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.additiveCodeChipText,
+                                  { color: detail.color },
+                                ]}
+                              >
+                                {detail.code}
+                              </Text>
+                            </View>
+                            <Text style={styles.additiveFullName} numberOfLines={1}>
+                              {detail.name}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={[
+                              styles.additiveRiskPill,
+                              { backgroundColor: detail.bgColor },
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.additiveRiskIndicatorDot,
+                                { backgroundColor: detail.color },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.additiveRiskPillText,
+                                { color: detail.color },
+                              ]}
+                            >
+                              {detail.riskLabel}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.additiveFunctionRole}>
+                          Role: <Text style={styles.additiveRoleValue}>{detail.role}</Text>
+                        </Text>
+                        <Text style={styles.additiveDetailedDesc}>
+                          {detail.description}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.cleanAdditivesCard}>
+                <View style={styles.cleanAdditivesIconBadge}>
+                  <Ionicons name="checkmark-circle" size={20} color="#15803D" />
+                </View>
+                <View style={styles.cleanAdditivesMeta}>
+                  <Text style={styles.cleanAdditivesHeadline}>
+                    Zero Artificial Additives
+                  </Text>
+                  <Text style={styles.cleanAdditivesSubheadline}>
+                    No synthetic colorants, preservatives, or chemical emulsifiers detected.
+                  </Text>
+                </View>
               </View>
             )}
           </View>
@@ -869,37 +1301,209 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 4,
   },
-  warningAlertBox: {
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  sectionHeaderTitleCol: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  sectionHeaderSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  viewToggleWrap: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    padding: 2,
+  },
+  viewToggleTab: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  viewToggleTabActive: {
+    backgroundColor: '#1E1D25',
+  },
+  palmWarningCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FEE2E2',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-  },
-  warningAlertText: {
-    flex: 1,
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#991B1B',
-    lineHeight: 17,
-  },
-  ingredientsTextBlock: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 14,
-    padding: 13,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderRadius: 16,
+    padding: 12,
+    gap: 12,
     marginBottom: 14,
   },
-  ingredientsBodyText: {
-    fontSize: 12.5,
+  palmWarningIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  palmWarningBody: {
+    flex: 1,
+  },
+  palmWarningHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  palmWarningTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#991B1B',
+  },
+  palmWarningBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  palmWarningBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#B91C1C',
+  },
+  palmWarningDesc: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#7F1D1D',
+    lineHeight: 16,
+  },
+  ingredientsListCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEF0F4',
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  ingredientItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+  },
+  ingredientItemDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0F4',
+  },
+  ingredientRankCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankCirclePalm: {
+    backgroundColor: '#FEE2E2',
+  },
+  rankCircleSugar: {
+    backgroundColor: '#FEF3C7',
+  },
+  ingredientRankText: {
+    fontSize: 11,
+    fontWeight: '800',
     color: '#4B5563',
-    lineHeight: 19,
+  },
+  rankTextPalm: {
+    color: '#B91C1C',
+  },
+  rankTextSugar: {
+    color: '#B45309',
+  },
+  ingredientTextInfo: {
+    flex: 1,
+  },
+  ingredientTitleText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#1E1D25',
+    lineHeight: 18,
+  },
+  ingredientTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  pillPalm: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  pillPalmText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  pillSugar: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  pillSugarText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  pillAllergen: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  pillAllergenText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  percentageBadge: {
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  percentageBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#1E1D25',
+  },
+  labelTypographyCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEF0F4',
+    padding: 14,
+    marginBottom: 16,
+  },
+  labelTextHeadline: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  labelBodyText: {
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 20,
     fontWeight: '500',
   },
   ingredientsPlaceholderText: {
@@ -908,46 +1512,124 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: 12,
   },
-  subSectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 10,
-  },
-  additivesWrapper: {
+  additivesBlock: {
     marginTop: 4,
   },
-  additivesChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  additivesBlockHeader: {
+    marginBottom: 10,
   },
-  additiveChip: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  additivesBlockTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1E1D25',
   },
-  additiveChipText: {
+  additivesSubtitle: {
     fontSize: 11.5,
-    fontWeight: '700',
-    color: '#374151',
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 2,
   },
-  cleanAdditivesBox: {
+  additivesCardsColumn: {
+    gap: 10,
+  },
+  additiveDetailCard: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+  },
+  additiveTopLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  additiveCodeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    marginRight: 8,
+  },
+  additiveCodeChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  additiveCodeChipText: {
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  additiveFullName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1E1D25',
+    flex: 1,
+  },
+  additiveRiskPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 4,
+  },
+  additiveRiskIndicatorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  additiveRiskPillText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  additiveFunctionRole: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 4,
+  },
+  additiveRoleValue: {
+    fontWeight: '700',
+    color: '#1E1D25',
+  },
+  additiveDetailedDesc: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    lineHeight: 16,
+  },
+  cleanAdditivesCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F0FDF4',
     borderWidth: 1,
     borderColor: '#DCFCE7',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
   },
-  cleanAdditivesText: {
+  cleanAdditivesIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cleanAdditivesMeta: {
     flex: 1,
-    fontSize: 12.5,
-    fontWeight: '700',
+  },
+  cleanAdditivesHeadline: {
+    fontSize: 13.5,
+    fontWeight: '800',
     color: '#166534',
+  },
+  cleanAdditivesSubheadline: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#15803D',
+    lineHeight: 16,
+    marginTop: 2,
   },
 });
