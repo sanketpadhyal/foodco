@@ -185,11 +185,7 @@ export default function ProductScanResultPanel({
         </View>
       ) : product ? (
         // Loaded Product Detail & Proper Graph View
-        <ScrollView
-          style={styles.resultScroll}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.resultContent}
-        >
+        <View style={styles.resultContent}>
           {/* Product Image Banner */}
           <View style={styles.productImageBanner}>
             {product.imageUrl && !imageLoadError ? (
@@ -294,7 +290,7 @@ export default function ProductScanResultPanel({
               </Text>
             </View>
           </View>
-        </ScrollView>
+        </View>
       ) : null}
     </UniversalPanel>
   );
