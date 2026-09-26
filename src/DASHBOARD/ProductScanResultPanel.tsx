@@ -11,6 +11,7 @@ import {
   Dimensions,
   Linking,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import UniversalPanel from '../components/universalpanel';
 import { ScannedProduct } from './productService';
 
@@ -223,36 +224,74 @@ export default function ProductScanResultPanel({
             </View>
           </View>
 
-          {/* Premium Health Score Card */}
-          <View style={[styles.scoreHeroCard, { borderTopColor: product.verdictColor, borderTopWidth: 3 }]}>
-            {/* Top label row */}
+          {/* Modern Health Score Card */}
+          <View style={styles.scoreHeroCard}>
+            {/* Header: Tag + Verdict */}
             <View style={styles.scoreCardTopRow}>
-              <Text style={styles.scoreCardLabel}>HEALTH SCORE</Text>
+              <View style={styles.scoreTagRow}>
+                <Ionicons name="shield-checkmark" size={14} color={product.verdictColor} />
+                <Text style={styles.scoreTagText}>FOODCO HEALTH INDEX</Text>
+              </View>
+              <View style={[styles.verdictBadge, { backgroundColor: `${product.verdictColor}14` }]}>
+                <View style={[styles.verdictDot, { backgroundColor: product.verdictColor }]} />
+                <Text style={[styles.verdictBadgeText, { color: product.verdictColor }]}>
+                  {product.verdict}
+                </Text>
+              </View>
             </View>
 
-            {/* Score + Verdict */}
+            {/* Middle: Big Score + Meter */}
             <View style={styles.scoreMainRow}>
-              <View style={[styles.scoreBigCircle, { borderColor: `${product.verdictColor}30`, backgroundColor: `${product.verdictColor}0D` }]}>
-                <Text style={[styles.scoreBigNumber, { color: product.verdictColor }]}>
+              <View style={[styles.scoreBadgeBox, { backgroundColor: `${product.verdictColor}0E`, borderColor: `${product.verdictColor}28` }]}>
+                <Text style={[styles.scoreNumberMain, { color: product.verdictColor }]}>
                   {product.aiHealthRating}
                 </Text>
-                <Text style={[styles.scoreBigMax, { color: product.verdictColor }]}>/100</Text>
+                <Text style={[styles.scoreMaxSub, { color: product.verdictColor }]}>/100</Text>
               </View>
 
-              <View style={styles.scoreRightCol}>
-                <View style={[styles.verdictPill, { backgroundColor: `${product.verdictColor}18` }]}>
-                  <Text style={[styles.verdictText, { color: product.verdictColor }]}>
-                    {product.verdict}
+              <View style={styles.meterContainer}>
+                <View style={styles.meterHeader}>
+                  <Text style={styles.meterTitle}>Nutritional Rating</Text>
+                  <Text style={[styles.meterPercent, { color: product.verdictColor }]}>
+                    {product.aiHealthRating}%
                   </Text>
                 </View>
-                <Text style={styles.scoreDescText}>
-                  {product.aiHealthRating >= 70
-                    ? 'Great choice! This product has a high health rating.'
-                    : product.aiHealthRating >= 40
-                    ? 'Moderate choice. Consume in moderation.'
-                    : 'Poor rating. Try to avoid or limit intake.'}
-                </Text>
+
+                <View style={styles.meterTrack}>
+                  <View
+                    style={[
+                      styles.meterFill,
+                      {
+                        width: `${Math.max(6, Math.min(100, product.aiHealthRating))}%`,
+                        backgroundColor: product.verdictColor,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.meterLabels}>
+                  <Text style={styles.meterLabelText}>Poor</Text>
+                  <Text style={styles.meterLabelText}>Moderate</Text>
+                  <Text style={styles.meterLabelText}>Optimal</Text>
+                </View>
               </View>
+            </View>
+
+            {/* Bottom: Insight banner */}
+            <View style={[styles.scoreInsightBox, { backgroundColor: `${product.verdictColor}0A`, borderColor: `${product.verdictColor}20` }]}>
+              <Ionicons
+                name={product.aiHealthRating >= 60 ? 'checkmark-circle' : 'alert-circle'}
+                size={16}
+                color={product.verdictColor}
+                style={styles.insightIcon}
+              />
+              <Text style={styles.scoreDescText}>
+                {product.aiHealthRating >= 70
+                  ? 'Great nutritional choice with clean, balanced nutrients.'
+                  : product.aiHealthRating >= 40
+                  ? 'Moderate nutritional value. Safe in moderate portions.'
+                  : 'Poor rating. High in sugar or saturated fats. Limit intake.'}
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -441,13 +480,16 @@ const styles = StyleSheet.create({
   },
   scoreHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    borderRadius: 22,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#EEF0F4',
-    marginBottom: 8,
-    overflow: 'hidden',
+    marginBottom: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   scoreCardTopRow: {
     flexDirection: 'row',
@@ -455,130 +497,116 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 14,
   },
-  scoreCardLabel: {
+  scoreTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  scoreTagText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#9CA3AF',
-    letterSpacing: 1.2,
+    color: '#8E95A2',
+    letterSpacing: 0.8,
   },
-  aiBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 10,
+  verdictBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
   },
-  aiBadgeText: {
-    fontSize: 11,
+  verdictDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  verdictBadgeText: {
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   scoreMainRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 14,
+    marginBottom: 14,
   },
-  scoreBigCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    borderWidth: 2.5,
+  scoreBadgeBox: {
+    width: 76,
+    height: 76,
+    borderRadius: 20,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scoreBigNumber: {
-    fontSize: 34,
+  scoreNumberMain: {
+    fontSize: 30,
     fontWeight: '900',
     letterSpacing: -1,
-    lineHeight: 38,
+    lineHeight: 34,
   },
-  scoreBigMax: {
-    fontSize: 11,
-    fontWeight: '700',
-    opacity: 0.7,
+  scoreMaxSub: {
+    fontSize: 10,
+    fontWeight: '800',
+    opacity: 0.8,
+    marginTop: -2,
   },
-  scoreRightCol: {
+  meterContainer: {
     flex: 1,
-    gap: 8,
-  },
-  scoreDescText: {
-    fontSize: 12.5,
-    color: '#6B7280',
-    fontWeight: '500',
-    lineHeight: 18,
-  },
-  scorePillarCard: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 2,
-  },
-  centerPillar: {
-    flex: 1.35,
-  },
-  pillarDivider: {
-    width: 1,
-    height: 48,
-    backgroundColor: '#E5E7EB',
-  },
-  nutriScoreBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  nutriScoreLetter: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '900',
+  meterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  pillarTitle: {
+  meterTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E1D25',
-    marginTop: 6,
+    color: '#374151',
   },
-  pillarSub: {
+  meterPercent: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  meterTrack: {
+    height: 8,
+    backgroundColor: '#F1F3F5',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  meterFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  meterLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  meterLabelText: {
     fontSize: 10,
     fontWeight: '600',
     color: '#9CA3AF',
-    marginTop: 2,
   },
-  scoreNumberRow: {
+  scoreInsightBox: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  scoreLargeNumber: {
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -1,
-  },
-  scoreMaxText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '700',
-    marginLeft: 2,
-  },
-  verdictPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  verdictText: {
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.1,
-  },
-  novaBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  novaNumber: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
+  insightIcon: {
+    marginRight: 8,
+  },
+  scoreDescText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#4B5563',
+    fontWeight: '600',
+    lineHeight: 17,
   },
 });
