@@ -355,9 +355,18 @@ export default function ProductDetailPage({
     [product?.ingredientsSummary]
   );
 
-  if (!product) return null;
+  React.useEffect(() => {
+    if (Platform.OS === 'android' && visible) {
+      try {
+        const NavigationBar = require('expo-navigation-bar');
+        NavigationBar.setBackgroundColorAsync?.('#FFFFFF');
+        NavigationBar.setButtonStyleAsync?.('dark');
+        NavigationBar.setBorderColorAsync?.('#EEF0F4');
+      } catch (_) {}
+    }
+  }, [visible]);
 
-  const metrics = product.metrics || {
+  const metrics = product?.metrics || {
     calories: 0,
     carbs: 0,
     sugars: 0,
@@ -369,6 +378,7 @@ export default function ProductDetailPage({
   };
 
   const handleShare = async () => {
+    if (!product) return;
     try {
       await Share.share({
         title: product.name,
@@ -377,7 +387,7 @@ export default function ProductDetailPage({
     } catch (_) {}
   };
 
-  const activeNova = NOVA_DETAILS[product.novaGroup || 3] || NOVA_DETAILS[3];
+  const activeNova = NOVA_DETAILS[product?.novaGroup || 3] || NOVA_DETAILS[3];
 
   const totalMacros = Math.max(1, (metrics.carbs || 0) + (metrics.fat || 0) + (metrics.protein || 0));
   const carbPct = Math.round(((metrics.carbs || 0) / totalMacros) * 100);
@@ -389,16 +399,7 @@ export default function ProductDetailPage({
   const headerPaddingTop = Math.max(insets.top, statusBarHeight) + 8;
   const bottomNavPadding = navBarHeight + 20;
 
-  React.useEffect(() => {
-    if (Platform.OS === 'android') {
-      try {
-        const NavigationBar = require('expo-navigation-bar');
-        NavigationBar.setBackgroundColorAsync?.('#FFFFFF');
-        NavigationBar.setButtonStyleAsync?.('dark');
-        NavigationBar.setBorderColorAsync?.('#EEF0F4');
-      } catch (_) {}
-    }
-  }, [visible]);
+  if (!visible || !product) return null;
 
   return (
     <Modal
