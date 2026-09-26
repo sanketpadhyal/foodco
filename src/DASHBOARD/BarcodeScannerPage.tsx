@@ -486,14 +486,20 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         errorMessage={scanError}
         onClose={handleScanAnother}
         onScanAnother={handleScanAnother}
-        onGetMoreInfo={() => setProductDetailVisible(true)}
+        onGetMoreInfo={() => {
+          setResultVisible(false);
+          setProductDetailVisible(true);
+        }}
       />
 
       {/* Full Deep-Dive Product Detail Page with Complete Nutrient Graphs & Transitions */}
       <ProductDetailPage
         visible={productDetailVisible}
         product={productData}
-        onClose={() => setProductDetailVisible(false)}
+        onClose={() => {
+          setProductDetailVisible(false);
+          setResultVisible(true);
+        }}
       />
     </Animated.View>
   );

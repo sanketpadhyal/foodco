@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,13 @@ import {
   Platform,
   BackHandler,
   Share,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScannedProduct } from '../DASHBOARD/productService';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export interface ProductDetailPageProps {
   visible: boolean;
@@ -63,40 +63,45 @@ export default function ProductDetailPage({
   onClose,
 }: ProductDetailPageProps) {
   const insets = useSafeAreaInsets();
+  const [mounted, setMounted] = useState(visible);
+
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
+      setMounted(true);
       slideAnim.setValue(SCREEN_HEIGHT);
       fadeAnim.setValue(0);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 240,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 340,
+          duration: 300,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
-    } else {
+    } else if (mounted) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 220,
+          duration: 180,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT,
-          duration: 280,
+          duration: 240,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setMounted(false);
+      });
     }
   }, [visible]);
 
@@ -109,8 +114,7 @@ export default function ProductDetailPage({
     return () => sub.remove();
   }, [visible, onClose]);
 
-  if (!visible && slideAnim === undefined) return null;
-  if (!product) return null;
+  if (!mounted || !product) return null;
 
   const metrics = product.metrics || {
     calories: 0,
@@ -139,6 +143,10 @@ export default function ProductDetailPage({
   const fatPct = Math.round(((metrics.fat || 0) / totalMacros) * 100);
   const proteinPct = Math.max(0, 100 - carbPct - fatPct);
 
+  const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : insets.top;
+  const headerPaddingTop = Math.max(insets.top, statusBarHeight) + 8;
+  const bottomNavPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 48 : 20) + 48;
+
   return (
     <Animated.View
       style={[
@@ -150,7 +158,7 @@ export default function ProductDetailPage({
       ]}
     >
       {/* Top Header Bar */}
-      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 16) }]}>
+      <View style={[styles.headerBar, { paddingTop: headerPaddingTop }]}>
         <TouchableOpacity
           style={styles.headerCircleBtn}
           onPress={onClose}
@@ -174,12 +182,18 @@ export default function ProductDetailPage({
         </TouchableOpacity>
       </View>
 
+      {/* Main Content Area */}
       <ScrollView
         style={styles.scrollArea}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 36 }]}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavPadding }]}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+        bounces={true}
+        overScrollMode="always"
+        scrollEventThrottle={16}
       >
-        {/* Hero Image Presentation */}
+        {/* Product Image */}
         {product.imageUrl ? (
           <View style={styles.heroImageWrapper}>
             <Image
@@ -286,9 +300,8 @@ export default function ProductDetailPage({
           </View>
         </View>
 
-        {/* Global Standard Badges: Nutri-Score & NOVA */}
+        {/* Global Standards: Nutri-Score & NOVA */}
         <View style={styles.standardsRow}>
-          {/* Nutri-Score Section */}
           <View style={styles.standardCard}>
             <Text style={styles.standardCardTitle}>Nutri-Score</Text>
             <View style={styles.nutriPillRow}>
@@ -319,7 +332,6 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          {/* NOVA Processing Classification */}
           <View style={styles.standardCard}>
             <Text style={styles.standardCardTitle}>Processing Grade</Text>
             <View style={styles.novaIndicatorRow}>
@@ -367,7 +379,7 @@ export default function ProductDetailPage({
           </View>
         </View>
 
-        {/* Detailed Nutrition Charts per 100g */}
+        {/* Detailed Nutrient Breakdown Charts per 100g */}
         <View style={styles.detailSectionCard}>
           <Text style={styles.sectionHeaderTitle}>Nutrient Profile (per 100g)</Text>
 
@@ -540,23 +552,20 @@ export default function ProductDetailPage({
 
 const styles = StyleSheet.create({
   fullContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#F8F9FA',
-    zIndex: 9999,
+    zIndex: 99999,
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 14,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#EEF0F4',
+    zIndex: 10,
   },
   headerCircleBtn: {
     width: 42,
