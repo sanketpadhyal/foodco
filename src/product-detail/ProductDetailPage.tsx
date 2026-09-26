@@ -459,7 +459,7 @@ export default function ProductDetailPage({
             activeOpacity={0.8}
             accessibilityLabel="Share Product"
           >
-            <Ionicons name="share-outline" size={20} color="#1E1D25" />
+            <Ionicons name="share-outline" size={20} color="#1A73E8" />
           </TouchableOpacity>
         </View>
 
