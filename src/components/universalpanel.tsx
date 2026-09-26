@@ -64,7 +64,7 @@ export default function UniversalPanel({
   const [mounted, setMounted] = useState(visible);
 
   const backdropAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(600)).current;
+  const slideAnim = useRef(new Animated.Value(400)).current;
   const panY = useRef(new Animated.Value(0)).current;
   const onCloseRef = useRef(onClose);
 
@@ -90,15 +90,15 @@ export default function UniversalPanel({
           if (dismissOnBackdropPress) {
             Animated.parallel([
               Animated.timing(panY, {
-                toValue: 600,
-                duration: 180,
-                easing: Easing.in(Easing.cubic),
+                toValue: 400,
+                duration: 160,
+                easing: Easing.out(Easing.quad),
                 useNativeDriver: true,
               }),
               Animated.timing(backdropAnim, {
                 toValue: 0,
-                duration: 180,
-                easing: Easing.in(Easing.cubic),
+                duration: 160,
+                easing: Easing.out(Easing.quad),
                 useNativeDriver: true,
               }),
             ]).start(() => {
@@ -109,7 +109,7 @@ export default function UniversalPanel({
             Animated.spring(panY, {
               toValue: 0,
               damping: 24,
-              stiffness: 260,
+              stiffness: 300,
               useNativeDriver: true,
             }).start();
           }
@@ -117,7 +117,7 @@ export default function UniversalPanel({
           Animated.spring(panY, {
             toValue: 0,
             damping: 24,
-            stiffness: 260,
+            stiffness: 300,
             useNativeDriver: true,
           }).start();
         }
@@ -129,21 +129,20 @@ export default function UniversalPanel({
     if (visible) {
       setMounted(true);
       panY.setValue(0);
-      slideAnim.setValue(600);
+      slideAnim.setValue(400);
       backdropAnim.setValue(0);
 
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 1,
-          duration: 250,
-          easing: Easing.out(Easing.cubic),
+          duration: 200,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.spring(slideAnim, {
+        Animated.timing(slideAnim, {
           toValue: 0,
-          damping: 26,
-          stiffness: 240,
-          mass: 0.9,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
@@ -151,14 +150,14 @@ export default function UniversalPanel({
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 0,
-          duration: 200,
-          easing: Easing.in(Easing.cubic),
+          duration: 160,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
-          toValue: 600,
-          duration: 220,
-          easing: Easing.in(Easing.cubic),
+          toValue: 400,
+          duration: 180,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
       ]).start(() => {
@@ -212,6 +211,8 @@ export default function UniversalPanel({
       <View style={styles.sheetContainer} pointerEvents="box-none">
         <Animated.View
           {...panResponder.panHandlers}
+          renderToHardwareTextureAndroid={true}
+          shouldRasterizeIOS={true}
           style={[
             styles.card,
             { maxWidth: resolvedMaxWidth, paddingBottom: bottomPadding },
@@ -323,10 +324,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 8,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 20,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 8,
   },
   handleContainer: {
     width: '100%',
