@@ -44,7 +44,7 @@ const theme = {
   primary: '#FF6B35',
   primaryDark: '#E8502A',
   blue: '#1A73E8',
-  bg: '#F8F9FB',
+  bg: '#FFFFFF',
   white: '#FFFFFF',
   textPrimary: '#0D0E11',
   textSecondary: '#7F8489',
@@ -204,6 +204,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         />
       </View>
       <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
         refreshControl={
@@ -381,6 +382,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 24,
+    backgroundColor: theme.white,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: theme.white,
   },
   greetingContainer: {
     paddingHorizontal: 20,
