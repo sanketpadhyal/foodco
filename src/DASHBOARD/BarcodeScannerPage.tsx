@@ -377,119 +377,82 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </View>
       </View>
 
-      {/* Bottom Sheet - Floating over the camera view with rounded top corners */}
-      <View style={[styles.bottomSheet, { paddingBottom: insets.bottom + 18 }]}>
-        {/* Foodco AI Assistant Profile Row */}
-        <View style={styles.profileRow}>
-          <View style={styles.avatarWrapper}>
-            <Image
-              source={require('../../assets/fodai.png')}
-              style={styles.avatarImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>Foodco AI Scanner</Text>
-            <Text style={styles.profileSubtitle}>Point camera at any packaged item</Text>
-          </View>
-          {/* Circular Vibrant Green Action Button */}
+      {/* Minimal Floating Camera Bottom Controls (100% Unobstructed Fullscreen Viewport) */}
+      <View style={[styles.floatingBottomControls, { paddingBottom: insets.bottom + 24 }]} pointerEvents="box-none">
+        {/* Floating Quick Demo Chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.floatingChipsScroll}
+        >
+          {DEMO_MART_PRODUCTS.map(item => (
+            <TouchableOpacity
+              key={item.barcode}
+              style={styles.floatingChip}
+              activeOpacity={0.8}
+              onPress={() => processBarcode(item.barcode)}
+            >
+              <Text style={styles.floatingChipText}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Floating Shutter Row */}
+        <View style={styles.shutterActionRow} pointerEvents="box-none">
+          {/* Keypad Digits Button */}
           <TouchableOpacity
-            style={styles.callActionButton}
+            style={styles.glassCircleBtn}
+            onPress={() => setShowManualInput(prev => !prev)}
+            activeOpacity={0.8}
+            accessibilityLabel="Enter Digits"
+          >
+            <Ionicons name="keypad" size={22} color="#1E1D25" />
+          </TouchableOpacity>
+
+          {/* Large Center Green Scanner Shutter Button */}
+          <TouchableOpacity
+            style={styles.centerShutterButton}
             activeOpacity={0.85}
             onPress={() => processBarcode('3017620422003')}
             accessibilityLabel="Scan Product"
           >
-            <Ionicons name="barcode-outline" size={24} color="#FFFFFF" />
+            <View style={styles.centerShutterRing}>
+              <Ionicons name="barcode-outline" size={32} color="#FFFFFF" />
+            </View>
           </TouchableOpacity>
-        </View>
 
-        {/* Feature / Scanner Modes Connected by Dotted Line */}
-        <View style={styles.routeSection}>
-          {/* Feature 1: Barcode & Digits Reader */}
+          {/* Demo Item Quick Shutter */}
           <TouchableOpacity
-            style={styles.routeStopRow}
-            activeOpacity={0.8}
+            style={styles.glassCircleBtn}
             onPress={() => processBarcode('5449000000996')}
-          >
-            <View style={styles.iconCircle}>
-              <Ionicons name="cart-outline" size={20} color="#1E1D25" />
-            </View>
-            <View style={styles.stopTextCol}>
-              <Text style={styles.stopTitle}>Supermarket Barcode & Digits</Text>
-              <Text style={styles.stopAddress}>Instant Nutri-Score & NOVA health group</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Dotted Vertical Connector Line */}
-          <View style={styles.dottedLineWrapper}>
-            <View style={styles.dottedLine} />
-          </View>
-
-          {/* Feature 2: Harmful Chemical & Additives Detector */}
-          <TouchableOpacity
-            style={styles.routeStopRow}
             activeOpacity={0.8}
-            onPress={() => processBarcode('7622210449283')}
+            accessibilityLabel="Quick Item"
           >
-            <View style={styles.iconCircle}>
-              <Ionicons name="shield-checkmark-outline" size={20} color="#5DB035" />
-            </View>
-            <View style={styles.stopTextCol}>
-              <Text style={styles.stopTitle}>Harmful Chemical & Additives Alert</Text>
-              <Text style={styles.stopAddress}>Finds hidden palm oil, E-numbers & carcinogens</Text>
-            </View>
+            <Ionicons name="sparkles" size={22} color="#5DB035" />
           </TouchableOpacity>
         </View>
 
-        {/* Hyper OCR Barcode Digits Quick Bar */}
-        <View style={styles.ocrQuickBar}>
-          <View style={styles.ocrQuickHeader}>
-            <Text style={styles.ocrQuickTitle}>⚡ FOODCO HYPER OCR DIGITS</Text>
-            <TouchableOpacity onPress={() => setShowManualInput(prev => !prev)}>
-              <Text style={styles.ocrInputToggleText}>
-                {showManualInput ? 'Close Input' : 'Type Barcode'}
-              </Text>
+        {/* Manual Barcode Input Sheet */}
+        {showManualInput ? (
+          <View style={styles.floatingManualInputWrap}>
+            <TextInput
+              style={styles.floatingManualInput}
+              placeholder="Enter barcode digits (e.g. 3017620422003)..."
+              placeholderTextColor="#9CA3AF"
+              keyboardType="numeric"
+              value={manualCode}
+              onChangeText={setManualCode}
+              autoFocus
+              onSubmitEditing={() => processBarcode(manualCode)}
+            />
+            <TouchableOpacity
+              style={styles.floatingManualSubmitBtn}
+              onPress={() => processBarcode(manualCode)}
+            >
+              <Text style={styles.floatingManualSubmitText}>Scan</Text>
             </TouchableOpacity>
           </View>
-
-          {showManualInput ? (
-            <View style={styles.manualInputRow}>
-              <TextInput
-                style={styles.manualInput}
-                placeholder="Enter 8, 12, or 13-digit barcode..."
-                placeholderTextColor="#9CA3AF"
-                keyboardType="numeric"
-                value={manualCode}
-                onChangeText={setManualCode}
-                onSubmitEditing={() => processBarcode(manualCode)}
-              />
-              <TouchableOpacity
-                style={styles.manualSubmitBtn}
-                onPress={() => processBarcode(manualCode)}
-              >
-                <Text style={styles.manualSubmitText}>Scan</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          {/* Quick Demo Mart Chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsScroll}
-          >
-            {DEMO_MART_PRODUCTS.map(item => (
-              <TouchableOpacity
-                key={item.barcode}
-                style={styles.quickChip}
-                activeOpacity={0.75}
-                onPress={() => processBarcode(item.barcode)}
-              >
-                <Text style={styles.quickChipText}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        ) : null}
       </View>
 
       {/* Universal Panel Product Scan Result with Skeleton & Proper Graph */}
@@ -593,7 +556,7 @@ const styles = StyleSheet.create({
   },
   viewfinderCenterWrap: {
     position: 'absolute',
-    top: '19%',
+    top: '26%',
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -623,8 +586,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   viewfinderBox: {
-    width: Math.min(SCREEN_WIDTH - 80, 260),
-    height: 180,
+    width: Math.min(SCREEN_WIDTH - 80, 270),
+    height: 190,
     borderRadius: 22,
     position: 'relative',
     overflow: 'hidden',
@@ -693,180 +656,109 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bottomSheet: {
+  floatingBottomControls: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    paddingTop: 20,
-    paddingHorizontal: 22,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 10,
+    alignItems: 'center',
+    zIndex: 30,
   },
-  profileRow: {
+  floatingChipsScroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    gap: 8,
+  },
+  floatingChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  floatingChipText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#1E1D25',
+  },
+  shutterActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: 40,
+    gap: 28,
   },
-  avatarWrapper: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    backgroundColor: '#F0FDF4',
+  glassCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  profileMeta: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  profileName: {
-    fontSize: 16.5,
-    fontWeight: '800',
-    color: '#1E1D25',
-    letterSpacing: -0.2,
-  },
-  profileSubtitle: {
-    fontSize: 12.5,
-    color: '#7E858E',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  callActionButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  centerShutterButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#5DB035',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#5DB035',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+  },
+  centerShutterRing: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingManualInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 6,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.32,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  routeSection: {
-    marginBottom: 12,
-    paddingLeft: 2,
-  },
-  routeStopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopTextCol: {
-    marginLeft: 14,
-  },
-  stopTitle: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: '#1E1D25',
-  },
-  stopAddress: {
-    fontSize: 12,
-    color: '#7E858E',
-    marginTop: 1.5,
-    fontWeight: '500',
-  },
-  dottedLineWrapper: {
-    height: 18,
-    marginLeft: 19,
-    justifyContent: 'center',
-  },
-  dottedLine: {
-    width: 1,
-    height: '100%',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderStyle: 'dashed',
-  },
-  ocrQuickBar: {
-    marginTop: 4,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  ocrQuickHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ocrQuickTitle: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#FF6B35',
-    letterSpacing: 0.3,
-  },
-  ocrInputToggleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#5DB035',
-  },
-  manualInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  manualInput: {
+  floatingManualInput: {
     flex: 1,
-    height: 40,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    height: 42,
     paddingHorizontal: 12,
     fontSize: 13,
     color: '#1E1D25',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    fontWeight: '600',
   },
-  manualSubmitBtn: {
-    marginLeft: 8,
+  floatingManualSubmitBtn: {
     backgroundColor: '#5DB035',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  manualSubmitText: {
+  floatingManualSubmitText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 12,
-  },
-  chipsScroll: {
-    paddingVertical: 2,
-    gap: 8,
-  },
-  quickChip: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  quickChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#374151',
+    fontSize: 13,
   },
 });
