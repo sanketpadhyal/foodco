@@ -9,6 +9,7 @@ import {
   ScrollView,
   Platform,
   Dimensions,
+  Linking,
 } from 'react-native';
 import UniversalPanel from '../components/universalpanel';
 import { ScannedProduct } from './productService';
@@ -43,6 +44,7 @@ export interface ProductScanResultPanelProps {
   errorMessage?: string | null;
   onClose: () => void;
   onScanAnother: () => void;
+  onGetMoreInfo?: () => void;
 }
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
@@ -54,6 +56,7 @@ export default function ProductScanResultPanel({
   errorMessage,
   onClose,
   onScanAnother,
+  onGetMoreInfo,
 }: ProductScanResultPanelProps) {
   // Skeleton pulse animation
   const pulseAnim = useRef(new Animated.Value(0.35)).current;
@@ -116,9 +119,26 @@ export default function ProductScanResultPanel({
           ? []
           : [
               {
-                label: 'Scan Another',
+                label: 'Get More Info',
                 variant: 'secondary',
-                onPress: onScanAnother,
+                onPress: () => {
+                  if (onGetMoreInfo) {
+                    onGetMoreInfo();
+                  } else if (product) {
+                    const barcode = product.barcode;
+                    if (barcode) {
+                      Linking.openURL(`https://world.openfoodfacts.org/product/${encodeURIComponent(barcode)}`).catch(() => {
+                        const q = encodeURIComponent(`${product.brand} ${product.name} nutrition ingredients`);
+                        Linking.openURL(`https://www.google.com/search?q=${q}`).catch(() => {});
+                      });
+                    } else {
+                      const q = encodeURIComponent(`${product.brand} ${product.name} nutrition ingredients`);
+                      Linking.openURL(`https://www.google.com/search?q=${q}`).catch(() => {});
+                    }
+                  } else {
+                    onScanAnother();
+                  }
+                },
               },
               {
                 label: 'Done',
