@@ -316,8 +316,27 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
       {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        {/* Top mask */}
-        <View style={styles.maskTop} />
+        {/* Top mask with Verified Foodco DB Trust Note */}
+        <View style={[styles.maskTop, { paddingTop: insets.top + 64 }]} pointerEvents="box-none">
+          <View style={styles.trustCardWrap}>
+            <View style={styles.trustCard}>
+              <View style={styles.trustIconWrap}>
+                <Ionicons name="shield-checkmark" size={20} color="#15803D" />
+              </View>
+              <View style={styles.trustTextContent}>
+                <View style={styles.trustHeaderRow}>
+                  <Text style={styles.trustTitle}>100% Verified Food Data</Text>
+                  <View style={styles.trustBadgePill}>
+                    <Text style={styles.trustBadgeText}>Foodco DB</Text>
+                  </View>
+                </View>
+                <Text style={styles.trustDescription}>
+                  Whatever you see here is powered by Foodco's official database & certified health authorities. Fully trusted & transparent.
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
 
         {/* Center row with left mask, transparent viewfinder window, and right mask */}
         <View style={styles.maskRow} pointerEvents="box-none">
@@ -514,6 +533,77 @@ const styles = StyleSheet.create({
   maskTop: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trustCardWrap: {
+    paddingHorizontal: 20,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trustCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    maxWidth: 360,
+  },
+  trustIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginTop: 1,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  trustTextContent: {
+    flex: 1,
+  },
+  trustHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  trustTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#14532D',
+    letterSpacing: 0.1,
+  },
+  trustBadgePill: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  trustBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.3,
+  },
+  trustDescription: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4B5563',
+    lineHeight: 15.5,
   },
   maskRow: {
     height: 200,
