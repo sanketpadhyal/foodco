@@ -53,20 +53,6 @@ interface CategoryItem {
   image: any;
 }
 
-interface FoodItem {
-  id: string;
-  title: string;
-  category: string;
-  calories: string;
-  nutriScore: string;
-  scoreColor: string;
-  rating: string;
-  novaGroup: string;
-  additives: string;
-  image: any;
-  badge: string;
-}
-
 const CATEGORIES: CategoryItem[] = [
   {
     id: 'beauty',
@@ -115,61 +101,6 @@ const CATEGORIES_ROW_2: CategoryItem[] = [
   },
 ];
 
-const HEALTHY_DISHES: FoodItem[] = [
-  {
-    id: 'dish-1',
-    title: 'Salad with thousand island dress',
-    category: 'Vegetables & Greens',
-    calories: '250.5 Calories',
-    nutriScore: 'Nutri-Score A',
-    scoreColor: '#137333',
-    rating: '4.8',
-    novaGroup: 'NOVA 1 (Unprocessed)',
-    additives: '0 Harmful Additives',
-    image: require('../../assets/dashboard/dish_salad.png'),
-    badge: '100% Clean',
-  },
-  {
-    id: 'dish-2',
-    title: 'Mayo herb salad with fruits',
-    category: 'Fresh Salads',
-    calories: '180.2 Calories',
-    nutriScore: 'Nutri-Score A',
-    scoreColor: '#137333',
-    rating: '4.9',
-    novaGroup: 'NOVA 1 (Unprocessed)',
-    additives: '0 Harmful Additives',
-    image: require('../../assets/dashboard/dish_yogurt.png'),
-    badge: 'Organic',
-  },
-  {
-    id: 'dish-3',
-    title: 'Greek yogurt & organic berry bowl',
-    category: 'Dairy & Breakfast',
-    calories: '140.0 Calories',
-    nutriScore: 'Nutri-Score A',
-    scoreColor: '#137333',
-    rating: '5.0',
-    novaGroup: 'NOVA 1 (Clean)',
-    additives: '100% Natural Probiotics',
-    image: require('../../assets/dashboard/dish_yogurt.png'),
-    badge: 'Superfood',
-  },
-  {
-    id: 'dish-4',
-    title: 'Avocado grain bowl with seeds',
-    category: 'Healthy Meals',
-    calories: '290.0 Calories',
-    nutriScore: 'Nutri-Score A',
-    scoreColor: '#137333',
-    rating: '4.7',
-    novaGroup: 'NOVA 1 (Natural)',
-    additives: 'Rich in Omega-3',
-    image: require('../../assets/dashboard/dish_salad.png'),
-    badge: 'Nutrient Dense',
-  },
-];
-
 export default function Dashboard({ user, onLogout }: DashboardProps) {
   const insets = useSafeAreaInsets();
   
@@ -177,7 +108,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>('home');
   const [scannerPanelVisible, setScannerPanelVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDish, setSelectedDish] = useState<FoodItem | null>(null);
   const [sessionExpiredVisible, setSessionExpiredVisible] = useState(false);
 
   const pageFade = useRef(new Animated.Value(0)).current;
@@ -233,13 +163,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       } catch (_) {}
     }
   }, []);
-
-  const filteredDishes = HEALTHY_DISHES.filter(dish =>
-    searchQuery.trim().length === 0
-      ? true
-      : dish.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dish.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <Animated.View
@@ -385,44 +308,33 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </View>
         </TouchableOpacity>
 
-        {/* Section Header */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Top Scanned Products</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => setSearchQuery('')}>
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Dishes / Products List */}
-        <View style={styles.dishesListWrapper}>
-          {filteredDishes.map(dish => (
-            <TouchableOpacity
-              key={dish.id}
-              style={styles.dishCard}
-              activeOpacity={0.85}
-              onPress={() => setSelectedDish(dish)}
-            >
-              <View style={styles.dishImageBox}>
-                <Image source={dish.image} style={styles.dishImage} resizeMode="cover" />
-              </View>
-              <View style={styles.dishInfoCol}>
-                <Text style={styles.dishTitle} numberOfLines={1}>
-                  {dish.title}
+        {/* Foodco AI Harmful Additives & Ingredients Scanner Banner */}
+        <TouchableOpacity
+          style={[styles.bannerContainer, styles.aiBannerContainer]}
+          activeOpacity={0.92}
+          onPress={() => setScannerPanelVisible(true)}
+        >
+          <View style={[styles.bannerCard, styles.aiBannerCard]}>
+            <View style={styles.bannerContent}>
+              <View style={styles.bannerTextCol}>
+                <Text style={styles.bannerHeading}>Foodco AI detects harmful additives</Text>
+                <Text style={styles.bannerSubheading}>
+                  Instant AI safety score, hidden palm oil, carcinogens & E-numbers
                 </Text>
-                <View style={styles.dishMetaRow}>
-                  <Text style={styles.dishCalories}>🔥 {dish.calories}</Text>
-                  <View style={styles.nutriBadge}>
-                    <Text style={styles.nutriBadgeText}>{dish.nutriScore}</Text>
-                  </View>
+                <View style={[styles.bannerActionBtn, styles.aiBannerActionBtn]}>
+                  <Text style={[styles.bannerActionText, styles.aiBannerActionText]}>
+                    Scan With Foodco AI  ➔
+                  </Text>
                 </View>
               </View>
-              <View style={styles.ratingBadge}>
-                <Text style={styles.ratingStar}>★</Text>
-                <Text style={styles.ratingScore}>{dish.rating}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+              <Image
+                source={require('../../assets/fodai.png')}
+                style={styles.bannerAiImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Account Logout Panel */}
@@ -486,31 +398,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           },
         ]}
       />
-
-      {/* Product Nutrition AI Details Panel */}
-      {selectedDish && (
-        <UniversalPanel
-          visible={!!selectedDish}
-          title={selectedDish.title}
-          message={`Category: ${selectedDish.category}\nCalories: ${selectedDish.calories}\nProcessing: ${selectedDish.novaGroup}\nAdditives: ${selectedDish.additives}\nAI Rating: ${selectedDish.rating} / 5.0 (${selectedDish.badge})`}
-          onClose={() => setSelectedDish(null)}
-          actions={[
-            {
-              label: 'Close',
-              variant: 'secondary',
-              onPress: () => setSelectedDish(null),
-            },
-            {
-              label: 'Scan Another',
-              variant: 'primary',
-              onPress: () => {
-                setSelectedDish(null);
-                setScannerPanelVisible(true);
-              },
-            },
-          ]}
-        />
-      )}
 
       {/* Session Expired Universal Panel */}
       <UniversalPanel
@@ -734,106 +621,27 @@ const styles = StyleSheet.create({
     width: 108,
     height: 108,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 22,
-    marginTop: 26,
-    marginBottom: 14,
+  aiBannerContainer: {
+    marginTop: 18,
+    marginBottom: 8,
+    shadowColor: '#E65100',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: theme.textPrimary,
+  aiBannerCard: {
+    backgroundColor: '#FF6B35',
   },
-  seeAllText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.blue,
-  },
-  dishesListWrapper: {
-    paddingHorizontal: 20,
-  },
-  dishCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  aiBannerActionBtn: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F1F3F5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
   },
-  dishImageBox: {
-    width: 66,
-    height: 66,
-    borderRadius: 18,
-    backgroundColor: '#FFF8ED',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+  aiBannerActionText: {
+    color: '#E65100',
   },
-  dishImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-  },
-  dishInfoCol: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  dishTitle: {
-    fontSize: 14.5,
-    fontWeight: '700',
-    color: theme.textPrimary,
-    marginBottom: 4,
-  },
-  dishMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dishCalories: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#8E949D',
-  },
-  nutriBadge: {
-    marginLeft: 8,
-    backgroundColor: '#E6F4EA',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  nutriBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#137333',
-  },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EFEFEF',
-  },
-  ratingStar: {
-    color: '#FBBC05',
-    fontSize: 12,
-    marginRight: 3,
-  },
-  ratingScore: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.textPrimary,
+  bannerAiImage: {
+    width: 95,
+    height: 135,
   },
   profilePanelCard: {
     flexDirection: 'row',
