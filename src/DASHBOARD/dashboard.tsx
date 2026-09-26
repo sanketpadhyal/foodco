@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import { DashboardNavbar } from './components';
+import UniversalPanel from '../components/universalpanel';
 
 export interface DashboardProps {
   user: {
@@ -69,6 +70,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [profilePanelVisible, setProfilePanelVisible] = useState(false);
 
   const fetchItems = async () => {
     try {
@@ -195,6 +197,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
         <DashboardNavbar
           user={user}
+          onProfilePress={() => setProfilePanelVisible(true)}
           onLogout={onLogout}
         />
       </View>
@@ -288,6 +291,52 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           ))}
         </View>
       </ScrollView>
+
+      <UniversalPanel
+        visible={profilePanelVisible}
+        title="Account"
+        onClose={() => setProfilePanelVisible(false)}
+        actions={[
+          {
+            label: 'Cancel',
+            variant: 'secondary',
+            onPress: () => setProfilePanelVisible(false),
+          },
+          {
+            label: 'Log Out',
+            variant: 'danger',
+            onPress: () => {
+              setProfilePanelVisible(false);
+              onLogout();
+            },
+          },
+        ]}
+      >
+        <View style={styles.profilePanelCard}>
+          <View style={styles.profilePanelAvatarWrap}>
+            {user.photoURL ? (
+              <Image source={{ uri: user.photoURL }} style={styles.profilePanelAvatar} />
+            ) : (
+              <View style={styles.profilePanelAvatarPlaceholder}>
+                <Text style={styles.profilePanelAvatarText}>
+                  {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
+                </Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.profilePanelInfo}>
+            <Text style={styles.profilePanelName} numberOfLines={1}>
+              {user.displayName || 'Member'}
+            </Text>
+            <Text style={styles.profilePanelEmail} numberOfLines={1}>
+              {user.email}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.profilePanelQuestion}>
+          Are you sure you want to log out of your account?
+        </Text>
+      </UniversalPanel>
     </View>
   );
 }
@@ -512,5 +561,58 @@ const styles = StyleSheet.create({
     color: theme.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  profilePanelCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#EFEFEF',
+  },
+  profilePanelAvatarWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#E4F6D4',
+  },
+  profilePanelAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  profilePanelAvatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.primary,
+  },
+  profilePanelAvatarText: {
+    color: theme.white,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  profilePanelInfo: {
+    marginLeft: 14,
+    flex: 1,
+  },
+  profilePanelName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    marginBottom: 2,
+  },
+  profilePanelEmail: {
+    fontSize: 13,
+    color: theme.textSecondary,
+  },
+  profilePanelQuestion: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    marginBottom: 8,
+    lineHeight: 20,
   },
 });

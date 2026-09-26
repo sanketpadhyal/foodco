@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
   ImageSourcePropType,
-  Alert,
 } from 'react-native';
 
 export interface DashboardNavbarProps {
@@ -35,22 +34,8 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = memo(({
   const handleProfilePress = () => {
     if (onProfilePress) {
       onProfilePress();
-      return;
-    }
-
-    if (onLogout) {
-      Alert.alert(
-        user?.displayName || 'My Profile',
-        user?.email ? `${user.email}` : 'Account options',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Log Out',
-            style: 'destructive',
-            onPress: onLogout,
-          },
-        ]
-      );
+    } else if (onLogout) {
+      onLogout();
     }
   };
 
