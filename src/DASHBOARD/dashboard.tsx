@@ -11,6 +11,7 @@ import {
   StatusBar as RNStatusBar,
   Animated,
   Easing,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -111,6 +112,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [scannerPageVisible, setScannerPageVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionExpiredVisible, setSessionExpiredVisible] = useState(false);
+  const [githubPanelVisible, setGithubPanelVisible] = useState(false);
 
   const pageFade = useRef(new Animated.Value(0)).current;
   const pageSlide = useRef(new Animated.Value(32)).current;
@@ -434,6 +436,30 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         activeTab={activeTab}
         onTabPress={setActiveTab}
         onScanPress={() => setScannerPageVisible(true)}
+        onGithubPress={() => setGithubPanelVisible(true)}
+      />
+
+      {/* GitHub Repository / Contribute Modal */}
+      <UniversalPanel
+        visible={githubPanelVisible}
+        title="Contribute on GitHub"
+        message="Do you want to redirect to the GitHub repository of this project to contribute?"
+        onClose={() => setGithubPanelVisible(false)}
+        actions={[
+          {
+            label: 'Cancel',
+            variant: 'secondary',
+            onPress: () => setGithubPanelVisible(false),
+          },
+          {
+            label: 'Open GitHub',
+            variant: 'blue',
+            onPress: () => {
+              setGithubPanelVisible(false);
+              Linking.openURL('https://github.com/sanketpadhyal/foodco.git').catch(() => {});
+            },
+          },
+        ]}
       />
 
       {/* Fullscreen Barcode & Hyper OCR Scanner Page with Down-to-Up Transition */}

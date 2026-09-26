@@ -9,12 +9,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-export type DashboardTab = 'home' | 'stats' | 'scan' | 'recipes' | 'ai' | 'cart';
+export type DashboardTab = 'home' | 'stats' | 'scan' | 'recipes' | 'ai' | 'cart' | 'github';
 
 export interface DashboardBottomBarProps {
   activeTab?: DashboardTab;
   onTabPress?: (tab: DashboardTab) => void;
   onScanPress?: () => void;
+  onGithubPress?: () => void;
 }
 
 const scannerBtnSource = require('../../../assets/orange-scanner-btn.png');
@@ -32,6 +33,7 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
   activeTab = 'home',
   onTabPress,
   onScanPress,
+  onGithubPress,
 }) => {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 12);
@@ -39,6 +41,12 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
   const handleTab = (tab: DashboardTab) => {
     if (tab === 'scan') {
       onScanPress?.();
+    } else if (tab === 'github') {
+      if (onGithubPress) {
+        onGithubPress();
+      } else {
+        onTabPress?.(tab);
+      }
     } else {
       onTabPress?.(tab);
     }
@@ -147,22 +155,19 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           </View>
         </TouchableOpacity>
 
-        {/* Tab 5: Fod AI */}
+        {/* Tab 5: GitHub */}
         <TouchableOpacity
           style={styles.tabButton}
-          onPress={() => handleTab('ai')}
+          onPress={() => handleTab('github')}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Fod AI Assistant"
+          accessibilityLabel="GitHub Repository"
         >
-          <View style={styles.aiIconSlot}>
-            <Image
-              source={fodaiSource}
-              style={[
-                styles.fodaiImage,
-                { opacity: activeTab === 'ai' || activeTab === 'cart' ? 1 : 0.72 },
-              ]}
-              resizeMode="contain"
+          <View style={styles.iconSlot}>
+            <Ionicons
+              name="logo-github"
+              size={26}
+              color={activeTab === 'github' ? THEME.active : THEME.inactive}
             />
           </View>
         </TouchableOpacity>
