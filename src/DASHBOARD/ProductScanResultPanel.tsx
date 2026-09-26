@@ -152,9 +152,13 @@ export default function ProductScanResultPanel({
           </Text>
         </View>
       ) : errorMessage && !product ? (
-        // Error state
+        // Error state — custom illustration
         <View style={styles.errorContainer}>
-          <Text style={styles.errorEmoji}>🔍</Text>
+          <Image
+            source={require('../../assets/dashboard/illustration_not_found.png')}
+            style={styles.notFoundIllustration}
+            resizeMode="contain"
+          />
           <Text style={styles.errorTitle}>Product Not Found</Text>
           <Text style={styles.errorSubtitle}>{errorMessage}</Text>
         </View>
@@ -307,6 +311,11 @@ const styles = StyleSheet.create({
   errorContainer: {
     alignItems: 'center',
     paddingVertical: 24,
+  },
+  notFoundIllustration: {
+    width: 200,
+    height: 200,
+    marginBottom: 16,
   },
   errorEmoji: {
     fontSize: 48,
