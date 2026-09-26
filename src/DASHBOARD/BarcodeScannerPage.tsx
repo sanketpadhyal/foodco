@@ -250,6 +250,28 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     }
   };
 
+  const DEMO_BARCODES = [
+    '3017620422003', // Nutella Hazelnut Spread
+    '5449000000996', // Coca-Cola Original
+    '7622210449283', // Oreo Sandwich Cookies
+    '8901491101838', // Lay's Classic Salted Chips
+    '8901030383701', // Maggi 2-Minute Masala Noodles
+    '5000159461122', // Snickers Chocolate Bar
+    '8901725181222', // Amul Pure Butter
+    '3033490004523', // Activia Probiotic Natural Yogurt
+  ];
+
+  const lastRandomCodeRef = useRef<string>('');
+
+  const handleScanRandom = () => {
+    isCooldownRef.current = false;
+    const candidates = DEMO_BARCODES.filter(code => code !== lastRandomCodeRef.current);
+    const randomIndex = Math.floor(Math.random() * candidates.length);
+    const chosenBarcode = candidates[randomIndex] || DEMO_BARCODES[0];
+    lastRandomCodeRef.current = chosenBarcode;
+    processBarcode(chosenBarcode);
+  };
+
   const handleScanAnother = () => {
     setResultVisible(false);
     setProductData(null);
@@ -308,19 +330,30 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <Text style={styles.headerTitleText}>Scan Barcode</Text>
         </View>
 
-        {/* Right Flashlight / Torch Toggle */}
-        <TouchableOpacity
-          style={[styles.squareControlBtn, torch && styles.torchActiveBtn]}
-          activeOpacity={0.82}
-          onPress={() => setTorch(prev => !prev)}
-          accessibilityLabel="Toggle Flashlight"
-        >
-          <Ionicons
-            name={torch ? 'flash' : 'flash-outline'}
-            size={22}
-            color={torch ? '#5DB035' : '#1E1D25'}
-          />
-        </TouchableOpacity>
+        {/* Right Controls: Random Shopping Scan + Torch */}
+        <View style={styles.topRightControls}>
+          <TouchableOpacity
+            style={styles.squareControlBtn}
+            activeOpacity={0.82}
+            onPress={handleScanRandom}
+            accessibilityLabel="Scan Random Shopping Item"
+          >
+            <Ionicons name="bag-handle-outline" size={21} color="#5DB035" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.squareControlBtn, torch && styles.torchActiveBtn]}
+            activeOpacity={0.82}
+            onPress={() => setTorch(prev => !prev)}
+            accessibilityLabel="Toggle Flashlight"
+          >
+            <Ionicons
+              name={torch ? 'flash' : 'flash-outline'}
+              size={22}
+              color={torch ? '#5DB035' : '#1E1D25'}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
@@ -346,7 +379,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
           <TouchableOpacity
             activeOpacity={0.92}
-            onPress={() => processBarcode('3017620422003')}
+            onPress={handleScanRandom}
             style={styles.viewfinderBox}
           >
             {/* 4 Corner Rounding Masks - Gives a smooth curved cutout */}
@@ -500,6 +533,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     zIndex: 25,
+  },
+  topRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   squareControlBtn: {
     width: 48,
