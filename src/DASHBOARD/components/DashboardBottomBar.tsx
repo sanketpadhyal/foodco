@@ -17,7 +17,15 @@ export interface DashboardBottomBarProps {
   onScanPress?: () => void;
 }
 
-const scannerBtnSource = require('../../../assets/scanner-btn.png');
+const scannerBtnSource = require('../../../assets/orange-scanner-btn.png');
+
+const THEME = {
+  active: '#FF6B35',
+  activeAccent: '#FFB894',
+  inactive: '#9CA3AF',
+  inactiveAccent: '#D1D5DB',
+  border: '#F3F4F6',
+};
 
 export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
   activeTab = 'home',
@@ -51,25 +59,25 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
             <View
               style={[
                 styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? '#22C55E' : '#B2BAC6' },
+                { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
               ]}
             />
             <View
               style={[
                 styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? '#86EFAC' : '#D1D5DB' },
+                { backgroundColor: activeTab === 'home' ? THEME.activeAccent : THEME.inactiveAccent },
               ]}
             />
             <View
               style={[
                 styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? '#22C55E' : '#B2BAC6' },
+                { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
               ]}
             />
             <View
               style={[
                 styles.gridBlock,
-                { backgroundColor: activeTab === 'home' ? '#22C55E' : '#B2BAC6' },
+                { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
               ]}
             />
           </View>
@@ -88,8 +96,8 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
               style={[
                 styles.chartBar,
                 {
-                  height: 10,
-                  backgroundColor: activeTab === 'stats' ? '#22C55E' : '#B2BAC6',
+                  height: 11,
+                  backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
                 },
               ]}
             />
@@ -97,8 +105,8 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
               style={[
                 styles.chartBar,
                 {
-                  height: 16,
-                  backgroundColor: activeTab === 'stats' ? '#22C55E' : '#B2BAC6',
+                  height: 18,
+                  backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
                 },
               ]}
             />
@@ -106,15 +114,15 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
               style={[
                 styles.chartBar,
                 {
-                  height: 8,
-                  backgroundColor: activeTab === 'stats' ? '#22C55E' : '#B2BAC6',
+                  height: 9,
+                  backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
                 },
               ]}
             />
           </View>
         </TouchableOpacity>
 
-        {/* Center Empty Space for Floating Scanner Button */}
+        {/* Center Space reserved for Floating Scanner Button */}
         <View style={styles.centerSpace} />
 
         {/* Tab 4: Recipes / Documents */}
@@ -127,8 +135,8 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
         >
           <Ionicons
             name={activeTab === 'recipes' ? 'document-text' : 'document-text-outline'}
-            size={23}
-            color={activeTab === 'recipes' ? '#22C55E' : '#B2BAC6'}
+            size={24}
+            color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
           />
         </TouchableOpacity>
 
@@ -142,8 +150,8 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
         >
           <Ionicons
             name={activeTab === 'cart' ? 'bag-handle' : 'bag-handle-outline'}
-            size={23}
-            color={activeTab === 'cart' ? '#22C55E' : '#B2BAC6'}
+            size={24}
+            color={activeTab === 'cart' ? THEME.active : THEME.inactive}
           />
         </TouchableOpacity>
       </View>
@@ -185,15 +193,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#F0F2F5',
+    borderTopColor: '#F3F4F6',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.07,
     shadowRadius: 14,
     elevation: 10,
   },
@@ -225,8 +233,8 @@ const styles = StyleSheet.create({
     gap: 3.5,
   },
   chartBar: {
-    width: 4,
-    borderRadius: 2,
+    width: 4.2,
+    borderRadius: 2.5,
   },
   centerSpace: {
     width: 60,
@@ -235,19 +243,19 @@ const styles = StyleSheet.create({
   floatingCenterBtn: {
     position: 'absolute',
     alignSelf: 'center',
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#22C55E',
+    shadowColor: '#FF6B35',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.38,
-    shadowRadius: 12,
+    shadowRadius: 14,
     elevation: 12,
   },
   scannerImage: {
-    width: 58,
-    height: 58,
+    width: 60,
+    height: 60,
   },
 });
