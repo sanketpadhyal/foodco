@@ -70,35 +70,35 @@ const CATEGORIES: CategoryItem[] = [
     title: 'Vegetables',
     subtitle: '120 Dishes',
     bgColor: '#EAF8EC',
-    image: require('../../../assets/dashboard/cat_veg.png'),
+    image: require('../../assets/dashboard/cat_veg.png'),
   },
   {
     id: 'mush',
     title: 'Mushroom',
     subtitle: '120 Dishes',
     bgColor: '#FDF0EB',
-    image: require('../../../assets/dashboard/cat_mush.png'),
+    image: require('../../assets/dashboard/cat_mush.png'),
   },
   {
     id: 'fruit',
     title: 'Fruit',
     subtitle: '120 Dishes',
     bgColor: '#FEF5E7',
-    image: require('../../../assets/dashboard/cat_fruit.png'),
+    image: require('../../assets/dashboard/cat_fruit.png'),
   },
   {
     id: 'dairy',
     title: 'Dairy & Milk',
     subtitle: '110 Products',
     bgColor: '#E8F4FD',
-    image: require('../../../assets/dashboard/cat_milk.png'),
+    image: require('../../assets/dashboard/cat_milk.png'),
   },
   {
     id: 'bakery',
     title: 'Bakery',
     subtitle: '95 Products',
     bgColor: '#F3EBFD',
-    image: require('../../../assets/dashboard/cat_bread.png'),
+    image: require('../../assets/dashboard/cat_bread.png'),
   },
 ];
 
@@ -113,7 +113,7 @@ const HEALTHY_DISHES: FoodItem[] = [
     rating: '4.8',
     novaGroup: 'NOVA 1 (Unprocessed)',
     additives: '0 Harmful Additives',
-    image: require('../../../assets/dashboard/dish_salad.png'),
+    image: require('../../assets/dashboard/dish_salad.png'),
     badge: '100% Clean',
   },
   {
@@ -126,7 +126,7 @@ const HEALTHY_DISHES: FoodItem[] = [
     rating: '4.9',
     novaGroup: 'NOVA 1 (Unprocessed)',
     additives: '0 Harmful Additives',
-    image: require('../../../assets/dashboard/dish_yogurt.png'),
+    image: require('../../assets/dashboard/dish_yogurt.png'),
     badge: 'Organic',
   },
   {
@@ -139,7 +139,7 @@ const HEALTHY_DISHES: FoodItem[] = [
     rating: '5.0',
     novaGroup: 'NOVA 1 (Clean)',
     additives: '100% Natural Probiotics',
-    image: require('../../../assets/dashboard/dish_yogurt.png'),
+    image: require('../../assets/dashboard/dish_yogurt.png'),
     badge: 'Superfood',
   },
   {
@@ -152,7 +152,7 @@ const HEALTHY_DISHES: FoodItem[] = [
     rating: '4.7',
     novaGroup: 'NOVA 1 (Natural)',
     additives: 'Rich in Omega-3',
-    image: require('../../../assets/dashboard/dish_salad.png'),
+    image: require('../../assets/dashboard/dish_salad.png'),
     badge: 'Nutrient Dense',
   },
 ];
@@ -273,7 +273,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 </View>
               </View>
               <Image
-                source={require('../../../assets/dashboard/avocado_3d.png')}
+                source={require('../../assets/dashboard/avocado_3d.png')}
                 style={styles.bannerAvocadoImage}
                 resizeMode="contain"
               />
