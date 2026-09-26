@@ -66,39 +66,11 @@ interface FoodItem {
 
 const CATEGORIES: CategoryItem[] = [
   {
-    id: 'veg',
-    title: 'Vegetables',
-    subtitle: '120 Dishes',
-    bgColor: '#EAF8EC',
-    image: require('../../assets/dashboard/cat_veg.png'),
-  },
-  {
-    id: 'mush',
-    title: 'Mushroom',
-    subtitle: '120 Dishes',
-    bgColor: '#FDF0EB',
-    image: require('../../assets/dashboard/cat_mush.png'),
-  },
-  {
-    id: 'fruit',
-    title: 'Fruit',
-    subtitle: '120 Dishes',
-    bgColor: '#FEF5E7',
-    image: require('../../assets/dashboard/cat_fruit.png'),
-  },
-  {
-    id: 'dairy',
-    title: 'Dairy & Milk',
-    subtitle: '110 Products',
-    bgColor: '#E8F4FD',
-    image: require('../../assets/dashboard/cat_milk.png'),
-  },
-  {
-    id: 'bakery',
-    title: 'Bakery',
-    subtitle: '95 Products',
-    bgColor: '#F3EBFD',
-    image: require('../../assets/dashboard/cat_bread.png'),
+    id: 'beauty',
+    title: 'Beauty',
+    subtitle: 'Cosmetics & Care',
+    bgColor: '#FFF0F2',
+    image: require('../../assets/dashboard/cat_beauty.png'),
   },
 ];
 
@@ -242,13 +214,17 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 activeOpacity={0.82}
                 onPress={() => setSearchQuery(cat.title)}
               >
-                <View style={styles.categoryIconBox}>
-                  <Image source={cat.image} style={styles.categoryImage} resizeMode="contain" />
+                <Image
+                  source={cat.image}
+                  style={styles.categoryPopoutImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.categoryTextContent}>
+                  <Text style={styles.categoryTitle} numberOfLines={1}>
+                    {cat.title}
+                  </Text>
+                  <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
                 </View>
-                <Text style={styles.categoryTitle} numberOfLines={1}>
-                  {cat.title}
-                </Text>
-                <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -491,41 +467,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   categoriesWrapper: {
-    marginTop: 34,
+    marginTop: 14,
+    overflow: 'visible',
   },
   categoriesScrollContent: {
     paddingHorizontal: 20,
     paddingRight: 8,
+    paddingTop: 36,
+    paddingBottom: 8,
+    overflow: 'visible',
   },
   categoryCard: {
-    width: 122,
-    height: 140,
+    width: 126,
+    height: 135,
     borderRadius: 24,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 16,
     marginRight: 14,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    position: 'relative',
+    overflow: 'visible',
   },
-  categoryIconBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
+  categoryPopoutImage: {
+    position: 'absolute',
+    top: -28,
+    width: 76,
+    height: 96,
+    zIndex: 5,
+  },
+  categoryTextContent: {
     alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  categoryImage: {
-    width: 44,
-    height: 44,
+    width: '100%',
   },
   categoryTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: theme.textPrimary,
     textAlign: 'center',
