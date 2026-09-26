@@ -28,6 +28,7 @@ export interface ScannedProduct {
   hasPalmOil: boolean;
   isUltraProcessed: boolean;
   ingredientsSummary?: string;
+  insight?: string;
 }
 
 const BACKEND_BASE = Platform.select({
@@ -348,6 +349,9 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
         const additives = Array.isArray(prod.additives) ? prod.additives : [];
 
         const analysis = calculateAiHealthScore(nutriGrade, nova, sugars, satFat, hasPalm, additives.length);
+        const backendAiRating = typeof prod.aiHealthRating === 'number' ? prod.aiHealthRating : analysis.score;
+        const backendVerdict = prod.verdict || analysis.verdict;
+        const backendVerdictColor = prod.verdictColor || analysis.color;
 
         return {
           barcode,
@@ -355,25 +359,26 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           brand: prod.brand || 'Mart Selection',
           category: prod.category || 'Grocery',
           imageUrl: prod.image_url || prod.imageUrl,
-          nutriScore: nutriGrade,
-          novaGroup: nova,
-          aiHealthRating: analysis.score,
-          verdict: analysis.verdict,
-          verdictColor: analysis.color,
+          nutriScore: (prod.nutriScore || nutriGrade) as ScannedProduct['nutriScore'],
+          novaGroup: prod.novaGroup ?? nova,
+          aiHealthRating: backendAiRating,
+          verdict: backendVerdict,
+          verdictColor: backendVerdictColor,
+          insight: prod.insight,
           metrics: {
-            calories: Number(prod.calories ?? 280),
-            carbs: Number(prod.carbs ?? 38),
-            sugars,
-            fat: Number(prod.fat ?? 9),
-            saturatedFat: satFat,
-            protein: Number(prod.protein ?? 5.5),
-            fiber: Number(prod.fiber ?? 2.5),
-            salt: Number(prod.salt ?? 0.6),
+            calories: Number(prod.metrics?.calories ?? prod.calories ?? 280),
+            carbs: Number(prod.metrics?.carbs ?? prod.carbs ?? 38),
+            sugars: Number(prod.metrics?.sugars ?? sugars),
+            fat: Number(prod.metrics?.fat ?? prod.fat ?? 9),
+            saturatedFat: Number(prod.metrics?.saturatedFat ?? satFat),
+            protein: Number(prod.metrics?.protein ?? prod.protein ?? 5.5),
+            fiber: Number(prod.metrics?.fiber ?? prod.fiber ?? 2.5),
+            salt: Number(prod.metrics?.salt ?? prod.salt ?? 0.6),
           },
-          additives,
-          hasPalmOil: hasPalm,
-          isUltraProcessed: nova === 4,
-          ingredientsSummary: prod.ingredients || prod.ingredients_text,
+          additives: Array.isArray(prod.additives) ? prod.additives : additives,
+          hasPalmOil: prod.hasPalmOil !== undefined ? Boolean(prod.hasPalmOil) : hasPalm,
+          isUltraProcessed: prod.isUltraProcessed !== undefined ? Boolean(prod.isUltraProcessed) : nova === 4,
+          ingredientsSummary: prod.ingredientsSummary || prod.ingredients || prod.ingredients_text,
         };
       }
     }

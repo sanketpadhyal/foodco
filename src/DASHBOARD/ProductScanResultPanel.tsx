@@ -280,11 +280,12 @@ export default function ProductScanResultPanel({
                 style={styles.insightIcon}
               />
               <Text style={styles.scoreDescText}>
-                {product.aiHealthRating >= 70
-                  ? 'Great nutritional choice with clean, balanced nutrients.'
-                  : product.aiHealthRating >= 40
-                  ? 'Moderate nutritional value. Safe in moderate portions.'
-                  : 'Poor rating. High in sugar or saturated fats. Limit intake.'}
+                {product.insight ||
+                  (product.aiHealthRating >= 70
+                    ? 'Great nutritional choice with clean, balanced nutrients.'
+                    : product.aiHealthRating >= 40
+                    ? 'Moderate nutritional value. Safe in moderate portions.'
+                    : 'Poor rating. High in sugar or saturated fats. Limit intake.')}
               </Text>
             </View>
           </View>
