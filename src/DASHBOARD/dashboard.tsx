@@ -91,6 +91,16 @@ const CATEGORIES: CategoryItem[] = [
   },
 ];
 
+const CATEGORIES_ROW_2: CategoryItem[] = [
+  {
+    id: 'chocolates',
+    title: 'Chocolates',
+    subtitle: 'Sweets & Treats',
+    bgColor: '#F4ECF8',
+    image: require('../../assets/dashboard/cat_chocolates.png'),
+  },
+];
+
 const HEALTHY_DISHES: FoodItem[] = [
   {
     id: 'dish-1',
@@ -267,7 +277,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </View>
         </View>
 
-        {/* Categories Section */}
+        {/* Categories Section - Row 1 */}
         <View style={styles.categoriesWrapper}>
           <ScrollView
             horizontal
@@ -275,6 +285,40 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             contentContainerStyle={styles.categoriesScrollContent}
           >
             {CATEGORIES.map(cat => (
+              <Animated.View
+                key={cat.id}
+                style={{ transform: [{ scale: cardScale }] }}
+              >
+                <TouchableOpacity
+                  style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
+                  activeOpacity={0.82}
+                  onPress={() => setSearchQuery(cat.title)}
+                >
+                  <Image
+                    source={cat.image}
+                    style={styles.categoryPopoutImage}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.categoryTextContent}>
+                    <Text style={styles.categoryTitle} numberOfLines={1}>
+                      {cat.title}
+                    </Text>
+                    <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Categories Section - Row 2 */}
+        <View style={styles.categoriesRow2Wrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesScrollContent}
+          >
+            {CATEGORIES_ROW_2.map(cat => (
               <Animated.View
                 key={cat.id}
                 style={{ transform: [{ scale: cardScale }] }}
@@ -573,6 +617,10 @@ const styles = StyleSheet.create({
   },
   categoriesWrapper: {
     marginTop: 14,
+    overflow: 'visible',
+  },
+  categoriesRow2Wrapper: {
+    marginTop: 4,
     overflow: 'visible',
   },
   categoriesScrollContent: {
