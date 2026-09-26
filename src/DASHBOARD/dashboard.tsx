@@ -99,6 +99,13 @@ const CATEGORIES_ROW_2: CategoryItem[] = [
     bgColor: '#F4ECF8',
     image: require('../../assets/dashboard/cat_chocolates.png'),
   },
+  {
+    id: 'biscuits',
+    title: 'Biscuits',
+    subtitle: 'Cookies & Bakes',
+    bgColor: '#FFF5EC',
+    image: require('../../assets/dashboard/cat_biscuits.png'),
+  },
 ];
 
 const HEALTHY_DISHES: FoodItem[] = [
