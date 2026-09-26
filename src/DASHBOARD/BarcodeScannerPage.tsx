@@ -85,6 +85,13 @@ function RealCameraComponent({
 
   const [permission, requestPermission] = safeUseCameraPermissions();
 
+  // Auto-request permission on first mount
+  useEffect(() => {
+    if (!permission || (!permission.granted && permission.canAskAgain !== false)) {
+      requestPermission();
+    }
+  }, []);
+
   if (!permission?.granted) {
     return (
       <View style={styles.permissionContainer}>
