@@ -75,49 +75,66 @@ export default function UniversalPanel({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return gestureState.dy > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      onMoveShouldSetPanResponder: (_, gs) => {
+        return gs.dy > 4 && Math.abs(gs.dy) > Math.abs(gs.dx) * 1.5;
       },
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          panY.setValue(gestureState.dy);
+      onPanResponderGrant: () => {
+        panY.stopAnimation();
+      },
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) {
+          // Resistance curve: drag slows down at larger distances
+          const resistance = 1 - Math.min(gs.dy / 600, 0.4);
+          panY.setValue(gs.dy * resistance);
         } else {
-          panY.setValue(0);
+          // Slight resistance going up too
+          panY.setValue(gs.dy * 0.1);
         }
       },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 70 || gestureState.vy > 0.4) {
-          if (dismissOnBackdropPress) {
-            Animated.parallel([
-              Animated.timing(panY, {
-                toValue: 400,
-                duration: 160,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: true,
-              }),
-              Animated.timing(backdropAnim, {
-                toValue: 0,
-                duration: 160,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: true,
-              }),
-            ]).start(() => {
-              panY.setValue(0);
-              onCloseRef.current?.();
-            });
-          } else {
-            Animated.spring(panY, {
-              toValue: 0,
-              damping: 24,
-              stiffness: 300,
+      onPanResponderRelease: (_, gs) => {
+        const shouldDismiss =
+          dismissOnBackdropPress && (gs.dy > 80 || (gs.vy > 0.5 && gs.dy > 20));
+
+        if (shouldDismiss) {
+          // Continue with the user's velocity into dismiss
+          const remainingDist = 420 - gs.dy;
+          const duration = Math.max(120, Math.min(280, remainingDist / Math.max(gs.vy, 0.5)));
+          Animated.parallel([
+            Animated.timing(panY, {
+              toValue: 500,
+              duration,
+              easing: Easing.out(Easing.quad),
               useNativeDriver: true,
-            }).start();
-          }
+            }),
+            Animated.timing(backdropAnim, {
+              toValue: 0,
+              duration,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            panY.setValue(0);
+            onCloseRef.current?.();
+          });
         } else {
+          // Spring snap-back — feels alive and physical
           Animated.spring(panY, {
             toValue: 0,
-            damping: 24,
-            stiffness: 300,
+            damping: 18,
+            stiffness: 260,
+            mass: 0.8,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: (_, gs) => {
+        // Snap back if gesture is cancelled
+        if (gs.dy < 80) {
+          Animated.spring(panY, {
+            toValue: 0,
+            damping: 18,
+            stiffness: 260,
+            mass: 0.8,
             useNativeDriver: true,
           }).start();
         }
@@ -191,13 +208,23 @@ export default function UniversalPanel({
   const bottomPadding = Math.max(insets.bottom + 12, 22);
   const translateY = Animated.add(slideAnim, panY);
 
+  // Backdrop fades proportionally as user drags — Instagram-style
+  const backdropOpacity = Animated.multiply(
+    backdropAnim,
+    panY.interpolate({
+      inputRange: [0, 300],
+      outputRange: [1, 0.15],
+      extrapolate: 'clamp',
+    })
+  );
+
   return (
     <View style={[StyleSheet.absoluteFill, styles.rootModalWrapper]} pointerEvents="box-none">
       <Animated.View
         style={[
           styles.backdrop,
           {
-            opacity: backdropAnim,
+            opacity: backdropOpacity,
           },
         ]}
       >
