@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   body: {
-    marginBottom: 8,
+    marginBottom: 2,
   },
   actionsRow: {
     flexDirection: 'row',

@@ -395,6 +395,7 @@ const styles = StyleSheet.create({
   },
   resultScroll: {
     maxHeight: MAX_SCROLL_HEIGHT,
+    flexGrow: 0,
   },
   resultContent: {
     paddingBottom: 0,
