@@ -162,9 +162,9 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
 
   const startGoogleSignIn = async () => {
     if (googleLoading) return;
-    setDataAlertVisible(false);
 
     if (!googleSigninModule) {
+      setDataAlertVisible(false);
       setAlertModal({
         visible: true,
         title: 'Google Sign-In Unavailable',
@@ -189,6 +189,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
       );
 
       if (response?.type === 'cancelled') {
+        setDataAlertVisible(false);
         return;
       }
 
@@ -261,11 +262,13 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
         }
       } catch (backendError) {}
 
+      setDataAlertVisible(false);
       if (onSuccess) {
         onSuccess(authUser);
       }
     } catch (error: any) {
       await clearNativeAuthState();
+      setDataAlertVisible(false);
       if (
         error?.code === 'SIGN_IN_CANCELLED' ||
         error?.code === '12501' ||
