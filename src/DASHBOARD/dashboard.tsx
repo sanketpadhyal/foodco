@@ -11,9 +11,12 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Feather, AntDesign } from '@expo/vector-icons';
+import { DashboardNavbar } from './components';
 
 export interface DashboardProps {
   user: {
@@ -101,6 +104,19 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      try {
+        RNStatusBar.setBackgroundColor('#FFFFFF', true);
+        RNStatusBar.setBarStyle('dark-content', true);
+      } catch (_) {}
+      try {
+        const NavigationBar = require('expo-navigation-bar');
+        NavigationBar.setStyle?.('dark');
+      } catch (_) {}
+    }
+  }, []);
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (item.brand && item.brand.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -174,7 +190,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
+        <DashboardNavbar
+          user={user}
+          onLogout={onLogout}
+        />
+      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -182,30 +205,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
       >
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {user.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
-                  {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
-                </Text>
-              </View>
-            )}
-            <View style={styles.greetingContainer}>
-              <Text style={styles.greetingText}>Hello, {user.displayName || 'User'}</Text>
-              <Text style={styles.subtitleText}>What would you like to eat?</Text>
-            </View>
-          </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Feather name="bell" size={20} color={theme.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-              <Feather name="log-out" size={20} color={theme.primaryDark} />
-            </TouchableOpacity>
-          </View>
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greetingText}>Hello, {user.displayName || 'User'}</Text>
+          <Text style={styles.subtitleText}>What would you like to eat?</Text>
         </View>
 
         <View style={styles.searchContainer}>
@@ -295,6 +297,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.bg,
   },
+  navbarWrapper: {
+    backgroundColor: theme.white,
+  },
   centerContainer: {
     flex: 1,
     backgroundColor: theme.bg,
@@ -304,72 +309,24 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: theme.white,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: theme.white,
-    fontSize: 20,
-    fontWeight: '600',
-  },
   greetingContainer: {
-    marginLeft: 12,
-    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
+    backgroundColor: theme.white,
   },
   greetingText: {
     fontSize: 16,
     color: theme.textSecondary,
-    marginBottom: 2,
+    marginBottom: 4,
+    fontWeight: '500',
   },
   subtitleText: {
-    fontSize: 18,
+    fontSize: 22,
     fontFamily: serifFont,
     color: theme.textPrimary,
     fontWeight: '700',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.bg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  logoutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFE8E0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    lineHeight: 28,
   },
   searchContainer: {
     flexDirection: 'row',
