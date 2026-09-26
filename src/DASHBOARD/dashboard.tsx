@@ -14,9 +14,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { DashboardNavbar, DashboardBottomBar, DashboardTab } from './components';
 import UniversalPanel from '../components/universalpanel';
 import { checkSessionStatus, clearUserSession } from '../auth-page/authService';
+import BarcodeScannerPage from './BarcodeScannerPage';
 
 export interface DashboardProps {
   user: {
@@ -106,7 +108,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   
   const [profilePanelVisible, setProfilePanelVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>('home');
-  const [scannerPanelVisible, setScannerPanelVisible] = useState(false);
+  const [scannerPageVisible, setScannerPageVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionExpiredVisible, setSessionExpiredVisible] = useState(false);
 
@@ -200,6 +202,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         {/* Sticky Search Bar Container */}
         <View style={styles.stickySearchContainer}>
           <View style={styles.searchBarWrapper}>
+            <Ionicons name="search" size={18} color="#9CA3AF" style={styles.searchLeadingIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for healthy food..."
@@ -211,6 +214,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               accessibilityRole="search"
               accessibilityLabel="Search for healthy food"
             />
+            <TouchableOpacity
+              style={styles.searchCameraBtn}
+              activeOpacity={0.8}
+              onPress={() => setScannerPageVisible(true)}
+              accessibilityLabel="Scan Mart Barcode"
+            >
+              <Ionicons name="camera" size={20} color="#FF6B35" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -286,7 +297,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         <TouchableOpacity
           style={styles.bannerContainer}
           activeOpacity={0.92}
-          onPress={() => setScannerPanelVisible(true)}
+          onPress={() => setScannerPageVisible(true)}
         >
           <View style={styles.bannerCard}>
             <View style={styles.bannerContent}>
@@ -312,7 +323,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         <TouchableOpacity
           style={[styles.bannerContainer, styles.aiBannerContainer]}
           activeOpacity={0.92}
-          onPress={() => setScannerPanelVisible(true)}
+          onPress={() => setScannerPageVisible(true)}
         >
           <View style={[styles.bannerCard, styles.aiBannerCard]}>
             <View style={styles.bannerContent}>
@@ -384,21 +395,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </Text>
       </UniversalPanel>
 
-      {/* Barcode & AI Scanner Panel */}
-      <UniversalPanel
-        visible={scannerPanelVisible}
-        title="AI Mart Barcode Scanner"
-        message="Scan any packaged mart item barcode to get an instant AI health rating, Nutri-Score, NOVA processing group, calories, and harmful additive alerts."
-        onClose={() => setScannerPanelVisible(false)}
-        actions={[
-          {
-            label: 'Ready to Scan',
-            variant: 'primary',
-            onPress: () => setScannerPanelVisible(false),
-          },
-        ]}
-      />
-
       {/* Session Expired Universal Panel */}
       <UniversalPanel
         visible={sessionExpiredVisible}
@@ -437,7 +433,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       <DashboardBottomBar
         activeTab={activeTab}
         onTabPress={setActiveTab}
-        onScanPress={() => setScannerPanelVisible(true)}
+        onScanPress={() => setScannerPageVisible(true)}
+      />
+
+      {/* Fullscreen Barcode & Hyper OCR Scanner Page with Down-to-Up Transition */}
+      <BarcodeScannerPage
+        visible={scannerPageVisible}
+        onClose={() => setScannerPageVisible(false)}
       />
     </Animated.View>
   );
@@ -501,20 +503,31 @@ const styles = StyleSheet.create({
     height: 54,
     backgroundColor: '#F7F8FA',
     borderRadius: 22,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+  },
+  searchLeadingIcon: {
+    marginRight: 10,
   },
   searchInput: {
-    width: '100%',
+    flex: 1,
     height: '100%',
-    textAlign: 'center',
     fontSize: 15,
     fontWeight: '500',
     color: theme.textPrimary,
     backgroundColor: 'transparent',
     paddingVertical: 0,
     paddingHorizontal: 0,
+  },
+  searchCameraBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFF0EA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   categoriesWrapper: {
     marginTop: 14,
