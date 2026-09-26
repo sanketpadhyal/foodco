@@ -314,53 +314,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </CameraErrorBoundary>
       </View>
 
-      {/* Top Floating Controls - Clean Light Theme */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        {/* Back Button: Clean White Rounded Square with < Chevron */}
-        <TouchableOpacity
-          style={styles.squareControlBtn}
-          onPress={handleClose}
-          activeOpacity={0.82}
-          accessibilityLabel="Back"
-        >
-          <Ionicons name="chevron-back" size={22} color="#1E1D25" />
-        </TouchableOpacity>
-
-        {/* Clean Center Scanner Title */}
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitleText}>Scan Barcode</Text>
-        </View>
-
-        {/* Right Controls: Random Shopping Scan + Torch */}
-        <View style={styles.topRightControls}>
-          <TouchableOpacity
-            style={styles.squareControlBtn}
-            activeOpacity={0.82}
-            onPress={handleScanRandom}
-            accessibilityLabel="Scan Random Shopping Item"
-          >
-            <Image
-              source={MYSTERY_RANDOM_ICON}
-              style={styles.randomMysteryIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.squareControlBtn, torch && styles.torchActiveBtn]}
-            activeOpacity={0.82}
-            onPress={() => setTorch(prev => !prev)}
-            accessibilityLabel="Toggle Flashlight"
-          >
-            <Ionicons
-              name={torch ? 'flash' : 'flash-outline'}
-              size={22}
-              color={torch ? '#5DB035' : '#1E1D25'}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {/* Top mask with Verified Foodco DB Trust Note */}
@@ -465,6 +418,53 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             <Ionicons name="shield-checkmark" size={13} color="#9CA3AF" />
             <Text style={styles.footerTrustText}>Official Foodco Database • 100% Trusted</Text>
           </View>
+        </View>
+      </View>
+
+      {/* Top Floating Controls - Clean Light Theme */}
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+        {/* Back Button: Clean White Rounded Square with < Chevron */}
+        <TouchableOpacity
+          style={styles.squareControlBtn}
+          onPress={handleClose}
+          activeOpacity={0.82}
+          accessibilityLabel="Back"
+        >
+          <Ionicons name="chevron-back" size={22} color="#1E1D25" />
+        </TouchableOpacity>
+
+        {/* Clean Center Scanner Title */}
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitleText}>Scan Barcode</Text>
+        </View>
+
+        {/* Right Controls: Random Shopping Scan + Torch */}
+        <View style={styles.topRightControls}>
+          <TouchableOpacity
+            style={styles.squareControlBtn}
+            activeOpacity={0.82}
+            onPress={handleScanRandom}
+            accessibilityLabel="Scan Random Shopping Item"
+          >
+            <Image
+              source={MYSTERY_RANDOM_ICON}
+              style={styles.randomMysteryIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.squareControlBtn, torch && styles.torchActiveBtn]}
+            activeOpacity={0.82}
+            onPress={() => setTorch(prev => !prev)}
+            accessibilityLabel="Toggle Flashlight"
+          >
+            <Ionicons
+              name={torch ? 'flash' : 'flash-outline'}
+              size={22}
+              color={torch ? '#5DB035' : '#1E1D25'}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
