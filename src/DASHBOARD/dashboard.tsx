@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Image,
   Platform,
   StatusBar as RNStatusBar,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -152,6 +154,33 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDish, setSelectedDish] = useState<FoodItem | null>(null);
 
+  const pageFade = useRef(new Animated.Value(0)).current;
+  const pageSlide = useRef(new Animated.Value(32)).current;
+  const cardScale = useRef(new Animated.Value(0.92)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(pageFade, {
+        toValue: 1,
+        duration: 480,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(pageSlide, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.spring(cardScale, {
+        toValue: 1,
+        friction: 7,
+        tension: 45,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'android') {
       try {
@@ -173,7 +202,15 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   );
 
   return (
-    <View style={styles.container}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          opacity: pageFade,
+          transform: [{ translateY: pageSlide }],
+        },
+      ]}
+    >
       <StatusBar style="dark" />
       <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
         <DashboardNavbar
@@ -222,24 +259,28 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             contentContainerStyle={styles.categoriesScrollContent}
           >
             {CATEGORIES.map(cat => (
-              <TouchableOpacity
+              <Animated.View
                 key={cat.id}
-                style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
-                activeOpacity={0.82}
-                onPress={() => setSearchQuery(cat.title)}
+                style={{ transform: [{ scale: cardScale }] }}
               >
-                <Image
-                  source={cat.image}
-                  style={styles.categoryPopoutImage}
-                  resizeMode="contain"
-                />
-                <View style={styles.categoryTextContent}>
-                  <Text style={styles.categoryTitle} numberOfLines={1}>
-                    {cat.title}
-                  </Text>
-                  <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
-                </View>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
+                  activeOpacity={0.82}
+                  onPress={() => setSearchQuery(cat.title)}
+                >
+                  <Image
+                    source={cat.image}
+                    style={styles.categoryPopoutImage}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.categoryTextContent}>
+                    <Text style={styles.categoryTitle} numberOfLines={1}>
+                      {cat.title}
+                    </Text>
+                    <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
             ))}
           </ScrollView>
         </View>
@@ -403,7 +444,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         onTabPress={setActiveTab}
         onScanPress={() => setScannerPanelVisible(true)}
       />
-    </View>
+    </Animated.View>
   );
 }
 
