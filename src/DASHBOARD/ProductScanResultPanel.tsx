@@ -165,7 +165,25 @@ export default function ProductScanResultPanel({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.resultContent}
         >
-          {/* Header Row: Info only */}
+          {/* Product Image Banner */}
+          <View style={styles.productImageBanner}>
+            {product.imageUrl && !imageLoadError ? (
+              <Image
+                source={{ uri: product.imageUrl }}
+                style={styles.productBannerImg}
+                resizeMode="contain"
+                onError={() => setImageLoadError(true)}
+              />
+            ) : (
+              <Image
+                source={getCategoryFallback(product.category, product.name)}
+                style={styles.productBannerImg}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+
+          {/* Product Info */}
           <View style={styles.productHeader}>
             <View style={styles.productMeta}>
               <Text style={styles.productName} numberOfLines={2}>
@@ -312,6 +330,22 @@ const styles = StyleSheet.create({
   },
   resultContent: {
     paddingBottom: 12,
+  },
+  productImageBanner: {
+    width: '100%',
+    height: 140,
+    borderRadius: 18,
+    backgroundColor: '#F5F6F8',
+    borderWidth: 1,
+    borderColor: '#ECEEF2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  productBannerImg: {
+    width: '100%',
+    height: '100%',
   },
   productHeader: {
     flexDirection: 'row',
