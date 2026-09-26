@@ -15,16 +15,21 @@ export interface DashboardNavbarProps {
     photoURL?: string | null;
   };
   customAvatar?: ImageSourcePropType;
+  customLogo?: ImageSourcePropType;
+  onLogoPress?: () => void;
   onMenuPress?: () => void;
   onProfilePress?: () => void;
   onLogout?: () => void;
 }
 
 const defaultAvatarSource = require('../../../assets/default-avatar.png');
+const defaultLogoSource = require('../../../assets/logo.png');
 
 export const DashboardNavbar: React.FC<DashboardNavbarProps> = memo(({
   user,
   customAvatar,
+  customLogo,
+  onLogoPress,
   onProfilePress,
   onLogout,
 }) => {
@@ -46,8 +51,26 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = memo(({
     ? { uri: userPhotoUri }
     : defaultAvatarSource;
 
+  const logoSource: ImageSourcePropType = customLogo || defaultLogoSource;
+
   return (
     <View style={styles.container}>
+      {/* Left Logo Icon */}
+      <TouchableOpacity
+        style={styles.logoButton}
+        onPress={onLogoPress}
+        activeOpacity={onLogoPress ? 0.7 : 1}
+        disabled={!onLogoPress}
+        accessibilityRole="image"
+        accessibilityLabel="App logo"
+      >
+        <Image
+          source={logoSource}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+
       {/* Profile Avatar Button */}
       <TouchableOpacity
         style={styles.avatarButton}
@@ -74,11 +97,21 @@ export default DashboardNavbar;
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
+  },
+  logoButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
   },
   avatarButton: {
     width: 44,
