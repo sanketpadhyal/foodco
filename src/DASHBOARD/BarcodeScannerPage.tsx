@@ -326,9 +326,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
               <View style={styles.trustTextContent}>
                 <View style={styles.trustHeaderRow}>
                   <Text style={styles.trustTitle}>100% Verified Food Data</Text>
-                  <View style={styles.trustBadgePill}>
-                    <Text style={styles.trustBadgeText}>Foodco DB</Text>
-                  </View>
                 </View>
                 <Text style={styles.trustDescription}>
                   Whatever you see here is powered by Foodco's official database & certified health authorities. Fully trusted & transparent.
@@ -584,20 +581,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#14532D',
     letterSpacing: 0.1,
-  },
-  trustBadgePill: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-  },
-  trustBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#15803D',
-    letterSpacing: 0.3,
   },
   trustDescription: {
     fontSize: 11,
