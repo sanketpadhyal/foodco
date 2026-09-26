@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   subtitleHighlight: {
-    color: theme.primary,
+    color: theme.blue,
   },
   profilePanelCard: {
     flexDirection: 'row',
