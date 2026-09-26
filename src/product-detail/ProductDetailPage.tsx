@@ -324,6 +324,11 @@ export default function ProductDetailPage({
 }: ProductDetailPageProps) {
   const insets = useSafeAreaInsets();
   const [ingredientsView, setIngredientsView] = React.useState<'list' | 'text'>('list');
+  const [heroImageError, setHeroImageError] = React.useState(false);
+
+  React.useEffect(() => {
+    setHeroImageError(false);
+  }, [product?.barcode, product?.imageUrl]);
 
   const toggleAnim = React.useRef(new Animated.Value(0)).current;
   const contentFadeAnim = React.useRef(new Animated.Value(1)).current;
@@ -489,17 +494,19 @@ export default function ProductDetailPage({
           removeClippedSubviews={Platform.OS === 'android'}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Product Image */}
-          {product.imageUrl ? (
-            <View style={styles.heroImageWrapper}>
-              <Image
-                source={{ uri: product.imageUrl }}
-                style={styles.heroImage}
-                resizeMode="contain"
-                fadeDuration={0}
-              />
-            </View>
-          ) : null}
+          <View style={styles.heroImageWrapper}>
+            <Image
+              source={
+                product.imageUrl && !heroImageError
+                  ? { uri: product.imageUrl }
+                  : require('../../assets/dashboard/illustration_not_found.png')
+              }
+              style={styles.heroImage}
+              resizeMode="contain"
+              fadeDuration={0}
+              onError={() => setHeroImageError(true)}
+            />
+          </View>
 
           {/* Product Identity */}
           <View style={styles.identityCard} renderToHardwareTextureAndroid={true}>

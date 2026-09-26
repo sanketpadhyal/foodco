@@ -18,25 +18,8 @@ import { ScannedProduct } from './productService';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAX_SCROLL_HEIGHT = Math.min(SCREEN_HEIGHT * 0.58, 480);
 
-const CAT_FALLBACKS: Record<string, any> = {
-  drinks: require('../../assets/dashboard/cat_drinks.png'),
-  chocolates: require('../../assets/dashboard/cat_chocolates.png'),
-  biscuits: require('../../assets/dashboard/cat_biscuits.png'),
-  food: require('../../assets/dashboard/cat_food.png'),
-  dairy: require('../../assets/dashboard/dish_yogurt.png'),
-  beauty: require('../../assets/dashboard/cat_beauty.png'),
-  default: require('../../assets/dashboard/banner_card.png'),
-};
+const NOT_FOUND_IMAGE = require('../../assets/dashboard/illustration_not_found.png');
 
-function getCategoryFallback(category?: string, name?: string) {
-  const str = `${category || ''} ${name || ''}`.toLowerCase();
-  if (/drink|soda|coke|beverage|cola/i.test(str)) return CAT_FALLBACKS.drinks;
-  if (/chocolate|spread|nutella|snickers|candy|sweet/i.test(str)) return CAT_FALLBACKS.chocolates;
-  if (/biscuit|cookie|oreo|wafer/i.test(str)) return CAT_FALLBACKS.biscuits;
-  if (/noodle|pasta|maggi|chips|lays|snack/i.test(str)) return CAT_FALLBACKS.food;
-  if (/butter|milk|yogurt|dairy|cheese/i.test(str)) return CAT_FALLBACKS.dairy;
-  return CAT_FALLBACKS.default;
-}
 
 export interface ProductScanResultPanelProps {
   visible: boolean;
@@ -197,7 +180,7 @@ export default function ProductScanResultPanel({
               />
             ) : (
               <Image
-                source={getCategoryFallback(product.category, product.name)}
+                source={NOT_FOUND_IMAGE}
                 style={styles.productBannerImg}
                 resizeMode="contain"
               />
