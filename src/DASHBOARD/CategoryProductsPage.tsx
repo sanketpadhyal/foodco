@@ -57,10 +57,10 @@ export default function CategoryProductsPage({
   const [selectedProduct, setSelectedProduct] = useState<ScannedProduct | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
 
-  // 💥 "Blow Up" animation values
-  const blowUpScale = useRef(new Animated.Value(0.82)).current;
-  const blowUpOpacity = useRef(new Animated.Value(0)).current;
-  const blowUpTranslateY = useRef(new Animated.Value(40)).current;
+  // 💥 Pop-up animation values
+  const popupScale = useRef(new Animated.Value(0.88)).current;
+  const popupOpacity = useRef(new Animated.Value(0)).current;
+  const popupTranslateY = useRef(new Animated.Value(35)).current;
 
   useEffect(() => {
     if (visible && category) {
@@ -68,28 +68,28 @@ export default function CategoryProductsPage({
       setActiveFilter('all');
       setLoading(true);
 
-      // Trigger the explosive blow-up entrance animation
-      blowUpScale.setValue(0.82);
-      blowUpOpacity.setValue(0);
-      blowUpTranslateY.setValue(40);
+      // Instantaneous pop-up entrance animation
+      popupScale.setValue(0.88);
+      popupOpacity.setValue(0);
+      popupTranslateY.setValue(35);
 
       Animated.parallel([
-        Animated.spring(blowUpScale, {
+        Animated.spring(popupScale, {
           toValue: 1,
-          friction: 6.5,
-          tension: 65,
+          friction: 7.5,
+          tension: 90,
           useNativeDriver: true,
         }),
-        Animated.timing(blowUpOpacity, {
+        Animated.timing(popupOpacity, {
           toValue: 1,
-          duration: 260,
+          duration: 160,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.spring(blowUpTranslateY, {
+        Animated.spring(popupTranslateY, {
           toValue: 0,
-          friction: 7,
-          tension: 60,
+          friction: 8,
+          tension: 80,
           useNativeDriver: true,
         }),
       ]).start();
@@ -141,15 +141,20 @@ export default function CategoryProductsPage({
 
   const handleClose = () => {
     Animated.parallel([
-      Animated.timing(blowUpScale, {
+      Animated.timing(popupScale, {
         toValue: 0.9,
-        duration: 180,
+        duration: 140,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.timing(blowUpOpacity, {
+      Animated.timing(popupOpacity, {
         toValue: 0,
-        duration: 160,
+        duration: 130,
+        useNativeDriver: true,
+      }),
+      Animated.timing(popupTranslateY, {
+        toValue: 30,
+        duration: 140,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -171,10 +176,10 @@ export default function CategoryProductsPage({
         style={[
           styles.container,
           {
-            opacity: blowUpOpacity,
+            opacity: popupOpacity,
             transform: [
-              { scale: blowUpScale },
-              { translateY: blowUpTranslateY },
+              { scale: popupScale },
+              { translateY: popupTranslateY },
             ],
           },
         ]}

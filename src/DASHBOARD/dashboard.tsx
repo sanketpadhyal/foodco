@@ -116,38 +116,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [githubPanelVisible, setGithubPanelVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryItem | null>(null);
   const [categoryPageVisible, setCategoryPageVisible] = useState(false);
-  const [activeBlowUpId, setActiveBlowUpId] = useState<string | null>(null);
 
   const pageFade = useRef(new Animated.Value(0)).current;
   const pageSlide = useRef(new Animated.Value(32)).current;
   const cardScale = useRef(new Animated.Value(0.92)).current;
-  const blowUpCardAnim = useRef(new Animated.Value(1)).current;
-
   const handleCategoryPress = (cat: CategoryItem) => {
-    setActiveBlowUpId(cat.id);
-    blowUpCardAnim.setValue(1);
-
-    // Explosive blow-up pop animation on the clicked category panel
-    Animated.sequence([
-      Animated.timing(blowUpCardAnim, {
-        toValue: 1.25,
-        duration: 150,
-        easing: Easing.out(Easing.back(1.8)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(blowUpCardAnim, {
-        toValue: 1.1,
-        duration: 80,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setSelectedCategory(cat);
-      setCategoryPageVisible(true);
-      setTimeout(() => {
-        blowUpCardAnim.setValue(1);
-        setActiveBlowUpId(null);
-      }, 350);
-    });
+    setSelectedCategory(cat);
+    setCategoryPageVisible(true);
   };
 
   useEffect(() => {
@@ -268,40 +243,30 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesScrollContent}
           >
-            {CATEGORIES.map(cat => {
-              const isThisCardActive = activeBlowUpId === cat.id;
-              const scaleValue = isThisCardActive
-                ? Animated.multiply(cardScale, blowUpCardAnim)
-                : cardScale;
-
-              return (
-                <Animated.View
-                  key={cat.id}
-                  style={{
-                    transform: [{ scale: scaleValue }],
-                    zIndex: isThisCardActive ? 100 : 1,
-                  }}
+            {CATEGORIES.map(cat => (
+              <Animated.View
+                key={cat.id}
+                style={{ transform: [{ scale: cardScale }] }}
+              >
+                <TouchableOpacity
+                  style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
+                  activeOpacity={0.7}
+                  onPress={() => handleCategoryPress(cat)}
                 >
-                  <TouchableOpacity
-                    style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
-                    activeOpacity={0.82}
-                    onPress={() => handleCategoryPress(cat)}
-                  >
-                    <Image
-                      source={cat.image}
-                      style={styles.categoryPopoutImage}
-                      resizeMode="contain"
-                    />
-                    <View style={styles.categoryTextContent}>
-                      <Text style={styles.categoryTitle} numberOfLines={1}>
-                        {cat.title}
-                      </Text>
-                      <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
-                    </View>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
+                  <Image
+                    source={cat.image}
+                    style={styles.categoryPopoutImage}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.categoryTextContent}>
+                    <Text style={styles.categoryTitle} numberOfLines={1}>
+                      {cat.title}
+                    </Text>
+                    <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
           </ScrollView>
         </View>
 
@@ -312,40 +277,30 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesScrollContent}
           >
-            {CATEGORIES_ROW_2.map(cat => {
-              const isThisCardActive = activeBlowUpId === cat.id;
-              const scaleValue = isThisCardActive
-                ? Animated.multiply(cardScale, blowUpCardAnim)
-                : cardScale;
-
-              return (
-                <Animated.View
-                  key={cat.id}
-                  style={{
-                    transform: [{ scale: scaleValue }],
-                    zIndex: isThisCardActive ? 100 : 1,
-                  }}
+            {CATEGORIES_ROW_2.map(cat => (
+              <Animated.View
+                key={cat.id}
+                style={{ transform: [{ scale: cardScale }] }}
+              >
+                <TouchableOpacity
+                  style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
+                  activeOpacity={0.7}
+                  onPress={() => handleCategoryPress(cat)}
                 >
-                  <TouchableOpacity
-                    style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
-                    activeOpacity={0.82}
-                    onPress={() => handleCategoryPress(cat)}
-                  >
-                    <Image
-                      source={cat.image}
-                      style={styles.categoryPopoutImage}
-                      resizeMode="contain"
-                    />
-                    <View style={styles.categoryTextContent}>
-                      <Text style={styles.categoryTitle} numberOfLines={1}>
-                        {cat.title}
-                      </Text>
-                      <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
-                    </View>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
+                  <Image
+                    source={cat.image}
+                    style={styles.categoryPopoutImage}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.categoryTextContent}>
+                    <Text style={styles.categoryTitle} numberOfLines={1}>
+                      {cat.title}
+                    </Text>
+                    <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
           </ScrollView>
         </View>
 
