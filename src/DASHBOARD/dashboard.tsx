@@ -21,6 +21,8 @@ import UniversalPanel from '../components/universalpanel';
 import { checkSessionStatus, clearUserSession } from '../auth-page/authService';
 import BarcodeScannerPage from './BarcodeScannerPage';
 import CategoryProductsPage from './CategoryProductsPage';
+import { ProductDetailPage } from '../product-detail';
+import { ScannedProduct } from './productService';
 
 export interface DashboardProps {
   user: {
@@ -116,6 +118,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [githubPanelVisible, setGithubPanelVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryItem | null>(null);
   const [categoryPageVisible, setCategoryPageVisible] = useState(false);
+  const [selectedDetailProduct, setSelectedDetailProduct] = useState<ScannedProduct | null>(null);
+  const [productDetailVisible, setProductDetailVisible] = useState(false);
 
   const pageFade = useRef(new Animated.Value(0)).current;
   const pageSlide = useRef(new Animated.Value(32)).current;
@@ -477,11 +481,22 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         onClose={() => setScannerPageVisible(false)}
       />
 
-      {/* Blow-Up Animated Category Products Full Page with Deep-Dive Info View */}
+      {/* Category Products Full Page with Hardware Accelerated Pop-up Animation */}
       <CategoryProductsPage
         visible={categoryPageVisible}
         category={selectedCategory}
         onClose={() => setCategoryPageVisible(false)}
+        onSelectProduct={(product) => {
+          setSelectedDetailProduct(product);
+          setProductDetailVisible(true);
+        }}
+      />
+
+      {/* Full Deep-Dive Product Detail Page (Zero-Lag Native Window) */}
+      <ProductDetailPage
+        visible={productDetailVisible}
+        product={selectedDetailProduct}
+        onClose={() => setProductDetailVisible(false)}
       />
     </Animated.View>
   );

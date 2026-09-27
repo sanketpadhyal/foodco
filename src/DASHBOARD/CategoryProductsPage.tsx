@@ -14,6 +14,8 @@ import {
   StatusBar as RNStatusBar,
   ActivityIndicator,
   Dimensions,
+  BackHandler,
+  InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -38,6 +40,7 @@ export interface CategoryProductsPageProps {
     image: any;
   } | null;
   onClose: () => void;
+  onSelectProduct?: (product: ScannedProduct) => void;
 }
 
 type FilterOption = 'all' | 'safe' | 'high_nutri' | 'palm_free';
@@ -46,6 +49,7 @@ export default function CategoryProductsPage({
   visible,
   category,
   onClose,
+  onSelectProduct,
 }: CategoryProductsPageProps) {
   const insets = useSafeAreaInsets();
 
@@ -54,54 +58,84 @@ export default function CategoryProductsPage({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
-  const [selectedProduct, setSelectedProduct] = useState<ScannedProduct | null>(null);
-  const [detailVisible, setDetailVisible] = useState(false);
+  const [internalSelectedProduct, setInternalSelectedProduct] = useState<ScannedProduct | null>(null);
+  const [internalDetailVisible, setInternalDetailVisible] = useState(false);
 
-  // 💥 Pop-up animation values
-  const popupScale = useRef(new Animated.Value(0.88)).current;
+  // 💥 Ultra-smooth Hardware Accelerated Pop-up Animation Values
+  const popupScale = useRef(new Animated.Value(0.92)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
-  const popupTranslateY = useRef(new Animated.Value(35)).current;
+  const popupTranslateY = useRef(new Animated.Value(28)).current;
+  const isClosingRef = useRef(false);
+
+  // Configure Android System Navigation Bar appearance
+  useEffect(() => {
+    if (Platform.OS === 'android' && visible) {
+      try {
+        const NavigationBar = require('expo-navigation-bar');
+        NavigationBar.setBackgroundColorAsync?.('#FFFFFF');
+        NavigationBar.setButtonStyleAsync?.('dark');
+        NavigationBar.setBorderColorAsync?.('#EEF0F4');
+      } catch (_) {}
+    }
+  }, [visible]);
+
+  // Handle Android Hardware Back Button
+  useEffect(() => {
+    if (!visible) return;
+    const onBackPress = () => {
+      handleClose();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [visible]);
 
   useEffect(() => {
     if (visible && category) {
+      isClosingRef.current = false;
       setSearchQuery('');
       setActiveFilter('all');
       setLoading(true);
 
-      // Instantaneous pop-up entrance animation
-      popupScale.setValue(0.88);
+      // Reset animation state
+      popupScale.setValue(0.92);
       popupOpacity.setValue(0);
-      popupTranslateY.setValue(35);
+      popupTranslateY.setValue(28);
 
+      // Run butter-smooth popup entrance animation
       Animated.parallel([
         Animated.spring(popupScale, {
           toValue: 1,
-          friction: 7.5,
-          tension: 90,
+          friction: 8,
+          tension: 75,
           useNativeDriver: true,
         }),
         Animated.timing(popupOpacity, {
           toValue: 1,
-          duration: 160,
+          duration: 200,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.spring(popupTranslateY, {
           toValue: 0,
           friction: 8,
-          tension: 80,
+          tension: 70,
           useNativeDriver: true,
         }),
       ]).start();
 
-      loadCategoryProducts(category.id);
+      // Defer loading slightly so animation runs at native 60fps without JS thread stutter
+      const task = InteractionManager.runAfterInteractions(() => {
+        loadCategoryProducts(category.id);
+      });
+
+      return () => task.cancel();
     } else {
       setProducts([]);
     }
   }, [visible, category]);
 
   const loadCategoryProducts = async (catId: string, search: string = '') => {
-    setLoading(true);
     try {
       const res = await fetchProductsByCategory(catId, search, 80);
       setProducts(res.products);
@@ -135,26 +169,36 @@ export default function CategoryProductsPage({
   }, [products, activeFilter]);
 
   const handleProductPress = (product: ScannedProduct) => {
-    setSelectedProduct(product);
-    setDetailVisible(true);
+    if (onSelectProduct) {
+      onSelectProduct(product);
+    } else {
+      setInternalSelectedProduct(product);
+      setInternalDetailVisible(true);
+    }
   };
 
+  // 💥 Silky-Smooth Closing Animation
   const handleClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
     Animated.parallel([
       Animated.timing(popupScale, {
-        toValue: 0.9,
-        duration: 140,
+        toValue: 0.94,
+        duration: 170,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(popupOpacity, {
         toValue: 0,
-        duration: 130,
+        duration: 160,
+        easing: Easing.in(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(popupTranslateY, {
-        toValue: 30,
-        duration: 140,
+        toValue: 24,
+        duration: 170,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -171,6 +215,7 @@ export default function CategoryProductsPage({
       transparent={false}
       onRequestClose={handleClose}
       statusBarTranslucent={true}
+      hardwareAccelerated={true}
     >
       <Animated.View
         style={[
@@ -187,12 +232,12 @@ export default function CategoryProductsPage({
         <StatusBar style="dark" />
         <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-        {/* Top Header */}
+        {/* Top Header Bar */}
         <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 24) + 6 }]}>
           <TouchableOpacity
             style={styles.backCircleBtn}
             onPress={handleClose}
-            activeOpacity={0.7}
+            activeOpacity={0.65}
             accessibilityLabel="Go Back"
           >
             <Ionicons name="chevron-back" size={22} color="#1E1D25" />
@@ -301,13 +346,20 @@ export default function CategoryProductsPage({
             data={filteredProducts}
             keyExtractor={item => item.barcode}
             numColumns={2}
-            contentContainerStyle={[styles.gridContainer, { paddingBottom: insets.bottom + 24 }]}
+            contentContainerStyle={[
+              styles.gridContainer,
+              { paddingBottom: Math.max(insets.bottom, 16) + 36 },
+            ]}
             showsVerticalScrollIndicator={false}
             columnWrapperStyle={styles.columnWrapper}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={Platform.OS === 'android'}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.productCard}
-                activeOpacity={0.84}
+                activeOpacity={0.78}
                 onPress={() => handleProductPress(item)}
               >
                 {/* Score & Nutri-Score Top Badges */}
@@ -393,11 +445,22 @@ export default function CategoryProductsPage({
           />
         )}
 
-        {/* Deep-Dive Product Info Page */}
-        <ProductDetailPage
-          visible={detailVisible}
-          product={selectedProduct}
-          onClose={() => setDetailVisible(false)}
+        {/* Fallback Internal Product Detail Page if not using dashboard top-level */}
+        {!onSelectProduct && (
+          <ProductDetailPage
+            visible={internalDetailVisible}
+            product={internalSelectedProduct}
+            onClose={() => setInternalDetailVisible(false)}
+          />
+        )}
+
+        {/* Solid White Panel Behind Android System Navigation Buttons */}
+        <View
+          style={[
+            styles.bottomNavBackdrop,
+            { height: insets.bottom > 0 ? insets.bottom : 0 },
+          ]}
+          pointerEvents="none"
         />
       </Animated.View>
     </Modal>
@@ -645,5 +708,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     flex: 1,
+  },
+  bottomNavBackdrop: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F2F5',
+    zIndex: 999,
   },
 });
