@@ -7,7 +7,10 @@ import {
   useWindowDimensions,
   Platform,
   BackHandler,
+  LogBox,
 } from 'react-native';
+
+LogBox.ignoreAllLogs(true);
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import FoodcoSplashScreen from './src/splash-screen/splashscreen';
 import LandingPage from './src/landing page/landingpage';
