@@ -43,8 +43,6 @@ export interface CategoryProductsPageProps {
   onSelectProduct?: (product: ScannedProduct) => void;
 }
 
-type FilterOption = 'all' | 'safe' | 'high_nutri' | 'palm_free';
-
 export default function CategoryProductsPage({
   visible,
   category,
@@ -57,7 +55,6 @@ export default function CategoryProductsPage({
   const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
   const [internalSelectedProduct, setInternalSelectedProduct] = useState<ScannedProduct | null>(null);
   const [internalDetailVisible, setInternalDetailVisible] = useState(false);
 
@@ -94,7 +91,6 @@ export default function CategoryProductsPage({
     if (visible && category) {
       isClosingRef.current = false;
       setSearchQuery('');
-      setActiveFilter('all');
       setLoading(true);
 
       // Reset animation state
@@ -152,21 +148,6 @@ export default function CategoryProductsPage({
     if (!category) return;
     loadCategoryProducts(category.id, text);
   };
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      if (activeFilter === 'safe') {
-        return (p.aiHealthRating || 0) >= 70;
-      }
-      if (activeFilter === 'high_nutri') {
-        return p.nutriScore === 'A' || p.nutriScore === 'B';
-      }
-      if (activeFilter === 'palm_free') {
-        return !p.hasPalmOil;
-      }
-      return true;
-    });
-  }, [products, activeFilter]);
 
   const handleProductPress = (product: ScannedProduct) => {
     if (onSelectProduct) {
@@ -280,56 +261,13 @@ export default function CategoryProductsPage({
           </View>
         </View>
 
-        {/* Filter Pills */}
-        <View style={styles.filtersWrapper}>
-          <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('all')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterChipText, activeFilter === 'all' && styles.filterChipTextActive]}>
-              All ({products.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'safe' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('safe')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterChipText, activeFilter === 'safe' && styles.filterChipTextActive]}>
-              🛡️ Safe Choice
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'high_nutri' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('high_nutri')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterChipText, activeFilter === 'high_nutri' && styles.filterChipTextActive]}>
-              ⭐ Grade A/B
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'palm_free' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('palm_free')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterChipText, activeFilter === 'palm_free' && styles.filterChipTextActive]}>
-              🌴 Palm-Free
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Product Grid */}
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#FF6B35" />
             <Text style={styles.loadingText}>Loading all {category.title} products...</Text>
           </View>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Image
               source={category.image}
@@ -338,12 +276,12 @@ export default function CategoryProductsPage({
             />
             <Text style={styles.emptyTitle}>No Products Found</Text>
             <Text style={styles.emptySubtitle}>
-              Try searching with another keyword or clearing your filter.
+              Try searching with another keyword.
             </Text>
           </View>
         ) : (
           <FlatList
-            data={filteredProducts}
+            data={products}
             keyExtractor={item => item.barcode}
             numColumns={2}
             contentContainerStyle={[
@@ -544,32 +482,6 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: 4,
-  },
-  filtersWrapper: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#F7F8FA',
-    borderWidth: 1,
-    borderColor: '#EEF0F4',
-  },
-  filterChipActive: {
-    backgroundColor: '#1E1D25',
-    borderColor: '#1E1D25',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
