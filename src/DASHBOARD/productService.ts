@@ -949,3 +949,102 @@ export async function fetchRandomProductFromDatabase(): Promise<string | null> {
   return null;
 }
 
+const CATEGORY_LOCAL_DATA = require('./categoryProductsData.json');
+
+export async function fetchProductsByCategory(
+  categoryKey: string,
+  search: string = '',
+  limit: number = 50
+): Promise<{ total: number; products: ScannedProduct[] }> {
+  const normKey = categoryKey.toLowerCase().trim();
+  const searchLower = search.toLowerCase().trim();
+
+  // 1. Load from curated offline store
+  let baseProducts: ScannedProduct[] = [];
+  const localItems = (CATEGORY_LOCAL_DATA as Record<string, any[]>)[normKey] || [];
+  if (localItems.length > 0) {
+    baseProducts = localItems.map(p => ({
+      ...p,
+      productType: p.productType || (normKey === 'beauty' || normKey === 'perfume' ? 'beauty' : 'food'),
+      nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
+      verdict: p.verdict || 'Good Choice',
+      metrics: p.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+      additives: p.additives || [],
+      hasPalmOil: Boolean(p.hasPalmOil),
+      isUltraProcessed: Boolean(p.isUltraProcessed),
+    }));
+  }
+
+  // 2. Fetch live data from backend API
+  try {
+    const jwt = await getStoredJwtToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (jwt) {
+      headers['Authorization'] = `Bearer ${jwt}`;
+    }
+    const queryParams = new URLSearchParams();
+    if (searchLower) queryParams.append('search', searchLower);
+    queryParams.append('limit', String(limit));
+
+    const res = await fetch(`${BACKEND_BASE}/products/category/${encodeURIComponent(normKey)}?${queryParams.toString()}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+        const liveProducts: ScannedProduct[] = data.products.map((p: any) => ({
+          ...p,
+          productType: p.productType || (normKey === 'beauty' || normKey === 'perfume' ? 'beauty' : 'food'),
+          nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
+          verdict: p.verdict || 'Good Choice',
+          metrics: p.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+          additives: p.additives || [],
+          hasPalmOil: Boolean(p.hasPalmOil),
+          isUltraProcessed: Boolean(p.isUltraProcessed),
+        }));
+
+        // Merge: avoid duplicates by barcode
+        const seen = new Set<string>();
+        const merged: ScannedProduct[] = [];
+        for (const p of liveProducts) {
+          if (!seen.has(p.barcode)) {
+            seen.add(p.barcode);
+            merged.push(p);
+          }
+        }
+        for (const p of baseProducts) {
+          if (!seen.has(p.barcode)) {
+            seen.add(p.barcode);
+            merged.push(p);
+          }
+        }
+
+        return {
+          total: data.total || merged.length,
+          products: merged,
+        };
+      }
+    }
+  } catch (_) {
+    // Graceful fallback to local base products
+  }
+
+  // Filter local products if search term provided
+  let filtered = baseProducts;
+  if (searchLower) {
+    filtered = baseProducts.filter(p =>
+      (p.name && p.name.toLowerCase().includes(searchLower)) ||
+      (p.brand && p.brand.toLowerCase().includes(searchLower)) ||
+      (p.category && p.category.toLowerCase().includes(searchLower))
+    );
+  }
+
+  return {
+    total: filtered.length,
+    products: filtered,
+  };
+}
+
+
