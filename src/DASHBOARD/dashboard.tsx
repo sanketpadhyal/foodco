@@ -21,6 +21,7 @@ import UniversalPanel from '../components/universalpanel';
 import { checkSessionStatus, clearUserSession } from '../auth-page/authService';
 import BarcodeScannerPage from './BarcodeScannerPage';
 import CategoryProductsPage from './CategoryProductsPage';
+import SearchResultsPage from './SearchResultsPage';
 import { ProductDetailPage } from '../product-detail';
 import { ScannedProduct } from './productService';
 
@@ -118,6 +119,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [githubPanelVisible, setGithubPanelVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryItem | null>(null);
   const [categoryPageVisible, setCategoryPageVisible] = useState(false);
+  const [searchPageVisible, setSearchPageVisible] = useState(false);
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<ScannedProduct | null>(null);
   const [productDetailVisible, setProductDetailVisible] = useState(false);
 
@@ -204,6 +206,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
       >
         {/* Header Greeting */}
@@ -225,6 +228,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               underlineColorAndroid="transparent"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onSubmitEditing={() => {
+                if (searchQuery.trim().length > 0) {
+                  setSearchPageVisible(true);
+                }
+              }}
               returnKeyType="search"
               accessibilityRole="search"
               accessibilityLabel="Search for healthy food"
@@ -232,10 +240,21 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             <TouchableOpacity
               style={styles.searchCameraBtn}
               activeOpacity={0.8}
-              onPress={() => setScannerPageVisible(true)}
-              accessibilityLabel="Scan Mart Barcode"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              onPress={() => {
+                if (searchQuery.trim().length > 0) {
+                  setSearchPageVisible(true);
+                } else {
+                  setScannerPageVisible(true);
+                }
+              }}
+              accessibilityLabel={searchQuery.trim().length > 0 ? "Search Mart Products" : "Scan Mart Barcode"}
             >
-              <Ionicons name="camera" size={20} color="#FF6B35" />
+              <Ionicons
+                name={searchQuery.trim().length > 0 ? "search" : "camera"}
+                size={20}
+                color="#FF6B35"
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -486,6 +505,17 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         visible={categoryPageVisible}
         category={selectedCategory}
         onClose={() => setCategoryPageVisible(false)}
+        onSelectProduct={(product) => {
+          setSelectedDetailProduct(product);
+          setProductDetailVisible(true);
+        }}
+      />
+
+      {/* Search Results Full Page with Hardware Accelerated Pop-up Animation */}
+      <SearchResultsPage
+        visible={searchPageVisible}
+        initialQuery={searchQuery}
+        onClose={() => setSearchPageVisible(false)}
         onSelectProduct={(product) => {
           setSelectedDetailProduct(product);
           setProductDetailVisible(true);

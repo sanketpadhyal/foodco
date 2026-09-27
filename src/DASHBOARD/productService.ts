@@ -1047,4 +1047,117 @@ export async function fetchProductsByCategory(
   };
 }
 
+export async function searchAllProducts(
+  query: string,
+  limit: number = 60
+): Promise<{ total: number; products: ScannedProduct[] }> {
+  const searchLower = query.toLowerCase().trim();
+  if (!searchLower) return { total: 0, products: [] };
+
+  // 1. Search local curated items & category store across all categories
+  const curatedList: ScannedProduct[] = Object.entries(CURATED_PRODUCTS).map(([barcode, p]) => ({
+    barcode,
+    name: p.name || 'Packaged Mart Item',
+    brand: p.brand || 'Mart Selection',
+    category: p.category || 'Grocery',
+    imageUrl: p.imageUrl,
+    productType: p.productType || 'food',
+    nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
+    novaGroup: p.novaGroup || 3,
+    aiHealthRating: p.aiHealthRating ?? 75,
+    verdict: p.verdict || 'Good Choice',
+    verdictColor: p.verdictColor || '#10B981',
+    metrics: p.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+    additives: p.additives || [],
+    hasPalmOil: Boolean(p.hasPalmOil),
+    isUltraProcessed: Boolean(p.isUltraProcessed),
+    ingredientsSummary: p.ingredientsSummary,
+    insight: p.insight,
+    formulationProfile: p.formulationProfile || null,
+  }));
+
+  const allCategoryLocal = Object.values(CATEGORY_LOCAL_DATA as Record<string, any[]>).flat();
+  const allLocal = [...curatedList, ...allCategoryLocal];
+
+  const matchedLocal: ScannedProduct[] = allLocal
+    .filter(p => {
+      const text = [p.name, p.brand, p.category].filter(Boolean).join(' ').toLowerCase();
+      return text.includes(searchLower);
+    })
+    .map(p => ({
+      ...p,
+      productType: p.productType || 'food',
+      nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
+      verdict: p.verdict || 'Good Choice',
+      metrics: p.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+      additives: p.additives || [],
+      hasPalmOil: Boolean(p.hasPalmOil),
+      isUltraProcessed: Boolean(p.isUltraProcessed),
+    }));
+
+  // 2. Fetch live results from backend
+  try {
+    const jwt = await getStoredJwtToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (jwt) {
+      headers['Authorization'] = `Bearer ${jwt}`;
+    }
+    const res = await fetch(`${BACKEND_BASE}/products/category/all?search=${encodeURIComponent(searchLower)}&limit=${limit}`, {
+      method: 'GET',
+      headers,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+        const liveProducts: ScannedProduct[] = data.products.map((p: any) => ({
+          ...p,
+          productType: p.productType || 'food',
+          nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
+          verdict: p.verdict || 'Good Choice',
+          metrics: p.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+          additives: p.additives || [],
+          hasPalmOil: Boolean(p.hasPalmOil),
+          isUltraProcessed: Boolean(p.isUltraProcessed),
+        }));
+
+        const seen = new Set<string>();
+        const merged: ScannedProduct[] = [];
+        for (const p of liveProducts) {
+          if (!seen.has(p.barcode)) {
+            seen.add(p.barcode);
+            merged.push(p);
+          }
+        }
+        for (const p of matchedLocal) {
+          if (!seen.has(p.barcode)) {
+            seen.add(p.barcode);
+            merged.push(p);
+          }
+        }
+
+        return {
+          total: Math.max(data.total || 0, merged.length),
+          products: merged,
+        };
+      }
+    }
+  } catch (_) {}
+
+  // Deduplicate matchedLocal
+  const seen = new Set<string>();
+  const deduplicated: ScannedProduct[] = [];
+  for (const p of matchedLocal) {
+    if (!seen.has(p.barcode)) {
+      seen.add(p.barcode);
+      deduplicated.push(p);
+    }
+  }
+
+  return {
+    total: deduplicated.length,
+    products: deduplicated,
+  };
+}
+
+
 
