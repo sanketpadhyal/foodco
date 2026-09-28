@@ -43,3 +43,7 @@ yarn-error.*
 # Claude Code settings
 CLAUDE.md
 AGENTS.md
+
+# Binaries
+*.apk
+*.aab
