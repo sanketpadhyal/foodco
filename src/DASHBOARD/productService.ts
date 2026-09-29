@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStoredJwtToken } from '../auth-page/authService';
+import { getBackendBaseUrl } from '../../api/universalbackendapi';
 
 export interface NutritionMetrics {
   calories: number;       // kcal per 100g
@@ -186,10 +187,7 @@ export async function setCachedSearchResults(
   } catch (_) {}
 }
 
-const BACKEND_BASE = Platform.select({
-  android: 'https://foodco.heymimi.app/api',
-  default: 'https://foodco.heymimi.app/api',
-});
+const getBackendBase = () => getBackendBaseUrl();
 
 export function isBeautyCategory(category: string, name: string): boolean {
   const combined = `${category || ''} ${name || ''}`.toLowerCase();
@@ -794,7 +792,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       headers['Authorization'] = `Bearer ${jwt}`;
     }
 
-    const backendRes = await fetch(`${BACKEND_BASE}/products/${encodeURIComponent(barcode)}`, {
+    const backendRes = await fetch(`${getBackendBase()}/products/${encodeURIComponent(barcode)}`, {
       method: 'GET',
       headers,
     });
@@ -1173,7 +1171,7 @@ export async function fetchProductsByCategory(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4500);
 
-    const res = await fetch(`${BACKEND_BASE}/products/category/${encodeURIComponent(normKey)}?${queryParams.toString()}`, {
+    const res = await fetch(`${getBackendBase()}/products/category/${encodeURIComponent(normKey)}?${queryParams.toString()}`, {
       method: 'GET',
       headers,
       signal: controller.signal,

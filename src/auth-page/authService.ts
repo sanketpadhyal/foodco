@@ -1,10 +1,9 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = Platform.select({
-  android: 'https://foodco.heymimi.app/api/auth',
-  default: 'https://foodco.heymimi.app/api/auth',
-});
+import { getBackendBaseUrl } from '../../api/universalbackendapi';
+
+const getBackendAuthUrl = () => `${getBackendBaseUrl()}/auth`;
 
 export interface AuthUser {
   uid: string;
@@ -47,7 +46,7 @@ export function parseAuthError(error: unknown): string {
 
 export async function sendOtpRequest(email: string): Promise<AuthResponse> {
   try {
-    const response = await fetch(`${BACKEND_URL}/send-otp`, {
+    const response = await fetch(`${getBackendAuthUrl()}/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -64,7 +63,7 @@ export async function sendOtpRequest(email: string): Promise<AuthResponse> {
 
 export async function verifyOtpRequest(email: string, otp: string): Promise<AuthResponse> {
   try {
-    const response = await fetch(`${BACKEND_URL}/verify-otp`, {
+    const response = await fetch(`${getBackendAuthUrl()}/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, otp }),
@@ -85,7 +84,7 @@ export async function syncTokenWithBackend(
   photoURL?: string
 ): Promise<AuthResponse> {
   try {
-    const response = await fetch(`${BACKEND_URL}/sync`, {
+    const response = await fetch(`${getBackendAuthUrl()}/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken, name, photoURL }),
