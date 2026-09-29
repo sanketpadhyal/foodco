@@ -1166,11 +1166,6 @@ export default function ProductDetailPage({
             onPress={() => setAiModalVisible(true)}
             activeOpacity={0.85}
           >
-            <Image
-              source={require('../../assets/fodai.png')}
-              style={styles.askFodaiBtnIcon}
-              resizeMode="contain"
-            />
             <Text style={styles.askFodaiBtnText}>Ask Fodco AI</Text>
           </TouchableOpacity>
         </View>
