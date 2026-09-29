@@ -1162,15 +1162,16 @@ export default function ProductDetailPage({
 
         <View style={[styles.bottomPanelWrap, { paddingBottom: Math.max(navBarHeight, 14) }]}>
           <TouchableOpacity
-            style={styles.floatingCenterAiBtn}
+            style={styles.askFodaiBlueBtn}
             onPress={() => setAiModalVisible(true)}
             activeOpacity={0.85}
           >
             <Image
               source={require('../../assets/fodai.png')}
-              style={styles.floatingCenterAiLogo}
+              style={styles.askFodaiBtnIcon}
               resizeMode="contain"
             />
+            <Text style={styles.askFodaiBtnText}>Ask Fodco AI</Text>
           </TouchableOpacity>
         </View>
 
@@ -1191,13 +1192,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 14,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
@@ -1205,26 +1205,31 @@ const styles = StyleSheet.create({
     elevation: 12,
     zIndex: 999,
   },
-  floatingCenterAiBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
+  askFodaiBlueBtn: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#2563EB',
+    borderRadius: 25,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -30,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 10,
-    borderWidth: 2,
-    borderColor: '#10B981',
+    gap: 10,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  floatingCenterAiLogo: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  askFodaiBtnIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  askFodaiBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   fullContainer: {
     flex: 1,
