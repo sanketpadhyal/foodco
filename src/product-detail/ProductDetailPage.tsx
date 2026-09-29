@@ -328,26 +328,10 @@ export default function ProductDetailPage({
   const [ingredientsView, setIngredientsView] = React.useState<'list' | 'text'>('list');
   const [heroImageError, setHeroImageError] = React.useState(false);
   const [aiModalVisible, setAiModalVisible] = React.useState(false);
-  const [showAiHint, setShowAiHint] = React.useState(false);
 
   React.useEffect(() => {
     setHeroImageError(false);
   }, [product?.barcode, product?.imageUrl]);
-
-  React.useEffect(() => {
-    if (visible) {
-      AsyncStorage.getItem('@foodco_ai_hint_seen').then((seen) => {
-        if (!seen) {
-          setShowAiHint(true);
-        }
-      });
-    }
-  }, [visible]);
-
-  const dismissAiHint = () => {
-    setShowAiHint(false);
-    AsyncStorage.setItem('@foodco_ai_hint_seen', 'true').catch(() => {});
-  };
 
   const toggleAnim = React.useRef(new Animated.Value(0)).current;
   const contentFadeAnim = React.useRef(new Animated.Value(1)).current;
@@ -460,7 +444,7 @@ export default function ProductDetailPage({
   const navBarHeight = insets.bottom > 0 ? insets.bottom : 12;
   const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : insets.top;
   const headerPaddingTop = Math.max(insets.top, statusBarHeight) + 8;
-  const bottomNavPadding = navBarHeight + 20;
+  const bottomNavPadding = navBarHeight + 90;
 
   if (!visible || !product) return null;
 
@@ -1176,55 +1160,24 @@ export default function ProductDetailPage({
           </View>
         </ScrollView>
 
-        {showAiHint && (
-          <View
-            style={[
-              styles.aiHintContainer,
-              { bottom: navBarHeight + 82 },
-            ]}
+        <View style={[styles.bottomPanelWrap, { paddingBottom: Math.max(navBarHeight, 14) }]}>
+          <TouchableOpacity
+            style={styles.floatingCenterAiBtn}
+            onPress={() => setAiModalVisible(true)}
+            activeOpacity={0.85}
           >
-            <View style={styles.aiHintBubble}>
-              <Text style={styles.aiHintText}>
-                You can ask Fodco AI about this product!
-              </Text>
-              <TouchableOpacity
-                onPress={dismissAiHint}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close" size={16} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.aiHintArrow} />
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.floatingAiBtn,
-            { bottom: navBarHeight + 20 },
-          ]}
-          onPress={() => {
-            dismissAiHint();
-            setAiModalVisible(true);
-          }}
-          activeOpacity={0.85}
-        >
-          <Image
-            source={require('../../assets/fodai.png')}
-            style={styles.floatingAiLogo}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+            <Image
+              source={require('../../assets/fodai.png')}
+              style={styles.floatingCenterAiLogo}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
 
         <FodcoAiChatModal
           visible={aiModalVisible}
           product={product}
           onClose={() => setAiModalVisible(false)}
-        />
-
-        <View
-          style={[styles.bottomWhitePanel, { height: navBarHeight }]}
-          pointerEvents="none"
         />
       </View>
     </Modal>
@@ -1232,76 +1185,46 @@ export default function ProductDetailPage({
 }
 
 const styles = StyleSheet.create({
-  floatingAiBtn: {
+  bottomPanelWrap: {
     position: 'absolute',
-    right: 20,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 12,
+    zIndex: 999,
+  },
+  floatingCenterAiBtn: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 8,
+    marginTop: -30,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 10,
     borderWidth: 2,
     borderColor: '#10B981',
-    zIndex: 999,
   },
-  floatingAiLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  aiHintContainer: {
-    position: 'absolute',
-    right: 16,
-    alignItems: 'flex-end',
-    zIndex: 1000,
-  },
-  aiHintBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#1E1D25',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-    maxWidth: 240,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  aiHintText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    lineHeight: 17,
-  },
-  aiHintArrow: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 7,
-    borderRightWidth: 7,
-    borderTopWidth: 7,
-    borderStyle: 'solid',
-    backgroundColor: 'transparent',
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#1E1D25',
-    marginRight: 24,
-  },
-  bottomWhitePanel: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    zIndex: 9999,
+  floatingCenterAiLogo: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   fullContainer: {
     flex: 1,
