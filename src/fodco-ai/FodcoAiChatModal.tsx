@@ -33,6 +33,7 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const textInputRef = useRef<TextInput>(null);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
@@ -269,6 +270,7 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
 
           <View style={[styles.inputBar, { paddingBottom: isKeyboardVisible ? 10 : Math.max(insets.bottom, 12) }]}>
             <TextInput
+              ref={textInputRef}
               style={styles.textInput}
               placeholder={`Ask Fodco AI about ${product.name}...`}
               placeholderTextColor="#9CA3AF"
@@ -276,15 +278,21 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
               onChangeText={setInputText}
               multiline={false}
               returnKeyType="send"
-              onSubmitEditing={() => handleSend()}
-              editable={!loading}
+              blurOnSubmit={false}
+              onSubmitEditing={() => {
+                handleSend();
+                textInputRef.current?.focus();
+              }}
             />
             <TouchableOpacity
               style={[
                 styles.sendBtn,
                 !inputText.trim() || loading ? styles.sendBtnDisabled : null,
               ]}
-              onPress={() => handleSend()}
+              onPress={() => {
+                handleSend();
+                textInputRef.current?.focus();
+              }}
               disabled={!inputText.trim() || loading}
             >
               <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
