@@ -1166,7 +1166,7 @@ export default function ProductDetailPage({
             onPress={() => setAiModalVisible(true)}
             activeOpacity={0.85}
           >
-            <Text style={styles.askFodaiBtnText}>Ask Fodco AI</Text>
+            <Text style={styles.askFodaiBtnText}>Ask Fodco</Text>
           </TouchableOpacity>
         </View>
 

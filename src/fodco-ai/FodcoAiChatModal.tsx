@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { askFodcoAi, explainFodcoAi, ChatMessage } from './fodcoAiService';
+import { FormattedAiText } from './FormattedAiText';
 import { ScannedProduct } from '../DASHBOARD/productService';
 
 export interface FodcoAiChatModalProps {
@@ -198,15 +199,13 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
                       isUser ? styles.msgBubbleUser : styles.msgBubbleAi,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.msgText,
-                        isUser ? styles.msgTextUser : styles.msgTextAi,
-                      ]}
-                      selectable
-                    >
-                      {item.content}
-                    </Text>
+                    {isUser ? (
+                      <Text style={styles.msgTextUser} selectable>
+                        {item.content}
+                      </Text>
+                    ) : (
+                      <FormattedAiText content={item.content} />
+                    )}
                   </View>
                 </View>
               );
@@ -349,9 +348,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   msgBubble: {
-    maxWidth: '82%',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    maxWidth: '86%',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     borderRadius: 20,
   },
   msgBubbleUser: {
@@ -363,23 +362,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EEF0F4',
     borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  msgText: {
-    fontSize: 14,
-    lineHeight: 21,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   msgTextUser: {
+    fontSize: 14.5,
+    lineHeight: 21,
     color: '#FFFFFF',
     fontWeight: '500',
-  },
-  msgTextAi: {
-    color: '#1F2937',
-    fontWeight: '400',
   },
   typingBubble: {
     flexDirection: 'row',
