@@ -205,6 +205,8 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
         email: rawUser?.email || '',
         displayName: rawUser?.name || 'Foodco Member',
         photoURL: rawUser?.photo || null,
+        token: idToken,
+        jwt: idToken,
       };
 
       let firebaseIdToken = idToken;
@@ -245,6 +247,8 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
                 email: userCredential.user.email || authUser.email,
                 displayName: userCredential.user.displayName || authUser.displayName,
                 photoURL: userCredential.user.photoURL || authUser.photoURL,
+                token: firebaseIdToken,
+                jwt: firebaseIdToken,
               };
             }
           }
@@ -258,7 +262,15 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
           authUser.photoURL || undefined
         );
         if (backendResult?.user) {
-          authUser = backendResult.user;
+          authUser = {
+            ...authUser,
+            ...backendResult.user,
+            token: backendResult.token || backendResult.jwt || authUser.token || firebaseIdToken,
+            jwt: backendResult.jwt || backendResult.token || authUser.jwt || firebaseIdToken,
+          };
+        } else if (backendResult?.token || backendResult?.jwt) {
+          authUser.token = backendResult.token || backendResult.jwt;
+          authUser.jwt = backendResult.jwt || backendResult.token;
         }
       } catch (backendError) {}
 

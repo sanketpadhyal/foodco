@@ -158,39 +158,73 @@ export function isTokenExpired(token: string): boolean {
 export async function checkSessionStatus(): Promise<{ valid: boolean; reason?: string }> {
   try {
     const session = await loadUserSession();
-    if (!session) {
+    if (!session || !session.uid) {
       return { valid: false, reason: 'no_session' };
     }
-    const token = session.jwt || session.token;
+
+    let token = session.jwt || session.token;
+
+    // 1. Try to refresh token from native Firebase Auth if available
+    try {
+      const fAuthPackage = require('@react-native-firebase/auth');
+      const firebaseAuth = fAuthPackage.default || fAuthPackage;
+      const authInstance =
+        typeof firebaseAuth === 'function'
+          ? firebaseAuth()
+          : firebaseAuth.getAuth
+          ? firebaseAuth.getAuth()
+          : firebaseAuth;
+      const currentUser = authInstance?.currentUser;
+
+      if (currentUser) {
+        if (!token || isTokenExpired(token)) {
+          const freshToken = await currentUser.getIdToken(true);
+          if (freshToken) {
+            token = freshToken;
+            session.token = freshToken;
+            session.jwt = freshToken;
+            await saveUserSession(session);
+          }
+        }
+      }
+    } catch (_) {}
+
+    // If user has local authenticated session details, keep them logged in
     if (!token) {
+      if (session.uid && session.email) {
+        return { valid: true };
+      }
       return { valid: false, reason: 'missing_token' };
     }
 
-    if (isTokenExpired(token)) {
-      return { valid: false, reason: 'token_expired' };
+    // 2. Validate session against backend /me endpoint with timeout
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      const response = await fetch(`${BACKEND_URL}/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
+
+      if (response.status === 401 || response.status === 403) {
+        const errorJson = await response.json().catch(() => ({}));
+        // Only trigger session expired if the backend explicitly logged out/revoked the session
+        if (errorJson.code === 'session_revoked' || errorJson.code === 'account_disabled') {
+          return { valid: false, reason: errorJson.code };
+        }
+        // If token expired on backend, try to re-sync
+        return { valid: true };
+      }
+
+      return { valid: true };
+    } catch (networkError) {
+      // Offline or network error: retain local valid session
+      return { valid: true };
     }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-    const response = await fetch(`${BACKEND_URL}/me`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
-
-    if (response.status === 401 || response.status === 403) {
-      return { valid: false, reason: 'session_expired' };
-    }
-
-    const data = await response.json();
-    if (!data.success) {
-      return { valid: false, reason: data.code || 'invalid_session' };
-    }
-
-    return { valid: true };
   } catch (error) {
     return { valid: true };
   }

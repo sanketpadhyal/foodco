@@ -16,15 +16,22 @@ import {
   Dimensions,
   BackHandler,
   InteractionManager,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { ScannedProduct, searchAllProducts } from './productService';
+import {
+  ScannedProduct,
+  searchAllProducts,
+  getCachedSearchResults,
+  PaginatedProducts,
+} from './productService';
 import { ProductDetailPage } from '../product-detail';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
+const PAGE_SIZE = 20;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const sansFont = Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' });
@@ -48,10 +55,17 @@ export default function SearchResultsPage({
   const [query, setQuery] = useState(initialQuery);
   const [products, setProducts] = useState<ScannedProduct[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [page, setPage] = useState<number>(1);
+  const [hasMore, setHasMore] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [internalSelectedProduct, setInternalSelectedProduct] = useState<ScannedProduct | null>(null);
   const [internalDetailVisible, setInternalDetailVisible] = useState(false);
+
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFetchingRef = useRef(false);
 
   // 💥 Ultra-smooth Hardware Accelerated Pop-up Animation Values
   const popupScale = useRef(new Animated.Value(0.92)).current;
@@ -87,6 +101,7 @@ export default function SearchResultsPage({
       isClosingRef.current = false;
       const initial = (initialQuery || '').trim();
       setQuery(initial);
+      setPage(1);
 
       // Reset animation state
       popupScale.setValue(0.92);
@@ -117,9 +132,21 @@ export default function SearchResultsPage({
 
       // Defer search execution slightly so opening animation runs at 60fps
       if (initial.length > 0) {
-        setLoading(true);
+        let hasCache = false;
+        getCachedSearchResults(initial, 1).then(cached => {
+          if (cached && cached.products && cached.products.length > 0) {
+            hasCache = true;
+            setProducts(cached.products);
+            setTotalCount(cached.total);
+            setHasMore(cached.hasMore);
+            setHasSearched(true);
+            setLoading(false);
+          }
+        });
+
         const task = InteractionManager.runAfterInteractions(() => {
-          executeSearch(initial);
+          if (!hasCache) setLoading(true);
+          executeSearch(initial, 1, false);
         });
         return () => task.cancel();
       } else {
@@ -130,11 +157,18 @@ export default function SearchResultsPage({
     } else {
       setProducts([]);
       setTotalCount(0);
+      setPage(1);
+      setHasMore(true);
       setHasSearched(false);
+      setLoading(false);
+      setLoadingMore(false);
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
     }
   }, [visible, initialQuery]);
 
-  const executeSearch = async (searchTerm: string) => {
+  const executeSearch = async (searchTerm: string, targetPage: number = 1, forceRefresh: boolean = false) => {
     const q = searchTerm.trim();
     if (!q) {
       setProducts([]);
@@ -144,26 +178,80 @@ export default function SearchResultsPage({
       return;
     }
 
-    setLoading(true);
+    if (isFetchingRef.current && !forceRefresh && targetPage > 1) return;
+    isFetchingRef.current = true;
+
+    if (targetPage === 1 && !refreshing) {
+      setLoading(true);
+    }
     setHasSearched(true);
+
     try {
-      const res = await searchAllProducts(q);
-      setProducts(res.products);
+      const res = await searchAllProducts(q, targetPage, PAGE_SIZE, forceRefresh);
+      if (targetPage === 1) {
+        setProducts(res.products);
+      } else {
+        setProducts(prev => {
+          const existingBarcodes = new Set(prev.map(p => p.barcode));
+          const uniqueNew = res.products.filter(p => !existingBarcodes.has(p.barcode));
+          return [...prev, ...uniqueNew];
+        });
+      }
       setTotalCount(res.total);
+      setPage(targetPage);
+      setHasMore(res.hasMore);
     } catch (_) {
-      setProducts([]);
-      setTotalCount(0);
+      if (targetPage === 1) {
+        setProducts([]);
+        setTotalCount(0);
+      }
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
     }
   };
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
+
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+
+    if (!text.trim()) {
+      setProducts([]);
+      setTotalCount(0);
+      setHasSearched(false);
+      setLoading(false);
+      return;
+    }
+
+    searchTimerRef.current = setTimeout(() => {
+      setPage(1);
+      executeSearch(text, 1, false);
+    }, 280);
   };
 
   const handleSearchSubmit = () => {
-    executeSearch(query);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    setPage(1);
+    executeSearch(query, 1, false);
+  };
+
+  const handleLoadMore = () => {
+    if (loading || loadingMore || refreshing || !hasMore || !query.trim()) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    executeSearch(query, nextPage, false);
+  };
+
+  const handleRefresh = () => {
+    if (!query.trim() || refreshing) return;
+    setRefreshing(true);
+    setPage(1);
+    executeSearch(query, 1, true);
   };
 
   const handleProductPress = (product: ScannedProduct) => {
@@ -179,6 +267,10 @@ export default function SearchResultsPage({
   const handleClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
+
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
 
     Animated.parallel([
       Animated.timing(popupScale, {
@@ -224,199 +316,225 @@ export default function SearchResultsPage({
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-        {/* Top Header Bar */}
-        <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 24) + 6 }]}>
-          <TouchableOpacity
-            style={styles.backCircleBtn}
-            onPress={handleClose}
-            activeOpacity={0.65}
-            accessibilityLabel="Go Back"
-          >
-            <Ionicons name="chevron-back" size={22} color="#1E1D25" />
-          </TouchableOpacity>
+      {/* Top Header Bar */}
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 24) + 6 }]}>
+        <TouchableOpacity
+          style={styles.backCircleBtn}
+          onPress={handleClose}
+          activeOpacity={0.65}
+          accessibilityLabel="Go Back"
+        >
+          <Ionicons name="chevron-back" size={22} color="#1E1D25" />
+        </TouchableOpacity>
 
-          {/* Search Input Bar */}
-          <View style={styles.searchBarWrapper}>
-            <Ionicons name="search" size={18} color="#FF6B35" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search all products & mart items..."
-              placeholderTextColor="#9CA3AF"
-              value={query}
-              onChangeText={handleQueryChange}
-              onSubmitEditing={handleSearchSubmit}
-              returnKeyType="search"
-              autoFocus={!initialQuery}
-              clearButtonMode="while-editing"
-            />
-            {query.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setQuery('');
-                  setProducts([]);
-                  setTotalCount(0);
-                  setHasSearched(false);
-                }}
-                style={styles.clearBtn}
-                accessibilityLabel="Clear Search"
-              >
-                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Results Info Sub-bar */}
-        <View style={styles.infoSubBar}>
-          <Text style={styles.resultsStatusText}>
-            {loading
-              ? 'Searching mart database...'
-              : hasSearched
-              ? `Found ${totalCount} product${totalCount === 1 ? '' : 's'}`
-              : 'Enter a search term to find products'}
-          </Text>
-          {totalCount > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{totalCount}</Text>
-            </View>
+        {/* Search Input Bar */}
+        <View style={styles.searchBarWrapper}>
+          <Ionicons name="search" size={18} color="#FF6B35" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search all products & mart items..."
+            placeholderTextColor="#9CA3AF"
+            value={query}
+            onChangeText={handleQueryChange}
+            onSubmitEditing={handleSearchSubmit}
+            returnKeyType="search"
+            autoFocus={!initialQuery}
+            clearButtonMode="while-editing"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setQuery('');
+                setProducts([]);
+                setTotalCount(0);
+                setHasSearched(false);
+              }}
+              style={styles.clearBtn}
+              accessibilityLabel="Clear Search"
+            >
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
           )}
         </View>
+      </View>
 
-        {/* Content Section */}
-        {loading ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color="#FF6B35" />
-            <Text style={styles.loadingText}>Searching verified items...</Text>
+      {/* Results Info Sub-bar */}
+      <View style={styles.infoSubBar}>
+        <Text style={styles.resultsStatusText}>
+          {loading
+            ? 'Searching mart database...'
+            : hasSearched
+            ? `Found ${totalCount} product${totalCount === 1 ? '' : 's'}`
+            : 'Enter a search term to find products'}
+        </Text>
+        {totalCount > 0 && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{totalCount}</Text>
           </View>
-        ) : products.length === 0 && hasSearched ? (
-          <View style={styles.centerState}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="search-outline" size={40} color="#D1D5DB" />
-            </View>
-            <Text style={styles.emptyTitle}>No matching products</Text>
-            <Text style={styles.emptySubtitle}>
-              We couldn't find any products matching "{query}". Try checking the spelling or search by brand (e.g. Amul, Britannia, Maggi).
-            </Text>
+        )}
+      </View>
+
+      {/* Content Section */}
+      {loading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color="#FF6B35" />
+          <Text style={styles.loadingText}>Searching verified items...</Text>
+        </View>
+      ) : products.length === 0 && hasSearched ? (
+        <View style={styles.centerState}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="search-outline" size={40} color="#D1D5DB" />
           </View>
-        ) : (
-          <FlatList
-            data={products}
-            keyExtractor={item => item.barcode || item.name}
-            numColumns={2}
-            columnWrapperStyle={styles.rowWrapper}
-            contentContainerStyle={[
-              styles.listContent,
-              { paddingBottom: insets.bottom + 90 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.productCard}
-                activeOpacity={0.75}
-                onPress={() => handleProductPress(item)}
-              >
-                {/* Score & Nutri-Score Top Badges */}
-                <View style={styles.cardBadgeRow}>
-                  <View
-                    style={[
-                      styles.scorePill,
-                      { backgroundColor: `${item.verdictColor || '#10B981'}15` },
-                    ]}
-                  >
-                    <Text style={[styles.scorePillText, { color: item.verdictColor || '#10B981' }]}>
-                      {item.aiHealthRating}/100
-                    </Text>
-                  </View>
-
-                  {item.nutriScore && (
-                    <View
-                      style={[
-                        styles.nutriPill,
-                        {
-                          backgroundColor:
-                            item.nutriScore === 'A'
-                              ? '#038141'
-                              : item.nutriScore === 'B'
-                              ? '#85BB2F'
-                              : item.nutriScore === 'C'
-                              ? '#FECB02'
-                              : item.nutriScore === 'D'
-                              ? '#EE8100'
-                              : '#E63E11',
-                        },
-                      ]}
-                    >
-                      <Text style={styles.nutriPillText}>{item.nutriScore}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Image */}
-                <View style={styles.thumbnailWrapper}>
-                  {item.imageUrl ? (
-                    <Image
-                      source={{ uri: item.imageUrl }}
-                      style={styles.thumbnail}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <Image
-                      source={require('../../assets/dashboard/cat_food.png')}
-                      style={styles.thumbnailPlaceholder}
-                      resizeMode="contain"
-                    />
-                  )}
-                </View>
-
-                {/* Info */}
-                <View style={styles.cardInfo}>
-                  <Text style={styles.productBrand} numberOfLines={1}>
-                    {item.brand || 'Mart Selection'}
-                  </Text>
-                  <Text style={styles.productName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                </View>
-
-                {/* Bottom Verdict Row */}
-                <View style={styles.cardFooter}>
-                  <View
-                    style={[
-                      styles.verdictDot,
-                      { backgroundColor: item.verdictColor || '#10B981' },
-                    ]}
-                  />
-                  <Text
-                    style={[styles.verdictLabel, { color: item.verdictColor || '#10B981' }]}
-                    numberOfLines={1}
-                  >
-                    {item.verdict || 'Good Choice'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-
-        {/* Fallback Internal Product Detail Page if not using dashboard top-level */}
-        {!onSelectProduct && (
-          <ProductDetailPage
-            visible={internalDetailVisible}
-            product={internalSelectedProduct}
-            onClose={() => setInternalDetailVisible(false)}
-          />
-        )}
-
-        {/* Solid White Panel Behind Android System Navigation Buttons */}
-        <View
-          style={[
-            styles.bottomNavBackdrop,
-            { height: insets.bottom > 0 ? insets.bottom : 0 },
+          <Text style={styles.emptyTitle}>No matching products</Text>
+          <Text style={styles.emptySubtitle}>
+            We couldn't find any products matching "{query}". Try checking the spelling or search by brand (e.g. Amul, Britannia, Maggi).
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          keyExtractor={item => item.barcode || item.name}
+          numColumns={2}
+          columnWrapperStyle={styles.rowWrapper}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 90 },
           ]}
-          pointerEvents="none"
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.4}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#FF6B35"
+              colors={['#FF6B35']}
+            />
+          }
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color="#FF6B35" />
+                <Text style={styles.footerLoaderText}>Loading more results...</Text>
+              </View>
+            ) : !hasMore && products.length > 10 ? (
+              <View style={styles.footerEnded}>
+                <Text style={styles.footerEndedText}>
+                  Showing all {products.length} results
+                </Text>
+              </View>
+            ) : (
+              <View style={{ height: 16 }} />
+            )
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.productCard}
+              activeOpacity={0.75}
+              onPress={() => handleProductPress(item)}
+            >
+              {/* Score & Nutri-Score Top Badges */}
+              <View style={styles.cardBadgeRow}>
+                <View
+                  style={[
+                    styles.scorePill,
+                    { backgroundColor: `${item.verdictColor || '#10B981'}15` },
+                  ]}
+                >
+                  <Text style={[styles.scorePillText, { color: item.verdictColor || '#10B981' }]}>
+                    {item.aiHealthRating}/100
+                  </Text>
+                </View>
+
+                {item.nutriScore && (
+                  <View
+                    style={[
+                      styles.nutriPill,
+                      {
+                        backgroundColor:
+                          item.nutriScore === 'A'
+                            ? '#038141'
+                            : item.nutriScore === 'B'
+                            ? '#85BB2F'
+                            : item.nutriScore === 'C'
+                            ? '#FECB02'
+                            : item.nutriScore === 'D'
+                            ? '#EE8100'
+                            : '#E63E11',
+                      },
+                    ]}
+                  >
+                    <Text style={styles.nutriPillText}>{item.nutriScore}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Image */}
+              <View style={styles.thumbnailWrapper}>
+                {item.imageUrl ? (
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={styles.thumbnail}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <Image
+                    source={require('../../assets/dashboard/cat_food.png')}
+                    style={styles.thumbnailPlaceholder}
+                    resizeMode="contain"
+                  />
+                )}
+              </View>
+
+              {/* Info */}
+              <View style={styles.cardInfo}>
+                <Text style={styles.productBrand} numberOfLines={1}>
+                  {item.brand || 'Mart Selection'}
+                </Text>
+                <Text style={styles.productName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+              </View>
+
+              {/* Bottom Verdict Row */}
+              <View style={styles.cardFooter}>
+                <View
+                  style={[
+                    styles.verdictDot,
+                    { backgroundColor: item.verdictColor || '#10B981' },
+                  ]}
+                />
+                <Text
+                  style={[styles.verdictLabel, { color: item.verdictColor || '#10B981' }]}
+                  numberOfLines={1}
+                >
+                  {item.verdict || 'Good Choice'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
         />
-      </Animated.View>
+      )}
+
+      {/* Fallback Internal Product Detail Page if not using dashboard top-level */}
+      {!onSelectProduct && (
+        <ProductDetailPage
+          visible={internalDetailVisible}
+          product={internalSelectedProduct}
+          onClose={() => setInternalDetailVisible(false)}
+        />
+      )}
+
+      {/* Solid White Panel Behind Android System Navigation Buttons */}
+      <View
+        style={[
+          styles.bottomNavBackdrop,
+          { height: insets.bottom > 0 ? insets.bottom : 0 },
+        ]}
+        pointerEvents="none"
+      />
+    </Animated.View>
   );
 }
 
@@ -636,5 +754,29 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
+  },
+  footerLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 8,
+  },
+  footerLoaderText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  footerEnded: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  footerEndedText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#B0B5BC',
+    textAlign: 'center',
   },
 });

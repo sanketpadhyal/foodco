@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStoredJwtToken } from '../auth-page/authService';
 
 export interface NutritionMetrics {
@@ -46,6 +47,143 @@ export interface ScannedProduct {
   ingredientsSummary?: string;
   insight?: string;
   formulationProfile?: FormulationProfile | null;
+}
+
+export interface PaginatedProducts {
+  total: number;
+  products: ScannedProduct[];
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
+  fromCache?: boolean;
+}
+
+// ── Cache Configuration & In-Memory Store ────────────────────────────────────
+const PROD_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days for barcode scans
+const CAT_CACHE_TTL = 60 * 60 * 1000;          // 1 hour for category listings
+const SEARCH_CACHE_TTL = 30 * 60 * 1000;       // 30 minutes for search results
+
+const memoryProductCache = new Map<string, { data: ScannedProduct; timestamp: number }>();
+const memoryCategoryCache = new Map<string, { data: PaginatedProducts; timestamp: number }>();
+const memorySearchCache = new Map<string, { data: PaginatedProducts; timestamp: number }>();
+
+const PROD_KEY_PREFIX = '@foodco_prod_v2_';
+const CAT_KEY_PREFIX = '@foodco_cat_v2_';
+const SEARCH_KEY_PREFIX = '@foodco_search_v2_';
+
+export async function getCachedProduct(barcode: string): Promise<ScannedProduct | null> {
+  const cleanBarcode = barcode.trim();
+  if (!cleanBarcode) return null;
+
+  // 1. L1 Memory Cache
+  const memHit = memoryProductCache.get(cleanBarcode);
+  if (memHit && Date.now() - memHit.timestamp < PROD_CACHE_TTL) {
+    return memHit.data;
+  }
+
+  // 2. L2 AsyncStorage Cache
+  try {
+    const raw = await AsyncStorage.getItem(`${PROD_KEY_PREFIX}${cleanBarcode}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.data && Date.now() - parsed.timestamp < PROD_CACHE_TTL) {
+        memoryProductCache.set(cleanBarcode, parsed);
+        return parsed.data;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+export async function setCachedProduct(barcode: string, product: ScannedProduct): Promise<void> {
+  const cleanBarcode = barcode.trim();
+  if (!cleanBarcode || !product) return;
+  const entry = { data: product, timestamp: Date.now() };
+  memoryProductCache.set(cleanBarcode, entry);
+  try {
+    await AsyncStorage.setItem(`${PROD_KEY_PREFIX}${cleanBarcode}`, JSON.stringify(entry));
+  } catch (_) {}
+}
+
+export async function getCachedCategoryPage(
+  categoryKey: string,
+  page: number = 1,
+  search: string = ''
+): Promise<PaginatedProducts | null> {
+  const key = `${categoryKey.toLowerCase().trim()}_p${page}_q${search.toLowerCase().trim()}`;
+  
+  // 1. L1 Memory Cache
+  const memHit = memoryCategoryCache.get(key);
+  if (memHit && Date.now() - memHit.timestamp < CAT_CACHE_TTL) {
+    return { ...memHit.data, fromCache: true };
+  }
+
+  // 2. L2 AsyncStorage Cache
+  try {
+    const raw = await AsyncStorage.getItem(`${CAT_KEY_PREFIX}${key}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.data && Date.now() - parsed.timestamp < CAT_CACHE_TTL) {
+        memoryCategoryCache.set(key, parsed);
+        return { ...parsed.data, fromCache: true };
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+export async function setCachedCategoryPage(
+  categoryKey: string,
+  page: number,
+  search: string,
+  data: PaginatedProducts
+): Promise<void> {
+  const key = `${categoryKey.toLowerCase().trim()}_p${page}_q${search.toLowerCase().trim()}`;
+  const entry = { data, timestamp: Date.now() };
+  memoryCategoryCache.set(key, entry);
+  try {
+    await AsyncStorage.setItem(`${CAT_KEY_PREFIX}${key}`, JSON.stringify(entry));
+  } catch (_) {}
+}
+
+export async function getCachedSearchResults(
+  query: string,
+  page: number = 1
+): Promise<PaginatedProducts | null> {
+  const key = `${query.toLowerCase().trim()}_p${page}`;
+  
+  // 1. L1 Memory Cache
+  const memHit = memorySearchCache.get(key);
+  if (memHit && Date.now() - memHit.timestamp < SEARCH_CACHE_TTL) {
+    return { ...memHit.data, fromCache: true };
+  }
+
+  // 2. L2 AsyncStorage Cache
+  try {
+    const raw = await AsyncStorage.getItem(`${SEARCH_KEY_PREFIX}${key}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.data && Date.now() - parsed.timestamp < SEARCH_CACHE_TTL) {
+        memorySearchCache.set(key, parsed);
+        return { ...parsed.data, fromCache: true };
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+export async function setCachedSearchResults(
+  query: string,
+  page: number,
+  data: PaginatedProducts
+): Promise<void> {
+  const key = `${query.toLowerCase().trim()}_p${page}`;
+  const entry = { data, timestamp: Date.now() };
+  memorySearchCache.set(key, entry);
+  try {
+    await AsyncStorage.setItem(`${SEARCH_KEY_PREFIX}${key}`, JSON.stringify(entry));
+  } catch (_) {}
 }
 
 const BACKEND_BASE = Platform.select({
@@ -598,16 +736,24 @@ export function parseBeautyIngredients(rawIngredients: string) {
   };
 }
 
-export async function fetchProductByBarcode(barcodeRaw: string): Promise<ScannedProduct> {
+export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: boolean = false): Promise<ScannedProduct> {
   const barcode = barcodeRaw.trim();
 
-  // 1. Check curated database first
+  // 1. Check in-memory / persistent cache first if not forced refresh
+  if (!forceRefresh) {
+    const cached = await getCachedProduct(barcode);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  // 2. Check curated database
   if (CURATED_PRODUCTS[barcode]) {
     const cur = CURATED_PRODUCTS[barcode];
     const nutri = (cur.nutriScore || 'C') as ScannedProduct['nutriScore'];
     const isBeauty = cur.productType === 'beauty' || isBeautyCategory(cur.category || '', cur.name || '');
 
-    return {
+    const curatedProduct: ScannedProduct = {
       barcode,
       name: cur.name || 'Packaged Mart Item',
       brand: cur.brand || 'Mart Product',
@@ -636,6 +782,8 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
       insight: cur.insight,
       formulationProfile: cur.formulationProfile || null,
     };
+    await setCachedProduct(barcode, curatedProduct);
+    return curatedProduct;
   }
 
   // 2. Query Foodco Backend with Firestore & Auth JWT
@@ -687,7 +835,7 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           backendVerdictColor = beautyAnalysis.color;
         }
 
-        return {
+        const productObj: ScannedProduct = {
           barcode,
           name: prod.product_name || prod.name || (isBeauty ? 'Beauty & Care Product' : 'Packaged Mart Item'),
           brand: prod.brand || 'Selection',
@@ -716,6 +864,8 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           ingredientsSummary: prod.ingredientsSummary || prod.ingredients || prod.ingredients_text,
           formulationProfile: formulation,
         };
+        await setCachedProduct(barcode, productObj);
+        return productObj;
       }
     }
   } catch (_) {
@@ -763,7 +913,7 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           additives.length
         );
 
-        return {
+        const offProduct: ScannedProduct = {
           barcode,
           name: p.product_name || p.product_name_en || 'Packaged Mart Item',
           brand: p.brands || 'Mart Brand',
@@ -790,6 +940,8 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           isUltraProcessed: nova === 4,
           ingredientsSummary: ingredientsText ? ingredientsText.slice(0, 180) + '...' : undefined,
         };
+        await setCachedProduct(barcode, offProduct);
+        return offProduct;
       }
     }
   } catch (_) {
@@ -808,7 +960,7 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
         const ingredientsText: string = p.ingredients_text || p.ingredients_text_en || '';
         const beautyEval = parseBeautyIngredients(ingredientsText);
 
-        return {
+        const obfProduct: ScannedProduct = {
           barcode,
           name: p.product_name || p.product_name_en || 'Cosmetic / Personal Care Item',
           brand: p.brands || 'Personal Care Brand',
@@ -836,6 +988,8 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
           ingredientsSummary: ingredientsText || undefined,
           formulationProfile: beautyEval.formulationProfile,
         };
+        await setCachedProduct(barcode, obfProduct);
+        return obfProduct;
       }
     }
   } catch (_) {
@@ -847,7 +1001,7 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
   const isBeauty = lastDigit % 4 === 0;
 
   if (isBeauty) {
-    return {
+    const estBeauty: ScannedProduct = {
       barcode,
       name: `Beauty Formulation #${barcode.slice(-6)}`,
       brand: 'Botanical Care Selection',
@@ -890,6 +1044,8 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
         ],
       }
     };
+    await setCachedProduct(barcode, estBeauty);
+    return estBeauty;
   }
 
   const grades: ScannedProduct['nutriScore'][] = ['B', 'C', 'D', 'C', 'B', 'D', 'C', 'A', 'E', 'B'];
@@ -897,7 +1053,7 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
   const nova = (lastDigit % 3) + 2;
   const analysis = calculateAiHealthScore(nutriScore, nova, 14, 4.2, false, 2);
 
-  return {
+  const fallbackProduct: ScannedProduct = {
     barcode,
     name: `Mart Product #${barcode.slice(-6)}`,
     brand: 'Supermarket Selection',
@@ -924,6 +1080,8 @@ export async function fetchProductByBarcode(barcodeRaw: string): Promise<Scanned
     isUltraProcessed: nova === 4,
     ingredientsSummary: 'Grains, plant oils, mineral salts, natural flavorings and emulsifiers.',
   };
+  await setCachedProduct(barcode, fallbackProduct);
+  return fallbackProduct;
 }
 
 export async function fetchRandomProductFromDatabase(): Promise<string | null> {
@@ -953,13 +1111,23 @@ const CATEGORY_LOCAL_DATA = require('./categoryProductsData.json');
 
 export async function fetchProductsByCategory(
   categoryKey: string,
+  page: number = 1,
+  limit: number = 20,
   search: string = '',
-  limit: number = 50
-): Promise<{ total: number; products: ScannedProduct[] }> {
+  forceRefresh: boolean = false
+): Promise<PaginatedProducts> {
   const normKey = categoryKey.toLowerCase().trim();
   const searchLower = search.toLowerCase().trim();
 
-  // 1. Load from curated offline store
+  // 1. Fast Cache Check (instant 0ms response when available)
+  if (!forceRefresh) {
+    const cached = await getCachedCategoryPage(normKey, page, searchLower);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  // 2. Load from curated offline store for fast fallback & pagination
   let baseProducts: ScannedProduct[] = [];
   const localItems = (CATEGORY_LOCAL_DATA as Record<string, any[]>)[normKey] || [];
   if (localItems.length > 0) {
@@ -975,7 +1143,22 @@ export async function fetchProductsByCategory(
     }));
   }
 
-  // 2. Fetch live data from backend API
+  // Local filtered & sliced for fallback
+  let filteredLocal = baseProducts;
+  if (searchLower) {
+    filteredLocal = baseProducts.filter(p =>
+      (p.name && p.name.toLowerCase().includes(searchLower)) ||
+      (p.brand && p.brand.toLowerCase().includes(searchLower)) ||
+      (p.category && p.category.toLowerCase().includes(searchLower))
+    );
+  }
+  const localTotal = filteredLocal.length;
+  const localStart = (page - 1) * limit;
+  const localSlice = filteredLocal.slice(localStart, localStart + limit);
+  const localTotalPages = Math.max(1, Math.ceil(localTotal / limit));
+  const localHasMore = page < localTotalPages;
+
+  // 3. Fetch live paginated data from backend API with timeout
   try {
     const jwt = await getStoredJwtToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -984,16 +1167,22 @@ export async function fetchProductsByCategory(
     }
     const queryParams = new URLSearchParams();
     if (searchLower) queryParams.append('search', searchLower);
+    queryParams.append('page', String(page));
     queryParams.append('limit', String(limit));
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4500);
 
     const res = await fetch(`${BACKEND_BASE}/products/category/${encodeURIComponent(normKey)}?${queryParams.toString()}`, {
       method: 'GET',
       headers,
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (res.ok) {
       const data = await res.json();
-      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+      if (data.success && Array.isArray(data.products)) {
         const liveProducts: ScannedProduct[] = data.products.map((p: any) => ({
           ...p,
           productType: p.productType || (normKey === 'beauty' || normKey === 'perfume' ? 'beauty' : 'food'),
@@ -1005,56 +1194,86 @@ export async function fetchProductsByCategory(
           isUltraProcessed: Boolean(p.isUltraProcessed),
         }));
 
-        // Merge: avoid duplicates by barcode
-        const seen = new Set<string>();
-        const merged: ScannedProduct[] = [];
-        for (const p of liveProducts) {
-          if (!seen.has(p.barcode)) {
-            seen.add(p.barcode);
-            merged.push(p);
-          }
+        let finalProducts = liveProducts;
+        let total = typeof data.total === 'number' ? data.total : liveProducts.length;
+        let totalPages = typeof data.totalPages === 'number' ? data.totalPages : Math.ceil(total / limit);
+
+        // If backend has 0 products on page 1 but local dataset has curated items, fallback
+        if (finalProducts.length === 0 && page === 1 && localSlice.length > 0) {
+          finalProducts = localSlice;
+          total = localTotal;
+          totalPages = localTotalPages;
         }
-        for (const p of baseProducts) {
-          if (!seen.has(p.barcode)) {
-            seen.add(p.barcode);
-            merged.push(p);
+
+        const hasMore = page < totalPages && finalProducts.length > 0;
+        const result: PaginatedProducts = {
+          total,
+          products: finalProducts,
+          page,
+          limit,
+          totalPages,
+          hasMore,
+          fromCache: false,
+        };
+
+        // Cache the page for fast instant loads next time
+        await setCachedCategoryPage(normKey, page, searchLower, result);
+
+        // Also cache each individual product so future barcode scans or clicks are 0ms instant
+        for (const p of finalProducts) {
+          if (p.barcode) {
+            setCachedProduct(p.barcode, p).catch(() => {});
           }
         }
 
-        return {
-          total: data.total || merged.length,
-          products: merged,
-        };
+        return result;
       }
     }
   } catch (_) {
-    // Graceful fallback to local base products
+    // Timeout or network offline -> fall through to local fallback
   }
 
-  // Filter local products if search term provided
-  let filtered = baseProducts;
-  if (searchLower) {
-    filtered = baseProducts.filter(p =>
-      (p.name && p.name.toLowerCase().includes(searchLower)) ||
-      (p.brand && p.brand.toLowerCase().includes(searchLower)) ||
-      (p.category && p.category.toLowerCase().includes(searchLower))
-    );
-  }
-
-  return {
-    total: filtered.length,
-    products: filtered,
+  // 4. Return offline local paginated dataset
+  const fallbackResult: PaginatedProducts = {
+    total: localTotal,
+    products: localSlice,
+    page,
+    limit,
+    totalPages: localTotalPages,
+    hasMore: localHasMore,
+    fromCache: false,
   };
+  return fallbackResult;
 }
 
 export async function searchAllProducts(
   query: string,
-  limit: number = 60
-): Promise<{ total: number; products: ScannedProduct[] }> {
+  page: number = 1,
+  limit: number = 20,
+  forceRefresh: boolean = false
+): Promise<PaginatedProducts> {
   const searchLower = query.toLowerCase().trim();
-  if (!searchLower) return { total: 0, products: [] };
+  if (!searchLower) {
+    return {
+      total: 0,
+      products: [],
+      page: 1,
+      limit,
+      totalPages: 0,
+      hasMore: false,
+      fromCache: false,
+    };
+  }
 
-  // 1. Search local curated items & category store across all categories
+  // 1. Fast Cache Check
+  if (!forceRefresh) {
+    const cached = await getCachedSearchResults(searchLower, page);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  // 2. Search local curated items & category store across all categories
   const curatedList: ScannedProduct[] = Object.entries(CURATED_PRODUCTS).map(([barcode, p]) => ({
     barcode,
     name: p.name || 'Packaged Mart Item',
@@ -1095,20 +1314,45 @@ export async function searchAllProducts(
       isUltraProcessed: Boolean(p.isUltraProcessed),
     }));
 
-  // 2. Fetch live results from backend
+  // Deduplicate matchedLocal
+  const seenLocal = new Set<string>();
+  const deduplicatedLocal: ScannedProduct[] = [];
+  for (const p of matchedLocal) {
+    if (!seenLocal.has(p.barcode)) {
+      seenLocal.add(p.barcode);
+      deduplicatedLocal.push(p);
+    }
+  }
+
+  const localTotal = deduplicatedLocal.length;
+  const localStart = (page - 1) * limit;
+  const localSlice = deduplicatedLocal.slice(localStart, localStart + limit);
+  const localTotalPages = Math.max(1, Math.ceil(localTotal / limit));
+  const localHasMore = page < localTotalPages;
+
+  // 3. Fetch live results from backend
   try {
     const jwt = await getStoredJwtToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (jwt) {
       headers['Authorization'] = `Bearer ${jwt}`;
     }
-    const res = await fetch(`${BACKEND_BASE}/products/category/all?search=${encodeURIComponent(searchLower)}&limit=${limit}`, {
-      method: 'GET',
-      headers,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4500);
+
+    const res = await fetch(
+      `${BACKEND_BASE}/products/category/all?search=${encodeURIComponent(searchLower)}&page=${page}&limit=${limit}`,
+      {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeout);
+
     if (res.ok) {
       const data = await res.json();
-      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+      if (data.success && Array.isArray(data.products)) {
         const liveProducts: ScannedProduct[] = data.products.map((p: any) => ({
           ...p,
           productType: p.productType || 'food',
@@ -1120,43 +1364,52 @@ export async function searchAllProducts(
           isUltraProcessed: Boolean(p.isUltraProcessed),
         }));
 
-        const seen = new Set<string>();
-        const merged: ScannedProduct[] = [];
-        for (const p of liveProducts) {
-          if (!seen.has(p.barcode)) {
-            seen.add(p.barcode);
-            merged.push(p);
-          }
+        let finalProducts = liveProducts;
+        let total = typeof data.total === 'number' ? data.total : liveProducts.length;
+        let totalPages = typeof data.totalPages === 'number' ? data.totalPages : Math.ceil(total / limit);
+
+        if (finalProducts.length === 0 && page === 1 && localSlice.length > 0) {
+          finalProducts = localSlice;
+          total = localTotal;
+          totalPages = localTotalPages;
         }
-        for (const p of matchedLocal) {
-          if (!seen.has(p.barcode)) {
-            seen.add(p.barcode);
-            merged.push(p);
+
+        const hasMore = page < totalPages && finalProducts.length > 0;
+        const result: PaginatedProducts = {
+          total,
+          products: finalProducts,
+          page,
+          limit,
+          totalPages,
+          hasMore,
+          fromCache: false,
+        };
+
+        await setCachedSearchResults(searchLower, page, result);
+
+        // Also cache each individual product so future barcode scans or clicks are 0ms instant
+        for (const p of finalProducts) {
+          if (p.barcode) {
+            setCachedProduct(p.barcode, p).catch(() => {});
           }
         }
 
-        return {
-          total: Math.max(data.total || 0, merged.length),
-          products: merged,
-        };
+        return result;
       }
     }
   } catch (_) {}
 
-  // Deduplicate matchedLocal
-  const seen = new Set<string>();
-  const deduplicated: ScannedProduct[] = [];
-  for (const p of matchedLocal) {
-    if (!seen.has(p.barcode)) {
-      seen.add(p.barcode);
-      deduplicated.push(p);
-    }
-  }
-
-  return {
-    total: deduplicated.length,
-    products: deduplicated,
+  // 4. Fallback to local slice
+  const fallbackResult: PaginatedProducts = {
+    total: localTotal,
+    products: localSlice,
+    page,
+    limit,
+    totalPages: localTotalPages,
+    hasMore: localHasMore,
+    fromCache: false,
   };
+  return fallbackResult;
 }
 
 

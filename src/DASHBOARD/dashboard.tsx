@@ -122,6 +122,24 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [searchPageVisible, setSearchPageVisible] = useState(false);
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<ScannedProduct | null>(null);
   const [productDetailVisible, setProductDetailVisible] = useState(false);
+  const [futureUpdatePanelVisible, setFutureUpdatePanelVisible] = useState(false);
+  const [futureUpdateTitle, setFutureUpdateTitle] = useState('Coming Soon');
+
+  const handleTabPress = (tab: DashboardTab) => {
+    if (tab === 'stats') {
+      setFutureUpdateTitle('Insights & Health Analytics');
+      setFutureUpdatePanelVisible(true);
+    } else if (tab === 'recipes') {
+      setFutureUpdateTitle('Saved Lists & History');
+      setFutureUpdatePanelVisible(true);
+    } else if (tab === 'scan') {
+      setScannerPageVisible(true);
+    } else if (tab === 'github') {
+      setGithubPanelVisible(true);
+    } else {
+      setActiveTab(tab);
+    }
+  };
 
   const pageFade = useRef(new Animated.Value(0)).current;
   const pageSlide = useRef(new Animated.Value(32)).current;
@@ -466,9 +484,24 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       {/* Dashboard Bottom Bar */}
       <DashboardBottomBar
         activeTab={activeTab}
-        onTabPress={setActiveTab}
+        onTabPress={handleTabPress}
         onScanPress={() => setScannerPageVisible(true)}
         onGithubPress={() => setGithubPanelVisible(true)}
+      />
+
+      {/* Future Stable Update Universal Panel */}
+      <UniversalPanel
+        visible={futureUpdatePanelVisible}
+        title={futureUpdateTitle}
+        message="We will bring this in a future stable update. Stay tuned!"
+        onClose={() => setFutureUpdatePanelVisible(false)}
+        actions={[
+          {
+            label: 'Got it',
+            variant: 'primary',
+            onPress: () => setFutureUpdatePanelVisible(false),
+          },
+        ]}
       />
 
       {/* GitHub Repository / Contribute Modal */}

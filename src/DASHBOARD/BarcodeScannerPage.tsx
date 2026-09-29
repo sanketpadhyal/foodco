@@ -15,7 +15,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import ProductScanResultPanel from './ProductScanResultPanel';
-import { fetchProductByBarcode, fetchRandomProductFromDatabase, ScannedProduct } from './productService';
+import {
+  fetchProductByBarcode,
+  getCachedProduct,
+  fetchRandomProductFromDatabase,
+  ScannedProduct,
+} from './productService';
 import { ProductDetailPage } from '../product-detail';
 
 const CORNER_MASK_TL = require('../../assets/dashboard/masks/corner_tl.png');
@@ -284,6 +289,20 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     isCooldownRef.current = true;
 
     const cleaned = rawCode.trim();
+
+    // ⚡ Fast Instant Cache Hit Check
+    const cached = await getCachedProduct(cleaned);
+    if (cached) {
+      setProductData(cached);
+      setScanError(null);
+      setFetchingProduct(false);
+      setResultVisible(true);
+      setTimeout(() => {
+        isCooldownRef.current = false;
+      }, 1200);
+      return;
+    }
+
     setResultVisible(true);
     setFetchingProduct(true);
     setScanError(null);
