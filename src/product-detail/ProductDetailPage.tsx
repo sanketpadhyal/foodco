@@ -17,7 +17,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScannedProduct, isBeautyCategory } from '../DASHBOARD/productService';
+import { FodcoAiChatModal } from '../fodco-ai/FodcoAiChatModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -325,10 +327,27 @@ export default function ProductDetailPage({
   const insets = useSafeAreaInsets();
   const [ingredientsView, setIngredientsView] = React.useState<'list' | 'text'>('list');
   const [heroImageError, setHeroImageError] = React.useState(false);
+  const [aiModalVisible, setAiModalVisible] = React.useState(false);
+  const [showAiHint, setShowAiHint] = React.useState(false);
 
   React.useEffect(() => {
     setHeroImageError(false);
   }, [product?.barcode, product?.imageUrl]);
+
+  React.useEffect(() => {
+    if (visible) {
+      AsyncStorage.getItem('@foodco_ai_hint_seen').then((seen) => {
+        if (!seen) {
+          setShowAiHint(true);
+        }
+      });
+    }
+  }, [visible]);
+
+  const dismissAiHint = () => {
+    setShowAiHint(false);
+    AsyncStorage.setItem('@foodco_ai_hint_seen', 'true').catch(() => {});
+  };
 
   const toggleAnim = React.useRef(new Animated.Value(0)).current;
   const contentFadeAnim = React.useRef(new Animated.Value(1)).current;
@@ -1157,6 +1176,52 @@ export default function ProductDetailPage({
           </View>
         </ScrollView>
 
+        {showAiHint && (
+          <View
+            style={[
+              styles.aiHintContainer,
+              { bottom: navBarHeight + 82 },
+            ]}
+          >
+            <View style={styles.aiHintBubble}>
+              <Text style={styles.aiHintText}>
+                You can ask Fodco AI about this product!
+              </Text>
+              <TouchableOpacity
+                onPress={dismissAiHint}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={16} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.aiHintArrow} />
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.floatingAiBtn,
+            { bottom: navBarHeight + 20 },
+          ]}
+          onPress={() => {
+            dismissAiHint();
+            setAiModalVisible(true);
+          }}
+          activeOpacity={0.85}
+        >
+          <Image
+            source={require('../../assets/fodai.png')}
+            style={styles.floatingAiLogo}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
+        <FodcoAiChatModal
+          visible={aiModalVisible}
+          product={product}
+          onClose={() => setAiModalVisible(false)}
+        />
+
         <View
           style={[styles.bottomWhitePanel, { height: navBarHeight }]}
           pointerEvents="none"
@@ -1167,6 +1232,69 @@ export default function ProductDetailPage({
 }
 
 const styles = StyleSheet.create({
+  floatingAiBtn: {
+    position: 'absolute',
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#10B981',
+    zIndex: 999,
+  },
+  floatingAiLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  aiHintContainer: {
+    position: 'absolute',
+    right: 16,
+    alignItems: 'flex-end',
+    zIndex: 1000,
+  },
+  aiHintBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1E1D25',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+    maxWidth: 240,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  aiHintText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    lineHeight: 17,
+  },
+  aiHintArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 7,
+    borderStyle: 'solid',
+    backgroundColor: 'transparent',
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#1E1D25',
+    marginRight: 24,
+  },
   bottomWhitePanel: {
     position: 'absolute',
     bottom: 0,

@@ -218,7 +218,6 @@ export async function checkSessionStatus(): Promise<{ valid: boolean; reason?: s
 
       return { valid: true };
     } catch (networkError) {
-
       return { valid: true };
     }
   } catch (error) {

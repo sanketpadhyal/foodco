@@ -150,7 +150,7 @@ export default function ProductScanResultPanel({
           </View>
 
           <Text style={styles.scanningFetchingText}>
-            ⚡ Fetching verified mart data & health rating...
+            Fetching verified mart data & health rating...
           </Text>
         </View>
       ) : errorMessage && !product ? (
