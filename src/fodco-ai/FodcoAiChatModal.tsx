@@ -123,36 +123,6 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
     };
   }, [visible, product]);
 
-  const handleClearChat = async () => {
-    if (!product || loading) return;
-    const cacheKey = `@foodco_ai_chat_${product.barcode || encodeURIComponent(product.name)}`;
-    await AsyncStorage.removeItem(cacheKey);
-    setLoading(true);
-    setMessages([]);
-    try {
-      const explanation = await explainFodcoAi(product);
-      const initMsg: ChatMessage = {
-        id: `init-${Date.now()}`,
-        role: 'assistant',
-        content: explanation,
-        timestamp: Date.now(),
-      };
-      setMessages([initMsg]);
-      await AsyncStorage.setItem(cacheKey, JSON.stringify([initMsg]));
-    } catch {
-      const fallbackMsg: ChatMessage = {
-        id: `init-err-${Date.now()}`,
-        role: 'assistant',
-        content: `Hello! I am your Foodco AI health advisor. Ask me anything about ${product.name} (ingredients, safety, alternatives, suitability, etc.).`,
-        timestamp: Date.now(),
-      };
-      setMessages([fallbackMsg]);
-      await AsyncStorage.setItem(cacheKey, JSON.stringify([fallbackMsg]));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSend = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
     if (!text || loading || !product) return;
@@ -247,14 +217,7 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.closeCircleBtn}
-            onPress={handleClearChat}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            disabled={loading}
-          >
-            <Ionicons name="refresh-outline" size={20} color="#1E1D25" />
-          </TouchableOpacity>
+          <View style={styles.placeholderBtn} />
         </View>
 
         <KeyboardAvoidingView
