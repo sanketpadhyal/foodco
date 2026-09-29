@@ -127,6 +127,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [futureUpdateTitle, setFutureUpdateTitle] = useState('Coming Soon');
 
   const handleTabPress = (tab: DashboardTab) => {
+    setActiveTab(tab);
     if (tab === 'stats') {
       setFutureUpdateTitle('Insights & Health Analytics');
       setFutureUpdatePanelVisible(true);
@@ -136,8 +137,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       setScannerPageVisible(true);
     } else if (tab === 'github') {
       setGithubPanelVisible(true);
-    } else {
-      setActiveTab(tab);
     }
   };
 
@@ -550,7 +549,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
       <HistoryPage
         visible={historyPageVisible}
-        onClose={() => setHistoryPageVisible(false)}
+        user={user}
+        onClose={() => {
+          setHistoryPageVisible(false);
+          setActiveTab('home');
+        }}
         onSelectProduct={(product) => {
           setSelectedDetailProduct(product);
           setProductDetailVisible(true);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -23,6 +23,8 @@ import { getStoredJwtToken } from '../auth-page/authService';
 import { getBackendBaseUrl } from '../../api/universalbackendapi';
 import { ScannedProduct } from './productService';
 
+const EMPTY_404_ILLUSTRATION = require('../../assets/page-found-concept-illustration_114360-1869 (1).png');
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
@@ -32,12 +34,19 @@ const boldSansFont = Platform.select({ ios: 'System', android: 'sans-serif-bold'
 
 export interface HistoryPageProps {
   visible: boolean;
+  user?: {
+    uid: string;
+    email: string;
+    displayName: string;
+    photoURL?: string | null;
+  };
   onClose: () => void;
   onSelectProduct?: (product: ScannedProduct) => void;
 }
 
 export default function HistoryPage({
   visible,
+  user,
   onClose,
   onSelectProduct,
 }: HistoryPageProps) {
@@ -48,9 +57,9 @@ export default function HistoryPage({
   const [refreshing, setRefreshing] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const slideAnim = useRef(new Animated.Value(36)).current;
 
-  const loadHistory = async (isRefresh = false) => {
+  const loadUserHistory = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
@@ -73,18 +82,23 @@ export default function HistoryPage({
         const data = await res.json();
         if (data.success && Array.isArray(data.scanHistory)) {
           setHistoryItems(data.scanHistory);
+        } else {
+          setHistoryItems([]);
         }
+      } else {
+        setHistoryItems([]);
       }
     } catch (_) {
+      setHistoryItems([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (visible) {
-      loadHistory();
+      loadUserHistory();
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -101,9 +115,9 @@ export default function HistoryPage({
       ]).start();
     } else {
       fadeAnim.setValue(0);
-      slideAnim.setValue(40);
+      slideAnim.setValue(36);
     }
-  }, [visible]);
+  }, [visible, loadUserHistory]);
 
   useEffect(() => {
     if (!visible || Platform.OS !== 'android') return;
@@ -148,7 +162,7 @@ export default function HistoryPage({
 
         <View style={styles.cardInfo}>
           <Text style={styles.cardBrand} numberOfLines={1}>
-            {item.brand || 'Foodco'}
+            {item.brand || 'Foodco Verified'}
           </Text>
           <Text style={styles.cardName} numberOfLines={2}>
             {item.name}
@@ -168,6 +182,8 @@ export default function HistoryPage({
       </TouchableOpacity>
     );
   };
+
+  const displayName = user?.displayName?.trim() || user?.email?.split('@')[0] || 'Member';
 
   return (
     <Modal visible={visible} animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
@@ -191,12 +207,12 @@ export default function HistoryPage({
             <View style={styles.headerTitleWrap}>
               <Text style={styles.headerTitle}>Scan History</Text>
               <Text style={styles.headerSubtitle}>
-                {historyItems.length > 0 ? `${historyItems.length} scanned products` : 'Recent scans'}
+                {displayName} • {historyItems.length > 0 ? `${historyItems.length} scans` : '0 items'}
               </Text>
             </View>
             <TouchableOpacity
               style={styles.refreshBtn}
-              onPress={() => loadHistory(true)}
+              onPress={() => loadUserHistory(true)}
               activeOpacity={0.7}
             >
               <Ionicons name="refresh" size={20} color="#1E1D25" />
@@ -207,17 +223,27 @@ export default function HistoryPage({
           {loading && !refreshing ? (
             <View style={styles.centerContainer}>
               <ActivityIndicator size="large" color="#FF6B35" />
-              <Text style={styles.loadingText}>Loading your scan history...</Text>
+              <Text style={styles.loadingText}>Fetching scan history...</Text>
             </View>
           ) : historyItems.length === 0 ? (
             <View style={styles.centerContainer}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="barcode-outline" size={54} color="#FF6B35" />
-              </View>
-              <Text style={styles.emptyTitle}>No scan history yet</Text>
+              <Image
+                source={EMPTY_404_ILLUSTRATION}
+                style={styles.emptyIllustration}
+                resizeMode="contain"
+              />
+              <Text style={styles.emptyTitle}>No Scans Found</Text>
               <Text style={styles.emptySubtitle}>
-                Scan your daily packaged foods, drinks, or cosmetics to see their real-time health verdict stored here.
+                You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
               </Text>
+              <TouchableOpacity
+                style={styles.emptyScanBtn}
+                activeOpacity={0.85}
+                onPress={onClose}
+              >
+                <Ionicons name="barcode-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.emptyScanBtnText}>Start Scanning</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <FlatList
@@ -229,7 +255,7 @@ export default function HistoryPage({
               contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
               showsVerticalScrollIndicator={false}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={() => loadHistory(true)} tintColor="#FF6B35" colors={['#FF6B35']} />
+                <RefreshControl refreshing={refreshing} onRefresh={() => loadUserHistory(true)} tintColor="#FF6B35" colors={['#FF6B35']} />
               }
             />
           )}
@@ -255,6 +281,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
   backButton: {
     width: 40,
@@ -293,7 +320,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
   },
   loadingText: {
     marginTop: 14,
@@ -301,27 +328,45 @@ const styles = StyleSheet.create({
     color: '#7F8489',
     fontWeight: '500',
   },
-  emptyIconWrap: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#FFF0EA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+  emptyIllustration: {
+    width: 220,
+    height: 220,
+    marginBottom: 12,
   },
   emptyTitle: {
     fontFamily: serifFont,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1E1D25',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 13.5,
     lineHeight: 20,
     color: '#7F8489',
     textAlign: 'center',
+    maxWidth: 290,
+    marginBottom: 20,
+  },
+  emptyScanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 22,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyScanBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   listContent: {
     paddingHorizontal: 16,
