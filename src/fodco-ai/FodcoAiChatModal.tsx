@@ -15,6 +15,7 @@ import {
   Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { askFodcoAi, explainFodcoAi, ChatMessage } from './fodcoAiService';
 import { FormattedAiText } from './FormattedAiText';
@@ -31,7 +32,6 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [initialLoaded, setInitialLoaded] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
 
@@ -61,46 +61,103 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
   }, []);
 
   useEffect(() => {
-    if (visible && product && !initialLoaded) {
-      setInitialLoaded(true);
+    let isMounted = true;
+
+    if (visible && product) {
+      const cacheKey = `@foodco_ai_chat_${product.barcode || encodeURIComponent(product.name)}`;
       setLoading(true);
 
-      explainFodcoAi(product)
-        .then((explanation) => {
-          setMessages([
-            {
-              id: 'init-1',
-              role: 'assistant',
-              content: explanation,
-              timestamp: Date.now(),
-            },
-          ]);
+      AsyncStorage.getItem(cacheKey)
+        .then((cached) => {
+          if (!isMounted) return;
+          if (cached) {
+            try {
+              const parsed: ChatMessage[] = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setMessages(parsed);
+                setLoading(false);
+                return;
+              }
+            } catch {}
+          }
+
+          return explainFodcoAi(product)
+            .then(async (explanation) => {
+              if (!isMounted) return;
+              const initMsg: ChatMessage = {
+                id: `init-${Date.now()}`,
+                role: 'assistant',
+                content: explanation,
+                timestamp: Date.now(),
+              };
+              setMessages([initMsg]);
+              await AsyncStorage.setItem(cacheKey, JSON.stringify([initMsg]));
+            })
+            .catch(async () => {
+              if (!isMounted) return;
+              const fallbackMsg: ChatMessage = {
+                id: `init-err-${Date.now()}`,
+                role: 'assistant',
+                content: `Hello! I am your Foodco AI health advisor. Ask me anything about ${product.name} (ingredients, safety, alternatives, suitability, etc.).`,
+                timestamp: Date.now(),
+              };
+              setMessages([fallbackMsg]);
+              await AsyncStorage.setItem(cacheKey, JSON.stringify([fallbackMsg]));
+            })
+            .finally(() => {
+              if (isMounted) setLoading(false);
+            });
         })
         .catch(() => {
-          setMessages([
-            {
-              id: 'init-err',
-              role: 'assistant',
-              content: `Hello! I am your Foodco AI health advisor. Ask me anything about ${product.name} (ingredients, safety, alternatives, suitability, etc.).`,
-              timestamp: Date.now(),
-            },
-          ]);
-        })
-        .finally(() => {
-          setLoading(false);
+          if (isMounted) setLoading(false);
         });
     }
 
     if (!visible) {
-      setInitialLoaded(false);
       setMessages([]);
       setInputText('');
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [visible, product]);
+
+  const handleClearChat = async () => {
+    if (!product || loading) return;
+    const cacheKey = `@foodco_ai_chat_${product.barcode || encodeURIComponent(product.name)}`;
+    await AsyncStorage.removeItem(cacheKey);
+    setLoading(true);
+    setMessages([]);
+    try {
+      const explanation = await explainFodcoAi(product);
+      const initMsg: ChatMessage = {
+        id: `init-${Date.now()}`,
+        role: 'assistant',
+        content: explanation,
+        timestamp: Date.now(),
+      };
+      setMessages([initMsg]);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify([initMsg]));
+    } catch {
+      const fallbackMsg: ChatMessage = {
+        id: `init-err-${Date.now()}`,
+        role: 'assistant',
+        content: `Hello! I am your Foodco AI health advisor. Ask me anything about ${product.name} (ingredients, safety, alternatives, suitability, etc.).`,
+        timestamp: Date.now(),
+      };
+      setMessages([fallbackMsg]);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify([fallbackMsg]));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSend = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
     if (!text || loading || !product) return;
+
+    const cacheKey = `@foodco_ai_chat_${product.barcode || encodeURIComponent(product.name)}`;
 
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
@@ -114,6 +171,8 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
     setInputText('');
     setLoading(true);
 
+    await AsyncStorage.setItem(cacheKey, JSON.stringify(newMessages));
+
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
@@ -122,25 +181,25 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
       const history = newMessages.map((m) => ({ role: m.role, content: m.content }));
       const reply = await askFodcoAi(product, text, history);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-${Date.now()}`,
-          role: 'assistant',
-          content: reply,
-          timestamp: Date.now(),
-        },
-      ]);
+      const aiMsg: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: reply,
+        timestamp: Date.now(),
+      };
+      const finalMessages = [...newMessages, aiMsg];
+      setMessages(finalMessages);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(finalMessages));
     } catch (err: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-err-${Date.now()}`,
-          role: 'assistant',
-          content: 'Sorry, I had trouble answering that. Please try again.',
-          timestamp: Date.now(),
-        },
-      ]);
+      const errAiMsg: ChatMessage = {
+        id: `ai-err-${Date.now()}`,
+        role: 'assistant',
+        content: 'Sorry, I had trouble answering that. Please try again.',
+        timestamp: Date.now(),
+      };
+      const finalMessages = [...newMessages, errAiMsg];
+      setMessages(finalMessages);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(finalMessages));
     } finally {
       setLoading(false);
       setTimeout(() => {
@@ -188,7 +247,14 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
             </View>
           </View>
 
-          <View style={styles.placeholderBtn} />
+          <TouchableOpacity
+            style={styles.closeCircleBtn}
+            onPress={handleClearChat}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            disabled={loading}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#1E1D25" />
+          </TouchableOpacity>
         </View>
 
         <KeyboardAvoidingView
