@@ -163,7 +163,6 @@ export async function checkSessionStatus(): Promise<{ valid: boolean; reason?: s
 
     let token = session.jwt || session.token;
 
-    // 1. Try to refresh token from native Firebase Auth if available
     try {
       const fAuthPackage = require('@react-native-firebase/auth');
       const firebaseAuth = fAuthPackage.default || fAuthPackage;
@@ -188,7 +187,6 @@ export async function checkSessionStatus(): Promise<{ valid: boolean; reason?: s
       }
     } catch (_) {}
 
-    // If user has local authenticated session details, keep them logged in
     if (!token) {
       if (session.uid && session.email) {
         return { valid: true };
@@ -196,12 +194,11 @@ export async function checkSessionStatus(): Promise<{ valid: boolean; reason?: s
       return { valid: false, reason: 'missing_token' };
     }
 
-    // 2. Validate session against backend /me endpoint with timeout
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-      const response = await fetch(`${BACKEND_URL}/me`, {
+      const response = await fetch(`${getBackendAuthUrl()}/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -211,17 +208,17 @@ export async function checkSessionStatus(): Promise<{ valid: boolean; reason?: s
 
       if (response.status === 401 || response.status === 403) {
         const errorJson = await response.json().catch(() => ({}));
-        // Only trigger session expired if the backend explicitly logged out/revoked the session
+
         if (errorJson.code === 'session_revoked' || errorJson.code === 'account_disabled') {
           return { valid: false, reason: errorJson.code };
         }
-        // If token expired on backend, try to re-sync
+
         return { valid: true };
       }
 
       return { valid: true };
     } catch (networkError) {
-      // Offline or network error: retain local valid session
+
       return { valid: true };
     }
   } catch (error) {

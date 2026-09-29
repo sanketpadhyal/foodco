@@ -55,7 +55,7 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = memo(({
 
   return (
     <View style={styles.container}>
-      {/* Left Logo Icon */}
+
       <TouchableOpacity
         style={styles.logoButton}
         onPress={onLogoPress}
@@ -71,7 +71,6 @@ export const DashboardNavbar: React.FC<DashboardNavbarProps> = memo(({
         />
       </TouchableOpacity>
 
-      {/* Profile Avatar Button */}
       <TouchableOpacity
         style={styles.avatarButton}
         onPress={handleProfilePress}

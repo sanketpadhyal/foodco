@@ -54,9 +54,9 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
 
   return (
     <View style={styles.outerWrapper} pointerEvents="box-none">
-      {/* Solid Pure White Bottom Bar */}
+
       <View style={[styles.barContainer, { paddingBottom: bottomInset }]}>
-        {/* Tab 1: Home / Explore Grid */}
+
         <TouchableOpacity
           style={styles.tabButton}
           onPress={() => handleTab('home')}
@@ -94,7 +94,6 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           </View>
         </TouchableOpacity>
 
-        {/* Tab 2: Stats / Analytics */}
         <TouchableOpacity
           style={styles.tabButton}
           onPress={() => handleTab('stats')}
@@ -135,10 +134,8 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           </View>
         </TouchableOpacity>
 
-        {/* Center Space reserved for Floating Scanner Button */}
         <View style={styles.centerSpace} />
 
-        {/* Tab 4: Recipes / Documents */}
         <TouchableOpacity
           style={styles.tabButton}
           onPress={() => handleTab('recipes')}
@@ -155,7 +152,6 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           </View>
         </TouchableOpacity>
 
-        {/* Tab 5: GitHub */}
         <TouchableOpacity
           style={styles.tabButton}
           onPress={() => handleTab('github')}
@@ -173,7 +169,6 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
         </TouchableOpacity>
       </View>
 
-      {/* Floating Center Scanner Button */}
       <TouchableOpacity
         style={[styles.floatingCenterBtn, { bottom: bottomInset + 18 }]}
         onPress={() => handleTab('scan')}

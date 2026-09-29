@@ -5,4 +5,3 @@ import App from './App';
 LogBox.ignoreAllLogs(true);
 
 registerRootComponent(App);
-

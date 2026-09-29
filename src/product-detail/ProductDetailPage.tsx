@@ -457,7 +457,6 @@ export default function ProductDetailPage({
       <View style={styles.fullContainer}>
         <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-        {/* Top Header Bar */}
         <View style={[styles.headerBar, { paddingTop: headerPaddingTop }]}>
           <TouchableOpacity
             style={styles.headerCircleBtn}
@@ -482,7 +481,6 @@ export default function ProductDetailPage({
           </TouchableOpacity>
         </View>
 
-        {/* Main Scrollable Content */}
         <ScrollView
           style={styles.scrollArea}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavPadding }]}
@@ -508,7 +506,6 @@ export default function ProductDetailPage({
             />
           </View>
 
-          {/* Product Identity */}
           <View style={styles.identityCard} renderToHardwareTextureAndroid={true}>
             <Text style={styles.productName}>{product.name}</Text>
             <Text style={styles.productBrandCategory}>
@@ -521,7 +518,6 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          {/* Health Score Main Card */}
           <View style={styles.scoreCard} renderToHardwareTextureAndroid={true}>
             <View style={styles.scoreTopRow}>
               <View style={styles.logoRow}>
@@ -614,7 +610,6 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          {/* Standards: Nutri-Score/Clean Grade & Processing/Compatibility */}
           <View style={styles.standardsRow}>
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
@@ -689,7 +684,6 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          {/* Composition Proportion Bar: Food Macros vs Beauty Actives */}
           <View style={styles.detailSectionCard}>
             <Text style={styles.sectionHeaderTitle}>
               {isBeauty ? 'Formulation Balance' : 'Macro Nutrient Balance'}
@@ -749,7 +743,6 @@ export default function ProductDetailPage({
             )}
           </View>
 
-          {/* Profile: Food Nutrient Profile vs Beauty Toxicological Profile */}
           <View style={styles.detailSectionCard}>
             <Text style={styles.sectionHeaderTitle}>
               {isBeauty ? 'Toxicological Safety Standards' : 'Nutrient Profile (per 100g)'}
@@ -839,7 +832,7 @@ export default function ProductDetailPage({
               </View>
             ) : (
               <>
-                {/* Energy */}
+
                 <View style={styles.graphRow}>
                   <View style={styles.graphHeader}>
                     <Text style={styles.graphMetricName}>Energy / Calories</Text>
@@ -858,7 +851,6 @@ export default function ProductDetailPage({
                   </View>
                 </View>
 
-                {/* Sugars */}
                 <View style={styles.graphRow}>
                   <View style={styles.graphHeader}>
                     <Text style={styles.graphMetricName}>Sugars</Text>
@@ -877,7 +869,6 @@ export default function ProductDetailPage({
                   </View>
                 </View>
 
-                {/* Saturated Fat */}
                 <View style={styles.graphRow}>
                   <View style={styles.graphHeader}>
                     <Text style={styles.graphMetricName}>Saturated Fat</Text>
@@ -896,7 +887,6 @@ export default function ProductDetailPage({
                   </View>
                 </View>
 
-                {/* Dietary Fiber */}
                 <View style={styles.graphRow}>
                   <View style={styles.graphHeader}>
                     <Text style={styles.graphMetricName}>Dietary Fiber</Text>
@@ -915,7 +905,6 @@ export default function ProductDetailPage({
                   </View>
                 </View>
 
-                {/* Protein */}
                 <View style={styles.graphRow}>
                   <View style={styles.graphHeader}>
                     <Text style={styles.graphMetricName}>Protein</Text>
@@ -934,7 +923,6 @@ export default function ProductDetailPage({
                   </View>
                 </View>
 
-                {/* Salt */}
                 <View style={styles.graphRow}>
                   <View style={styles.graphHeader}>
                     <Text style={styles.graphMetricName}>Salt / Sodium</Text>
@@ -956,7 +944,6 @@ export default function ProductDetailPage({
             )}
           </View>
 
-          {/* Ingredients & Chemical Additives - Premium Redesign */}
           <View style={styles.detailSectionCard}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionHeaderTitleCol}>
@@ -974,7 +961,7 @@ export default function ProductDetailPage({
 
               {parsedIngredients.length > 0 ? (
                 <View style={styles.viewToggleWrap}>
-                  {/* Sliding Active Dark Pill */}
+
                   <Animated.View
                     style={[
                       styles.slidingActivePill,
@@ -1012,7 +999,6 @@ export default function ProductDetailPage({
               ) : null}
             </View>
 
-            {/* Palm Oil Attention Banner */}
             {product.hasPalmOil ? (
               <View style={styles.palmWarningCard}>
                 <View style={styles.palmWarningIconCircle}>
@@ -1027,7 +1013,6 @@ export default function ProductDetailPage({
               </View>
             ) : null}
 
-            {/* Ingredients Display with Smooth Transition */}
             <Animated.View style={{ opacity: contentFadeAnim }}>
               {parsedIngredients.length > 0 ? (
                 ingredientsView === 'list' ? (
@@ -1100,7 +1085,6 @@ export default function ProductDetailPage({
               )}
             </Animated.View>
 
-            {/* Detected Additives Section */}
             {Array.isArray(product.additives) && product.additives.length > 0 ? (
               <View style={styles.additivesBlock}>
                 <View style={styles.additivesBlockHeader}>
@@ -1173,7 +1157,6 @@ export default function ProductDetailPage({
           </View>
         </ScrollView>
 
-        {/* Solid White Panel Behind Android System Navigation Buttons */}
         <View
           style={[styles.bottomWhitePanel, { height: navBarHeight }]}
           pointerEvents="none"

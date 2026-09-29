@@ -72,13 +72,11 @@ export default function CategoryProductsPage({
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFetchingRef = useRef(false);
 
-  // 💥 Ultra-smooth Hardware Accelerated Pop-up Animation Values
   const popupScale = useRef(new Animated.Value(0.92)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
   const popupTranslateY = useRef(new Animated.Value(28)).current;
   const isClosingRef = useRef(false);
 
-  // Configure Android System Navigation Bar appearance
   useEffect(() => {
     if (Platform.OS === 'android' && visible) {
       try {
@@ -90,7 +88,6 @@ export default function CategoryProductsPage({
     }
   }, [visible]);
 
-  // Handle Android Hardware Back Button
   useEffect(() => {
     if (!visible) return;
     const onBackPress = () => {
@@ -107,12 +104,10 @@ export default function CategoryProductsPage({
       setSearchQuery('');
       setPage(1);
 
-      // Reset animation state
       popupScale.setValue(0.92);
       popupOpacity.setValue(0);
       popupTranslateY.setValue(28);
 
-      // Run butter-smooth popup entrance animation
       Animated.parallel([
         Animated.spring(popupScale, {
           toValue: 1,
@@ -134,7 +129,6 @@ export default function CategoryProductsPage({
         }),
       ]).start();
 
-      // ⚡ FAST CACHE CHECK: If cached page exists, display instantly with 0ms delay!
       let hasCache = false;
       getCachedCategoryPage(category.id, 1, '').then(cached => {
         if (cached && cached.products && cached.products.length > 0) {
@@ -146,7 +140,6 @@ export default function CategoryProductsPage({
         }
       });
 
-      // Defer network fetch slightly so animation runs at 60fps without JS stutter
       const task = InteractionManager.runAfterInteractions(() => {
         if (!hasCache) {
           setLoading(true);
@@ -192,7 +185,7 @@ export default function CategoryProductsPage({
       setPage(targetPage);
       setHasMore(res.hasMore);
     } catch (_) {
-      // Handled inside service
+
     } finally {
       isFetchingRef.current = false;
       setLoading(false);
@@ -209,7 +202,6 @@ export default function CategoryProductsPage({
       clearTimeout(searchTimerRef.current);
     }
 
-    // Debounce search query to prevent unnecessary network and cache spam
     searchTimerRef.current = setTimeout(() => {
       setLoading(true);
       setPage(1);
@@ -240,7 +232,6 @@ export default function CategoryProductsPage({
     }
   };
 
-  // 💥 Silky-Smooth Closing Animation
   const handleClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
@@ -293,7 +284,6 @@ export default function CategoryProductsPage({
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Top Header Bar */}
       <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 24) + 6 }]}>
         <TouchableOpacity
           style={styles.backCircleBtn}
@@ -320,7 +310,6 @@ export default function CategoryProductsPage({
         </View>
       </View>
 
-      {/* Search Bar */}
       <View style={styles.searchSection}>
         <View style={styles.searchBarWrapper}>
           <Ionicons name="search" size={17} color="#9CA3AF" style={styles.searchIcon} />
@@ -341,7 +330,6 @@ export default function CategoryProductsPage({
         </View>
       </View>
 
-      {/* Product Grid */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FF6B35" />
@@ -406,7 +394,7 @@ export default function CategoryProductsPage({
               activeOpacity={0.78}
               onPress={() => handleProductPress(item)}
             >
-              {/* Score & Nutri-Score Top Badges */}
+
               <View style={styles.cardBadgeRow}>
                 <View
                   style={[
@@ -442,7 +430,6 @@ export default function CategoryProductsPage({
                 )}
               </View>
 
-              {/* Product Thumbnail */}
               <View style={styles.thumbnailWrapper}>
                 {item.imageUrl ? (
                   <Image
@@ -459,7 +446,6 @@ export default function CategoryProductsPage({
                 )}
               </View>
 
-              {/* Info */}
               <View style={styles.cardInfo}>
                 <Text style={styles.productBrand} numberOfLines={1}>
                   {item.brand || 'Mart Selection'}
@@ -469,7 +455,6 @@ export default function CategoryProductsPage({
                 </Text>
               </View>
 
-              {/* Bottom Verdict Row */}
               <View style={styles.cardFooter}>
                 <View
                   style={[
@@ -489,7 +474,6 @@ export default function CategoryProductsPage({
         />
       )}
 
-      {/* Fallback Internal Product Detail Page if not using dashboard top-level */}
       {!onSelectProduct && (
         <ProductDetailPage
           visible={internalDetailVisible}
@@ -498,7 +482,6 @@ export default function CategoryProductsPage({
         />
       )}
 
-      {/* Solid White Panel Behind Android System Navigation Buttons */}
       <View
         style={[
           styles.bottomNavBackdrop,

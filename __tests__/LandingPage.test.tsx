@@ -6,4 +6,3 @@ describe('LandingPage', () => {
     expect(typeof LandingPage).toBe('function');
   });
 });
-

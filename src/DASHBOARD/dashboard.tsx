@@ -51,7 +51,6 @@ const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: '
 const sansFont = Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' });
 const boldSansFont = Platform.select({ ios: 'System', android: 'sans-serif-bold', default: 'sans-serif' });
 
-
 interface CategoryItem {
   id: string;
   title: string;
@@ -110,7 +109,7 @@ const CATEGORIES_ROW_2: CategoryItem[] = [
 
 export default function Dashboard({ user, onLogout }: DashboardProps) {
   const insets = useSafeAreaInsets();
-  
+
   const [profilePanelVisible, setProfilePanelVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>('home');
   const [scannerPageVisible, setScannerPageVisible] = useState(false);
@@ -227,7 +226,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
       >
-        {/* Header Greeting */}
+
         <View style={styles.greetingContainer}>
           <Text style={styles.greetingText}>Hello, {user.displayName || 'User'}</Text>
           <Text style={styles.subtitleText}>
@@ -235,7 +234,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </Text>
         </View>
 
-        {/* Sticky Search Bar Container */}
         <View style={styles.stickySearchContainer}>
           <View style={styles.searchBarWrapper}>
             <Ionicons name="search" size={18} color="#9CA3AF" style={styles.searchLeadingIcon} />
@@ -277,7 +275,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </View>
         </View>
 
-        {/* Categories Section - Row 1 */}
         <View style={styles.categoriesWrapper}>
           <ScrollView
             horizontal
@@ -311,7 +308,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </ScrollView>
         </View>
 
-        {/* Categories Section - Row 2 */}
         <View style={styles.categoriesRow2Wrapper}>
           <ScrollView
             horizontal
@@ -345,7 +341,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </ScrollView>
         </View>
 
-        {/* Avocado Hero Banner */}
         <TouchableOpacity
           style={styles.bannerContainer}
           activeOpacity={0.92}
@@ -371,7 +366,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </View>
         </TouchableOpacity>
 
-        {/* Foodco AI Harmful Additives & Ingredients Scanner Banner */}
         <TouchableOpacity
           style={[styles.bannerContainer, styles.aiBannerContainer]}
           activeOpacity={0.92}
@@ -400,7 +394,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Account Logout Panel */}
       <UniversalPanel
         visible={profilePanelVisible}
         title="Account"
@@ -447,7 +440,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </Text>
       </UniversalPanel>
 
-      {/* Session Expired Universal Panel */}
       <UniversalPanel
         visible={sessionExpiredVisible}
         title="Session Expired"
@@ -481,7 +473,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </View>
       </UniversalPanel>
 
-      {/* Dashboard Bottom Bar */}
       <DashboardBottomBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
@@ -489,7 +480,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         onGithubPress={() => setGithubPanelVisible(true)}
       />
 
-      {/* Future Stable Update Universal Panel */}
       <UniversalPanel
         visible={futureUpdatePanelVisible}
         title={futureUpdateTitle}
@@ -504,7 +494,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         ]}
       />
 
-      {/* GitHub Repository / Contribute Modal */}
       <UniversalPanel
         visible={githubPanelVisible}
         title="Contribute on GitHub"
@@ -527,13 +516,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         ]}
       />
 
-      {/* Fullscreen Barcode & Hyper OCR Scanner Page with Down-to-Up Transition */}
       <BarcodeScannerPage
         visible={scannerPageVisible}
         onClose={() => setScannerPageVisible(false)}
       />
 
-      {/* Category Products Full Page with Hardware Accelerated Pop-up Animation */}
       <CategoryProductsPage
         visible={categoryPageVisible}
         category={selectedCategory}
@@ -544,7 +531,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         }}
       />
 
-      {/* Search Results Full Page with Hardware Accelerated Pop-up Animation */}
       <SearchResultsPage
         visible={searchPageVisible}
         initialQuery={searchQuery}
@@ -555,7 +541,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         }}
       />
 
-      {/* Full Deep-Dive Product Detail Page (Zero-Lag Native Window) */}
       <ProductDetailPage
         visible={productDetailVisible}
         product={selectedDetailProduct}

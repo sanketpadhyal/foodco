@@ -20,7 +20,6 @@ const MAX_SCROLL_HEIGHT = Math.min(SCREEN_HEIGHT * 0.58, 480);
 
 const NOT_FOUND_IMAGE = require('../../assets/dashboard/illustration_not_found.png');
 
-
 export interface ProductScanResultPanelProps {
   visible: boolean;
   loading: boolean;
@@ -42,7 +41,7 @@ export default function ProductScanResultPanel({
   onScanAnother,
   onGetMoreInfo,
 }: ProductScanResultPanelProps) {
-  // Skeleton pulse animation
+
   const pulseAnim = useRef(new Animated.Value(0.35)).current;
   const [imageLoadError, setImageLoadError] = useState(false);
 
@@ -133,7 +132,7 @@ export default function ProductScanResultPanel({
       }
     >
       {loading ? (
-        // Skeleton Loader View
+
         <View style={styles.skeletonContainer}>
           <View style={styles.skeletonHeaderRow}>
             <Animated.View style={[styles.skeletonImage, { opacity: pulseAnim }]} />
@@ -144,7 +143,6 @@ export default function ProductScanResultPanel({
             </View>
           </View>
 
-          {/* Skeleton Badges */}
           <View style={styles.skeletonBadgeRow}>
             <Animated.View style={[styles.skeletonBadge, { opacity: pulseAnim }]} />
             <Animated.View style={[styles.skeletonBadge, { opacity: pulseAnim }]} />
@@ -156,7 +154,7 @@ export default function ProductScanResultPanel({
           </Text>
         </View>
       ) : errorMessage && !product ? (
-        // Error state — custom illustration
+
         <View style={styles.errorContainer}>
           <Image
             source={require('../../assets/dashboard/illustration_not_found.png')}
@@ -167,9 +165,9 @@ export default function ProductScanResultPanel({
           <Text style={styles.errorSubtitle}>{errorMessage}</Text>
         </View>
       ) : product ? (
-        // Loaded Product Detail & Proper Graph View
+
         <View style={styles.resultContent}>
-          {/* Product Image Banner */}
+
           <View style={styles.productImageBanner}>
             {product.imageUrl && !imageLoadError ? (
               <Image
@@ -187,7 +185,6 @@ export default function ProductScanResultPanel({
             )}
           </View>
 
-          {/* Product Info */}
           <View style={styles.productHeader}>
             <View style={styles.productMeta}>
               <Text style={styles.productName} numberOfLines={2}>
@@ -203,9 +200,8 @@ export default function ProductScanResultPanel({
             </View>
           </View>
 
-          {/* Modern Health / Clean Score Card */}
           <View style={styles.scoreHeroCard}>
-            {/* Header: Tag */}
+
             <View style={styles.scoreCardTopRow}>
               <View style={styles.scoreTagRow}>
                 <Image
@@ -219,7 +215,6 @@ export default function ProductScanResultPanel({
               </View>
             </View>
 
-            {/* Middle: Big Score + Meter */}
             <View style={styles.scoreMainRow}>
               <View style={[styles.scoreBadgeBox, { backgroundColor: `${product.verdictColor}0E`, borderColor: `${product.verdictColor}28` }]}>
                 <Text style={[styles.scoreNumberMain, { color: product.verdictColor }]}>
@@ -258,7 +253,6 @@ export default function ProductScanResultPanel({
               </View>
             </View>
 
-            {/* Bottom: Insight banner */}
             <View style={[styles.scoreInsightBox, { backgroundColor: `${product.verdictColor}0A`, borderColor: `${product.verdictColor}20` }]}>
               <Ionicons
                 name={product.aiHealthRating >= 60 ? 'checkmark-circle' : 'alert-circle'}

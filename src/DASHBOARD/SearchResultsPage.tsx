@@ -67,13 +67,11 @@ export default function SearchResultsPage({
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFetchingRef = useRef(false);
 
-  // 💥 Ultra-smooth Hardware Accelerated Pop-up Animation Values
   const popupScale = useRef(new Animated.Value(0.92)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
   const popupTranslateY = useRef(new Animated.Value(28)).current;
   const isClosingRef = useRef(false);
 
-  // Configure Android System Navigation Bar appearance
   useEffect(() => {
     if (Platform.OS === 'android' && visible) {
       try {
@@ -85,7 +83,6 @@ export default function SearchResultsPage({
     }
   }, [visible]);
 
-  // Handle Android Hardware Back Button
   useEffect(() => {
     if (!visible) return;
     const onBackPress = () => {
@@ -103,12 +100,10 @@ export default function SearchResultsPage({
       setQuery(initial);
       setPage(1);
 
-      // Reset animation state
       popupScale.setValue(0.92);
       popupOpacity.setValue(0);
       popupTranslateY.setValue(28);
 
-      // Run butter-smooth popup entrance animation
       Animated.parallel([
         Animated.spring(popupScale, {
           toValue: 1,
@@ -130,7 +125,6 @@ export default function SearchResultsPage({
         }),
       ]).start();
 
-      // Defer search execution slightly so opening animation runs at 60fps
       if (initial.length > 0) {
         let hasCache = false;
         getCachedSearchResults(initial, 1).then(cached => {
@@ -263,7 +257,6 @@ export default function SearchResultsPage({
     }
   };
 
-  // 💥 Silky-Smooth Closing Animation
   const handleClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
@@ -316,7 +309,6 @@ export default function SearchResultsPage({
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Top Header Bar */}
       <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 24) + 6 }]}>
         <TouchableOpacity
           style={styles.backCircleBtn}
@@ -327,7 +319,6 @@ export default function SearchResultsPage({
           <Ionicons name="chevron-back" size={22} color="#1E1D25" />
         </TouchableOpacity>
 
-        {/* Search Input Bar */}
         <View style={styles.searchBarWrapper}>
           <Ionicons name="search" size={18} color="#FF6B35" style={styles.searchIcon} />
           <TextInput
@@ -358,7 +349,6 @@ export default function SearchResultsPage({
         </View>
       </View>
 
-      {/* Results Info Sub-bar */}
       <View style={styles.infoSubBar}>
         <Text style={styles.resultsStatusText}>
           {loading
@@ -374,7 +364,6 @@ export default function SearchResultsPage({
         )}
       </View>
 
-      {/* Content Section */}
       {loading ? (
         <View style={styles.centerState}>
           <ActivityIndicator size="large" color="#FF6B35" />

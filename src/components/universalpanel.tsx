@@ -83,11 +83,11 @@ export default function UniversalPanel({
       },
       onPanResponderMove: (_, gs) => {
         if (gs.dy > 0) {
-          // Resistance curve: drag slows down at larger distances
+
           const resistance = 1 - Math.min(gs.dy / 600, 0.4);
           panY.setValue(gs.dy * resistance);
         } else {
-          // Slight resistance going up too
+
           panY.setValue(gs.dy * 0.1);
         }
       },
@@ -96,7 +96,7 @@ export default function UniversalPanel({
           dismissOnBackdropPress && (gs.dy > 80 || (gs.vy > 0.5 && gs.dy > 20));
 
         if (shouldDismiss) {
-          // Continue with the user's velocity into dismiss
+
           const remainingDist = 420 - gs.dy;
           const duration = Math.max(120, Math.min(280, remainingDist / Math.max(gs.vy, 0.5)));
           Animated.parallel([
@@ -117,7 +117,7 @@ export default function UniversalPanel({
             onCloseRef.current?.();
           });
         } else {
-          // Spring snap-back — feels alive and physical
+
           Animated.spring(panY, {
             toValue: 0,
             damping: 18,
@@ -128,7 +128,7 @@ export default function UniversalPanel({
         }
       },
       onPanResponderTerminate: (_, gs) => {
-        // Snap back if gesture is cancelled
+
         if (gs.dy < 80) {
           Animated.spring(panY, {
             toValue: 0,
@@ -208,7 +208,6 @@ export default function UniversalPanel({
   const bottomPadding = Math.max(insets.bottom + 12, 22);
   const translateY = Animated.add(slideAnim, panY);
 
-  // Backdrop fades proportionally as user drags — Instagram-style
   const backdropOpacity = Animated.multiply(
     backdropAnim,
     panY.interpolate({

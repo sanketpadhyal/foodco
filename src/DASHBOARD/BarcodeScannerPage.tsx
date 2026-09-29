@@ -33,7 +33,6 @@ const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEWFINDER_WIDTH = Math.min(SCREEN_WIDTH - 56, 310);
 const VIEWFINDER_HEIGHT = 195;
 
-// Dynamic resolution of expo-camera
 let SafeCameraView: any = null;
 let safeUseCameraPermissions: any = null;
 
@@ -92,7 +91,6 @@ function RealCameraComponent({
 
   const [permission, requestPermission] = safeUseCameraPermissions();
 
-  // Auto-request permission on first mount
   useEffect(() => {
     if (!permission || (!permission.granted && permission.canAskAgain !== false)) {
       requestPermission();
@@ -149,22 +147,18 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
   const [torch, setTorch] = useState<boolean>(false);
   const [isCameraMounted, setIsCameraMounted] = useState<boolean>(false);
 
-  // Result panel states
   const [resultVisible, setResultVisible] = useState<boolean>(false);
   const [fetchingProduct, setFetchingProduct] = useState<boolean>(false);
   const [productData, setProductData] = useState<ScannedProduct | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [productDetailVisible, setProductDetailVisible] = useState<boolean>(false);
 
-  // Down-to-up transition animation
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Scanning laser beam animation
   const laserAnim = useRef(new Animated.Value(0)).current;
   const isCooldownRef = useRef(false);
 
-  // Android Navigation & Hardware Back Button Handling
   useEffect(() => {
     if (!visible) return;
 
@@ -290,7 +284,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
 
     const cleaned = rawCode.trim();
 
-    // ⚡ Fast Instant Cache Hit Check
     const cached = await getCachedProduct(cleaned);
     if (cached) {
       setProductData(cached);
@@ -389,7 +382,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         },
       ]}
     >
-      {/* 100% Real Camera Fullscreen View with Lag-Free Deferral */}
+
       <View style={StyleSheet.absoluteFill}>
         {isCameraMounted && !resultVisible && !productDetailVisible ? (
           <CameraErrorBoundary fallback={<CameraFallbackPlaceholder />}>
@@ -403,9 +396,8 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         )}
       </View>
 
-      {/* Light Mode Cutout Mask around Viewfinder (Clean Light Theme) */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        {/* Top mask with Verified Foodco DB Trust Note */}
+
         <View style={[styles.maskTop, { height: topMaskHeight }]} pointerEvents="box-none">
           <View style={styles.trustCard}>
             <View style={styles.trustIconWrap}>
@@ -420,26 +412,23 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           </View>
         </View>
 
-        {/* Center row with left mask, transparent viewfinder window, and right mask */}
         <View style={styles.maskRow} pointerEvents="box-none">
           <View style={styles.maskSide} />
 
           <View
             style={styles.viewfinderBox}
           >
-            {/* 4 Corner Rounding Masks - Gives a smooth curved cutout */}
+
             <Image source={CORNER_MASK_TL} style={[styles.cornerMask, styles.maskTL]} />
             <Image source={CORNER_MASK_TR} style={[styles.cornerMask, styles.maskTR]} />
             <Image source={CORNER_MASK_BL} style={[styles.cornerMask, styles.maskBL]} />
             <Image source={CORNER_MASK_BR} style={[styles.cornerMask, styles.maskBR]} />
 
-            {/* 4 Clean Green Corner Brackets matching the curve */}
             <View style={[styles.corner, styles.cornerTL]} />
             <View style={[styles.corner, styles.cornerTR]} />
             <View style={[styles.corner, styles.cornerBL]} />
             <View style={[styles.corner, styles.cornerBR]} />
 
-            {/* Sweeping Laser Scan Line */}
             <Animated.View
               style={[
                 styles.laserLine,
@@ -453,9 +442,8 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <View style={styles.maskSide} />
         </View>
 
-        {/* Bottom mask - FamPay Style Tilted Hashtag Stickers */}
         <View style={styles.maskBottom}>
-          {/* Main Tilted Instruction Sticker */}
+
           <View style={styles.heroStickerWrap}>
             <View style={styles.heroStickerPill}>
               <Text style={styles.heroStickerHash}>#</Text>
@@ -464,7 +452,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             </View>
           </View>
 
-          {/* FamPay-style Tilted Hashtags Cluster - 3 Balanced Rows */}
           <View style={styles.stickersContainer}>
             <View style={styles.stickerRow}>
               <View style={[styles.stickerPill, styles.stickerHealthy]}>
@@ -500,7 +487,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             </View>
           </View>
 
-          {/* Bottom Security / Trust Anchor */}
           <View style={styles.footerTrustWrap}>
             <Ionicons name="shield-checkmark" size={13} color="#9CA3AF" />
             <Text style={styles.footerTrustText}>Official Foodco Database • 100% Trusted</Text>
@@ -508,9 +494,8 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </View>
       </View>
 
-      {/* Top Floating Controls - Clean Light Theme */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        {/* Back Button: Clean White Rounded Square with < Chevron */}
+
         <TouchableOpacity
           style={styles.squareControlBtn}
           onPress={handleClose}
@@ -520,12 +505,10 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
           <Ionicons name="chevron-back" size={22} color="#1E1D25" />
         </TouchableOpacity>
 
-        {/* Clean Center Scanner Title */}
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitleText}>Scan Barcode</Text>
         </View>
 
-        {/* Right Controls: Random Shopping Scan + Torch */}
         <View style={styles.topRightControls}>
           <TouchableOpacity
             style={styles.squareControlBtn}
@@ -555,7 +538,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         </View>
       </View>
 
-      {/* Universal Panel Product Scan Result with Skeleton & Proper Graph */}
       <ProductScanResultPanel
         visible={resultVisible}
         loading={fetchingProduct}
@@ -569,7 +551,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         }}
       />
 
-      {/* Full Deep-Dive Product Detail Page with Complete Nutrient Graphs & Transitions */}
       <ProductDetailPage
         visible={productDetailVisible}
         product={productData}
@@ -579,7 +560,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
         }}
       />
 
-      {/* Solid White Panel Behind Android System Navigation Buttons */}
       <View
         style={[
           styles.bottomNavBackdrop,
@@ -966,4 +946,3 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 });
-

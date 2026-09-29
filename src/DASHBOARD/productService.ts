@@ -4,14 +4,14 @@ import { getStoredJwtToken } from '../auth-page/authService';
 import { getBackendBaseUrl } from '../../api/universalbackendapi';
 
 export interface NutritionMetrics {
-  calories: number;       // kcal per 100g
-  carbs: number;          // g
-  sugars: number;         // g
-  fat: number;            // g
-  saturatedFat: number;   // g
-  protein: number;        // g
-  fiber: number;          // g
-  salt: number;           // g
+  calories: number;
+  carbs: number;
+  sugars: number;
+  fat: number;
+  saturatedFat: number;
+  protein: number;
+  fiber: number;
+  salt: number;
 }
 
 export interface FormulationProfile {
@@ -37,8 +37,8 @@ export interface ScannedProduct {
   imageUrl?: string;
   productType?: 'food' | 'beauty' | 'general';
   nutriScore: 'A' | 'B' | 'C' | 'D' | 'E';
-  novaGroup?: number;     // 1 to 4
-  aiHealthRating: number; // 0 to 100
+  novaGroup?: number;
+  aiHealthRating: number;
   verdict: 'Excellent Choice' | 'Good Choice' | 'Moderate' | 'Avoid / Unhealthy' | 'Clean & Safe' | 'Good Formulation' | 'Moderate Concern' | 'Hazardous / Poor';
   verdictColor: string;
   metrics: NutritionMetrics;
@@ -60,10 +60,9 @@ export interface PaginatedProducts {
   fromCache?: boolean;
 }
 
-// ── Cache Configuration & In-Memory Store ────────────────────────────────────
-const PROD_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days for barcode scans
-const CAT_CACHE_TTL = 60 * 60 * 1000;          // 1 hour for category listings
-const SEARCH_CACHE_TTL = 30 * 60 * 1000;       // 30 minutes for search results
+const PROD_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+const CAT_CACHE_TTL = 60 * 60 * 1000;
+const SEARCH_CACHE_TTL = 30 * 60 * 1000;
 
 const memoryProductCache = new Map<string, { data: ScannedProduct; timestamp: number }>();
 const memoryCategoryCache = new Map<string, { data: PaginatedProducts; timestamp: number }>();
@@ -77,13 +76,11 @@ export async function getCachedProduct(barcode: string): Promise<ScannedProduct 
   const cleanBarcode = barcode.trim();
   if (!cleanBarcode) return null;
 
-  // 1. L1 Memory Cache
   const memHit = memoryProductCache.get(cleanBarcode);
   if (memHit && Date.now() - memHit.timestamp < PROD_CACHE_TTL) {
     return memHit.data;
   }
 
-  // 2. L2 AsyncStorage Cache
   try {
     const raw = await AsyncStorage.getItem(`${PROD_KEY_PREFIX}${cleanBarcode}`);
     if (raw) {
@@ -113,14 +110,12 @@ export async function getCachedCategoryPage(
   search: string = ''
 ): Promise<PaginatedProducts | null> {
   const key = `${categoryKey.toLowerCase().trim()}_p${page}_q${search.toLowerCase().trim()}`;
-  
-  // 1. L1 Memory Cache
+
   const memHit = memoryCategoryCache.get(key);
   if (memHit && Date.now() - memHit.timestamp < CAT_CACHE_TTL) {
     return { ...memHit.data, fromCache: true };
   }
 
-  // 2. L2 AsyncStorage Cache
   try {
     const raw = await AsyncStorage.getItem(`${CAT_KEY_PREFIX}${key}`);
     if (raw) {
@@ -153,14 +148,12 @@ export async function getCachedSearchResults(
   page: number = 1
 ): Promise<PaginatedProducts | null> {
   const key = `${query.toLowerCase().trim()}_p${page}`;
-  
-  // 1. L1 Memory Cache
+
   const memHit = memorySearchCache.get(key);
   if (memHit && Date.now() - memHit.timestamp < SEARCH_CACHE_TTL) {
     return { ...memHit.data, fromCache: true };
   }
 
-  // 2. L2 AsyncStorage Cache
   try {
     const raw = await AsyncStorage.getItem(`${SEARCH_KEY_PREFIX}${key}`);
     if (raw) {
@@ -455,7 +448,7 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
     isUltraProcessed: false,
     ingredientsSummary: 'Whole Milk, Skimmed Milk Concentrate, Live Bifidus ActiRegularis cultures.',
   },
-  // Real Curated Beauty & Personal Care Items
+
   '4005808811120': {
     name: 'Nivea Soft Light Moisturising Cream',
     brand: 'Nivea',
@@ -737,7 +730,6 @@ export function parseBeautyIngredients(rawIngredients: string) {
 export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: boolean = false): Promise<ScannedProduct> {
   const barcode = barcodeRaw.trim();
 
-  // 1. Check in-memory / persistent cache first if not forced refresh
   if (!forceRefresh) {
     const cached = await getCachedProduct(barcode);
     if (cached) {
@@ -745,7 +737,6 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     }
   }
 
-  // 2. Check curated database
   if (CURATED_PRODUCTS[barcode]) {
     const cur = CURATED_PRODUCTS[barcode];
     const nutri = (cur.nutriScore || 'C') as ScannedProduct['nutriScore'];
@@ -784,7 +775,6 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     return curatedProduct;
   }
 
-  // 2. Query Foodco Backend with Firestore & Auth JWT
   try {
     const jwt = await getStoredJwtToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -867,10 +857,9 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       }
     }
   } catch (_) {
-    // Continue to fallback
+
   }
 
-  // 3. Fallback to OpenFoodFacts Global Database
   try {
     const offRes = await fetch(
       `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`
@@ -943,10 +932,9 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       }
     }
   } catch (_) {
-    // Continue to Open Beauty Facts
+
   }
 
-  // 4. Fallback to OpenBeautyFacts Global Database
   try {
     const obfRes = await fetch(
       `https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`
@@ -991,10 +979,9 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       }
     }
   } catch (_) {
-    // Continue
+
   }
 
-  // 5. Intelligent Estimation Fallback
   const lastDigit = parseInt(barcode.slice(-1) || '5', 10);
   const isBeauty = lastDigit % 4 === 0;
 
@@ -1089,7 +1076,7 @@ export async function fetchRandomProductFromDatabase(): Promise<string | null> {
     if (jwt) {
       headers['Authorization'] = `Bearer ${jwt}`;
     }
-    const res = await fetch(`${BACKEND_BASE}/items/random?limit=6`, {
+    const res = await fetch(`${getBackendBase()}/items/random?limit=6`, {
       method: 'GET',
       headers,
     });
@@ -1117,7 +1104,6 @@ export async function fetchProductsByCategory(
   const normKey = categoryKey.toLowerCase().trim();
   const searchLower = search.toLowerCase().trim();
 
-  // 1. Fast Cache Check (instant 0ms response when available)
   if (!forceRefresh) {
     const cached = await getCachedCategoryPage(normKey, page, searchLower);
     if (cached) {
@@ -1125,7 +1111,6 @@ export async function fetchProductsByCategory(
     }
   }
 
-  // 2. Load from curated offline store for fast fallback & pagination
   let baseProducts: ScannedProduct[] = [];
   const localItems = (CATEGORY_LOCAL_DATA as Record<string, any[]>)[normKey] || [];
   if (localItems.length > 0) {
@@ -1141,7 +1126,6 @@ export async function fetchProductsByCategory(
     }));
   }
 
-  // Local filtered & sliced for fallback
   let filteredLocal = baseProducts;
   if (searchLower) {
     filteredLocal = baseProducts.filter(p =>
@@ -1156,7 +1140,6 @@ export async function fetchProductsByCategory(
   const localTotalPages = Math.max(1, Math.ceil(localTotal / limit));
   const localHasMore = page < localTotalPages;
 
-  // 3. Fetch live paginated data from backend API with timeout
   try {
     const jwt = await getStoredJwtToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -1196,7 +1179,6 @@ export async function fetchProductsByCategory(
         let total = typeof data.total === 'number' ? data.total : liveProducts.length;
         let totalPages = typeof data.totalPages === 'number' ? data.totalPages : Math.ceil(total / limit);
 
-        // If backend has 0 products on page 1 but local dataset has curated items, fallback
         if (finalProducts.length === 0 && page === 1 && localSlice.length > 0) {
           finalProducts = localSlice;
           total = localTotal;
@@ -1214,10 +1196,8 @@ export async function fetchProductsByCategory(
           fromCache: false,
         };
 
-        // Cache the page for fast instant loads next time
         await setCachedCategoryPage(normKey, page, searchLower, result);
 
-        // Also cache each individual product so future barcode scans or clicks are 0ms instant
         for (const p of finalProducts) {
           if (p.barcode) {
             setCachedProduct(p.barcode, p).catch(() => {});
@@ -1228,10 +1208,9 @@ export async function fetchProductsByCategory(
       }
     }
   } catch (_) {
-    // Timeout or network offline -> fall through to local fallback
+
   }
 
-  // 4. Return offline local paginated dataset
   const fallbackResult: PaginatedProducts = {
     total: localTotal,
     products: localSlice,
@@ -1263,7 +1242,6 @@ export async function searchAllProducts(
     };
   }
 
-  // 1. Fast Cache Check
   if (!forceRefresh) {
     const cached = await getCachedSearchResults(searchLower, page);
     if (cached) {
@@ -1271,7 +1249,6 @@ export async function searchAllProducts(
     }
   }
 
-  // 2. Search local curated items & category store across all categories
   const curatedList: ScannedProduct[] = Object.entries(CURATED_PRODUCTS).map(([barcode, p]) => ({
     barcode,
     name: p.name || 'Packaged Mart Item',
@@ -1312,7 +1289,6 @@ export async function searchAllProducts(
       isUltraProcessed: Boolean(p.isUltraProcessed),
     }));
 
-  // Deduplicate matchedLocal
   const seenLocal = new Set<string>();
   const deduplicatedLocal: ScannedProduct[] = [];
   for (const p of matchedLocal) {
@@ -1328,7 +1304,6 @@ export async function searchAllProducts(
   const localTotalPages = Math.max(1, Math.ceil(localTotal / limit));
   const localHasMore = page < localTotalPages;
 
-  // 3. Fetch live results from backend
   try {
     const jwt = await getStoredJwtToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -1339,7 +1314,7 @@ export async function searchAllProducts(
     const timeout = setTimeout(() => controller.abort(), 4500);
 
     const res = await fetch(
-      `${BACKEND_BASE}/products/category/all?search=${encodeURIComponent(searchLower)}&page=${page}&limit=${limit}`,
+      `${getBackendBase()}/products/category/all?search=${encodeURIComponent(searchLower)}&page=${page}&limit=${limit}`,
       {
         method: 'GET',
         headers,
@@ -1385,7 +1360,6 @@ export async function searchAllProducts(
 
         await setCachedSearchResults(searchLower, page, result);
 
-        // Also cache each individual product so future barcode scans or clicks are 0ms instant
         for (const p of finalProducts) {
           if (p.barcode) {
             setCachedProduct(p.barcode, p).catch(() => {});
@@ -1397,7 +1371,6 @@ export async function searchAllProducts(
     }
   } catch (_) {}
 
-  // 4. Fallback to local slice
   const fallbackResult: PaginatedProducts = {
     total: localTotal,
     products: localSlice,
@@ -1409,6 +1382,3 @@ export async function searchAllProducts(
   };
   return fallbackResult;
 }
-
-
-
