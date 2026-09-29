@@ -22,6 +22,7 @@ import { checkSessionStatus, clearUserSession } from '../auth-page/authService';
 import BarcodeScannerPage from './BarcodeScannerPage';
 import CategoryProductsPage from './CategoryProductsPage';
 import SearchResultsPage from './SearchResultsPage';
+import HistoryPage from './HistoryPage';
 import { ProductDetailPage } from '../product-detail';
 import { ScannedProduct } from './productService';
 
@@ -121,6 +122,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [searchPageVisible, setSearchPageVisible] = useState(false);
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<ScannedProduct | null>(null);
   const [productDetailVisible, setProductDetailVisible] = useState(false);
+  const [historyPageVisible, setHistoryPageVisible] = useState(false);
   const [futureUpdatePanelVisible, setFutureUpdatePanelVisible] = useState(false);
   const [futureUpdateTitle, setFutureUpdateTitle] = useState('Coming Soon');
 
@@ -129,8 +131,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       setFutureUpdateTitle('Insights & Health Analytics');
       setFutureUpdatePanelVisible(true);
     } else if (tab === 'recipes') {
-      setFutureUpdateTitle('Saved Lists & History');
-      setFutureUpdatePanelVisible(true);
+      setHistoryPageVisible(true);
     } else if (tab === 'scan') {
       setScannerPageVisible(true);
     } else if (tab === 'github') {
@@ -545,6 +546,15 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         visible={productDetailVisible}
         product={selectedDetailProduct}
         onClose={() => setProductDetailVisible(false)}
+      />
+
+      <HistoryPage
+        visible={historyPageVisible}
+        onClose={() => setHistoryPageVisible(false)}
+        onSelectProduct={(product) => {
+          setSelectedDetailProduct(product);
+          setProductDetailVisible(true);
+        }}
       />
     </Animated.View>
   );

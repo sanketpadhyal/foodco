@@ -94,6 +94,22 @@ export async function getCachedProduct(barcode: string): Promise<ScannedProduct 
   return null;
 }
 
+export async function recordScanToHistory(product: ScannedProduct): Promise<void> {
+  try {
+    const jwt = await getStoredJwtToken();
+    if (!jwt || !product) return;
+
+    fetch(`${getBackendBaseUrl()}/auth/history`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({ product }),
+    }).catch(() => {});
+  } catch (_) {}
+}
+
 export async function setCachedProduct(barcode: string, product: ScannedProduct): Promise<void> {
   const cleanBarcode = barcode.trim();
   if (!cleanBarcode || !product) return;
@@ -102,6 +118,7 @@ export async function setCachedProduct(barcode: string, product: ScannedProduct)
   try {
     await AsyncStorage.setItem(`${PROD_KEY_PREFIX}${cleanBarcode}`, JSON.stringify(entry));
   } catch (_) {}
+  recordScanToHistory(product).catch(() => {});
 }
 
 export async function getCachedCategoryPage(

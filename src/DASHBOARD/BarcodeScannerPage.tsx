@@ -13,7 +13,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import ProductScanResultPanel from './ProductScanResultPanel';
 import {
   fetchProductByBarcode,
@@ -448,7 +448,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             <View style={styles.heroStickerPill}>
               <Text style={styles.heroStickerHash}>#</Text>
               <Text style={styles.heroStickerText}>AlignBarcodeWithinFrame</Text>
-              <Text style={styles.heroStickerEmoji}> 🎯</Text>
+              <Ionicons name="scan-circle" size={17} color="#5DB035" style={styles.stickerIconRight} />
             </View>
           </View>
 
@@ -456,33 +456,33 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
             <View style={styles.stickerRow}>
               <View style={[styles.stickerPill, styles.stickerHealthy]}>
                 <Text style={[styles.stickerText, { color: '#15803D' }]}>#healthy</Text>
-                <Text style={styles.stickerEmoji}> 🌱</Text>
+                <MaterialCommunityIcons name="leaf" size={14} color="#15803D" style={styles.stickerIconRight} />
               </View>
               <View style={[styles.stickerPill, styles.stickerNutri]}>
                 <Text style={[styles.stickerText, { color: '#1D4ED8' }]}>#cleanbeauty</Text>
-                <Text style={styles.stickerEmoji}> 🌸</Text>
+                <MaterialCommunityIcons name="flower-tulip-outline" size={14} color="#1D4ED8" style={styles.stickerIconRight} />
               </View>
             </View>
 
             <View style={styles.stickerRow}>
               <View style={[styles.stickerPill, styles.stickerZeroJunk]}>
                 <Text style={[styles.stickerText, { color: '#B91C1C' }]}>#toxicfree</Text>
-                <Text style={styles.stickerEmoji}> 🛡️</Text>
+                <Ionicons name="shield-checkmark-outline" size={14} color="#B91C1C" style={styles.stickerIconRight} />
               </View>
               <View style={[styles.stickerPill, styles.stickerInstant]}>
                 <Text style={[styles.stickerText, { color: '#6D28D9' }]}>#instantscan</Text>
-                <Text style={styles.stickerEmoji}> ⚡</Text>
+                <Ionicons name="flash-outline" size={14} color="#6D28D9" style={styles.stickerIconRight} />
               </View>
             </View>
 
             <View style={styles.stickerRow}>
               <View style={[styles.stickerPill, styles.stickerCleanFood]}>
                 <Text style={[styles.stickerText, { color: '#047857' }]}>#skincare</Text>
-                <Text style={styles.stickerEmoji}> ✨</Text>
+                <Ionicons name="sparkles" size={13} color="#047857" style={styles.stickerIconRight} />
               </View>
               <View style={[styles.stickerPill, styles.stickerAiScore]}>
                 <Text style={[styles.stickerText, { color: '#B45309' }]}>#healthindex</Text>
-                <Text style={styles.stickerEmoji}> 🎯</Text>
+                <MaterialCommunityIcons name="target" size={15} color="#B45309" style={styles.stickerIconRight} />
               </View>
             </View>
           </View>
@@ -812,9 +812,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.1,
   },
-  stickerEmoji: {
-    fontSize: 11.5,
-    marginLeft: 3,
+  stickerIconRight: {
+    marginLeft: 5,
   },
   stickerHealthy: {
     transform: [{ rotate: '-1.2deg' }],
