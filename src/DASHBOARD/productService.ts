@@ -132,6 +132,7 @@ export async function recordScanToHistory(product: ScannedProduct): Promise<void
   } catch (_) {}
 }
 
+// Cache-only — used when pre-caching browsed/category products (does NOT record to history)
 export async function setCachedProduct(barcode: string, product: ScannedProduct): Promise<void> {
   const cleanBarcode = barcode.trim();
   if (!cleanBarcode || !product) return;
@@ -140,6 +141,12 @@ export async function setCachedProduct(barcode: string, product: ScannedProduct)
   try {
     await AsyncStorage.setItem(`${PROD_KEY_PREFIX}${cleanBarcode}`, JSON.stringify(entry));
   } catch (_) {}
+  // NOTE: intentionally NOT recording to history here — only actual barcode scans should appear
+}
+
+// Cache + history — used ONLY when the user actually scans a barcode
+export async function setCachedProductFromScan(barcode: string, product: ScannedProduct): Promise<void> {
+  await setCachedProduct(barcode, product);
   recordScanToHistory(product).catch(() => {});
 }
 
@@ -810,7 +817,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       insight: cur.insight,
       formulationProfile: cur.formulationProfile || null,
     };
-    await setCachedProduct(barcode, curatedProduct);
+    await setCachedProductFromScan(barcode, curatedProduct);
     return curatedProduct;
   }
 
@@ -891,7 +898,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
           ingredientsSummary: prod.ingredientsSummary || prod.ingredients || prod.ingredients_text,
           formulationProfile: formulation,
         };
-        await setCachedProduct(barcode, productObj);
+        await setCachedProductFromScan(barcode, productObj);
         return productObj;
       }
     }
@@ -966,7 +973,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
           isUltraProcessed: nova === 4,
           ingredientsSummary: ingredientsText ? ingredientsText.slice(0, 180) + '...' : undefined,
         };
-        await setCachedProduct(barcode, offProduct);
+        await setCachedProductFromScan(barcode, offProduct);
         return offProduct;
       }
     }
@@ -1013,7 +1020,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
           ingredientsSummary: ingredientsText || undefined,
           formulationProfile: beautyEval.formulationProfile,
         };
-        await setCachedProduct(barcode, obfProduct);
+        await setCachedProductFromScan(barcode, obfProduct);
         return obfProduct;
       }
     }
@@ -1068,7 +1075,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
         ],
       }
     };
-    await setCachedProduct(barcode, estBeauty);
+    await setCachedProductFromScan(barcode, estBeauty);
     return estBeauty;
   }
 
@@ -1104,7 +1111,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     isUltraProcessed: nova === 4,
     ingredientsSummary: 'Grains, plant oils, mineral salts, natural flavorings and emulsifiers.',
   };
-  await setCachedProduct(barcode, fallbackProduct);
+  await setCachedProductFromScan(barcode, fallbackProduct);
   return fallbackProduct;
 }
 
