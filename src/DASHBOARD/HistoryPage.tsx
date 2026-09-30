@@ -385,6 +385,12 @@ export default function HistoryPage({
           />
         </View>
 
+        {/* Page heading — same theme as Dashboard */}
+        <View style={styles.headingContainer}>
+          <Text style={styles.headingLabel}>Your Scans</Text>
+          <Text style={styles.headingTitle}>History</Text>
+        </View>
+
         {/* Body — exactly ONE phase is visible at a time, zero flicker */}
         {phase === 'loading' ? (
           <View style={styles.loaderContainer}>
@@ -467,6 +473,31 @@ const styles = StyleSheet.create({
   },
   navbarWrapper: {
     backgroundColor: '#FFFFFF',
+  },
+  headingContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  headingLabel: {
+    fontFamily: sansFont,
+    fontSize: 14,
+    color: '#58B84F',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  headingTitle: {
+    fontFamily: serifFont,
+    fontSize: 26,
+    color: '#1E1D25',
+    fontWeight: '700',
+    lineHeight: 32,
+    textAlign: 'center',
   },
   centerContainer: {
     flex: 1,
