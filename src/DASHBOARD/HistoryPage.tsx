@@ -407,14 +407,6 @@ export default function HistoryPage({
             <Text style={styles.emptySubtitle}>
               You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
             </Text>
-            <TouchableOpacity
-              style={styles.emptyScanBtn}
-              activeOpacity={0.85}
-              onPress={handleScanPress}
-            >
-              <Ionicons name="barcode-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.emptyScanBtnText}>Start Scanning</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           <FlatList

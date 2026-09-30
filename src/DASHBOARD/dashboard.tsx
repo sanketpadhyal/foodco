@@ -149,8 +149,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   }, [homeContentFade, homeContentSlide]);
 
   const handleTabPress = (tab: DashboardTab) => {
-    setActiveTab(tab);
     if (tab === 'home') {
+      setActiveTab('home');
       triggerHomeTransition();
     } else if (tab === 'stats') {
       setFutureUpdateTitle('Insights & Health Analytics');
