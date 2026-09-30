@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useReducer } from 'react';
 import {
   View,
   Text,
@@ -35,7 +35,61 @@ const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const sansFont = Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' });
-const boldSansFont = Platform.select({ ios: 'System', android: 'sans-serif-bold', default: 'sans-serif' });
+
+// ---------------------------------------------------------------------------
+// Atomic state machine — all transitions happen in ONE dispatch (no flicker)
+// ---------------------------------------------------------------------------
+type Phase = 'loading' | 'ready' | 'empty';
+
+type HistoryState = {
+  items: ScannedProduct[];
+  phase: Phase;
+  refreshing: boolean;
+};
+
+type HistoryAction =
+  | { type: 'SHOW_CACHED'; items: ScannedProduct[] }
+  | { type: 'SHOW_LOADING' }
+  | { type: 'SHOW_EMPTY' }
+  | { type: 'START_REFRESH' }
+  | { type: 'FETCH_SUCCESS'; items: ScannedProduct[] }
+  | { type: 'FETCH_ERROR' };
+
+function historyReducer(state: HistoryState, action: HistoryAction): HistoryState {
+  switch (action.type) {
+    case 'SHOW_CACHED':
+      return { items: action.items, phase: 'ready', refreshing: false };
+    case 'SHOW_LOADING':
+      return { items: [], phase: 'loading', refreshing: false };
+    case 'SHOW_EMPTY':
+      return { items: [], phase: 'empty', refreshing: false };
+    case 'START_REFRESH':
+      return { ...state, refreshing: true };
+    case 'FETCH_SUCCESS':
+      return {
+        items: action.items,
+        phase: action.items.length > 0 ? 'ready' : 'empty',
+        refreshing: false,
+      };
+    case 'FETCH_ERROR':
+      // keep existing items visible; just stop refreshing
+      return {
+        ...state,
+        refreshing: false,
+        phase: state.items.length > 0 ? 'ready' : 'empty',
+      };
+    default:
+      return state;
+  }
+}
+
+function initState(): HistoryState {
+  const cached = getMemoryHistory();
+  if (cached && cached.length > 0) return { items: cached, phase: 'ready', refreshing: false };
+  if (cached) return { items: [], phase: 'empty', refreshing: false };
+  return { items: [], phase: 'loading', refreshing: false };
+}
+// ---------------------------------------------------------------------------
 
 export interface HistoryPageProps {
   visible: boolean;
@@ -67,16 +121,15 @@ export default function HistoryPage({
 }: HistoryPageProps) {
   const insets = useSafeAreaInsets();
 
-  const [historyItems, setHistoryItems] = useState<ScannedProduct[]>(() => getMemoryHistory() || []);
-  const [loading, setLoading] = useState<boolean>(() => !getMemoryHistory());
-  const [hasLoaded, setHasLoaded] = useState<boolean>(() => !!getMemoryHistory());
-  const [refreshing, setRefreshing] = useState(false);
-  const isFetchingRef = useRef(false);
+  const [state, dispatch] = useReducer(historyReducer, undefined, initState);
+  const { items, phase, refreshing } = state;
 
   const pageOpacity = useRef(new Animated.Value(0)).current;
   const pageTranslateY = useRef(new Animated.Value(10)).current;
   const isClosingRef = useRef(false);
+  const isFetchingRef = useRef(false);
 
+  // Android nav bar colour
   useEffect(() => {
     if (Platform.OS === 'android' && visible) {
       try {
@@ -88,21 +141,19 @@ export default function HistoryPage({
     }
   }, [visible]);
 
+  // Fetch from network — dispatches a single action, never multiple setState calls
   const loadUserHistory = useCallback(async (isRefresh = false) => {
     if (isFetchingRef.current && !isRefresh) return;
     isFetchingRef.current = true;
 
     if (isRefresh) {
-      setRefreshing(true);
-    } else if (!getMemoryHistory()) {
-      setLoading(true);
+      dispatch({ type: 'START_REFRESH' });
     }
 
     try {
       const jwt = await getStoredJwtToken();
       if (!jwt) {
-        setHistoryItems([]);
-        setHasLoaded(true);
+        dispatch({ type: 'SHOW_EMPTY' });
         return;
       }
 
@@ -110,75 +161,71 @@ export default function HistoryPage({
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwt}`,
+          Authorization: `Bearer ${jwt}`,
         },
       });
 
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.scanHistory)) {
-          setHistoryItems(data.scanHistory);
           setMemoryHistory(data.scanHistory);
+          dispatch({ type: 'FETCH_SUCCESS', items: data.scanHistory });
         } else {
-          setHistoryItems([]);
           setMemoryHistory([]);
+          dispatch({ type: 'SHOW_EMPTY' });
         }
       } else {
-        if (!getMemoryHistory()) {
-          setHistoryItems([]);
-        }
+        dispatch({ type: 'FETCH_ERROR' });
       }
     } catch (_) {
-      if (!getMemoryHistory()) {
-        setHistoryItems([]);
-      }
+      dispatch({ type: 'FETCH_ERROR' });
     } finally {
       isFetchingRef.current = false;
-      setLoading(false);
-      setRefreshing(false);
-      setHasLoaded(true);
     }
   }, []);
 
+  // Page open/close animation + initial data gate
   useEffect(() => {
-    if (visible) {
-      isClosingRef.current = false;
-      pageOpacity.setValue(0);
-      pageTranslateY.setValue(10);
+    if (!visible) return;
 
-      Animated.parallel([
-        Animated.timing(pageOpacity, {
-          toValue: 1,
-          duration: 170,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pageTranslateY, {
-          toValue: 0,
-          duration: 170,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]).start();
+    isClosingRef.current = false;
+    pageOpacity.setValue(0);
+    pageTranslateY.setValue(10);
 
-      const cached = getMemoryHistory();
-      if (cached) {
-        setHistoryItems(cached);
-        setHasLoaded(true);
-        setLoading(false);
-      } else {
-        setLoading(true);
-        setHasLoaded(false);
-      }
+    Animated.parallel([
+      Animated.timing(pageOpacity, {
+        toValue: 1,
+        duration: 170,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(pageTranslateY, {
+        toValue: 0,
+        duration: 170,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-      const task = InteractionManager.runAfterInteractions(() => {
-        loadUserHistory();
-      });
-
-      return () => task.cancel();
+    // Seed from cache first (single atomic dispatch → no flicker)
+    const cached = getMemoryHistory();
+    if (cached && cached.length > 0) {
+      dispatch({ type: 'SHOW_CACHED', items: cached });
+    } else if (cached) {
+      dispatch({ type: 'SHOW_EMPTY' });
+    } else {
+      dispatch({ type: 'SHOW_LOADING' });
     }
+
+    // Defer network fetch until after interactions/animation
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadUserHistory();
+    });
+
+    return () => task.cancel();
   }, [visible, loadUserHistory, pageOpacity, pageTranslateY]);
 
+  // Android hardware back
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
@@ -196,25 +243,20 @@ export default function HistoryPage({
         easing: Easing.in(Easing.quad),
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      onClose();
-    });
+    ]).start(() => onClose());
   }, [onClose, pageOpacity, pageTranslateY]);
 
   useEffect(() => {
     if (!visible) return;
-    const onBackPress = () => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       handleClose();
       return true;
-    };
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    });
     return () => sub.remove();
   }, [visible, handleClose]);
 
   const handleBottomTabPress = (tab: DashboardTab) => {
-    if (tab === 'recipes') {
-      return;
-    }
+    if (tab === 'recipes') return;
     if (isClosingRef.current) return;
     isClosingRef.current = true;
 
@@ -232,51 +274,36 @@ export default function HistoryPage({
         useNativeDriver: true,
       }),
     ]).start(() => {
-      if (onTabPress) {
-        onTabPress(tab);
-      } else if (tab === 'home') {
-        onClose();
-      }
+      if (onTabPress) onTabPress(tab);
+      else if (tab === 'home') onClose();
     });
   };
 
   const handleScanPress = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
-
-    Animated.parallel([
-      Animated.timing(pageOpacity, {
-        toValue: 0,
-        duration: 130,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (onScanPress) {
-        onScanPress();
-      } else {
-        onClose();
-      }
+    Animated.timing(pageOpacity, {
+      toValue: 0,
+      duration: 130,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      if (onScanPress) onScanPress();
+      else onClose();
     });
   };
 
   const handleGithubPress = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
-
-    Animated.parallel([
-      Animated.timing(pageOpacity, {
-        toValue: 0,
-        duration: 130,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (onGithubPress) {
-        onGithubPress();
-      } else {
-        onClose();
-      }
+    Animated.timing(pageOpacity, {
+      toValue: 0,
+      duration: 130,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      if (onGithubPress) onGithubPress();
+      else onClose();
     });
   };
 
@@ -338,27 +365,18 @@ export default function HistoryPage({
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        StyleSheet.absoluteFill,
-        { zIndex: 995 },
-      ]}
-    >
+    <View style={[styles.container, StyleSheet.absoluteFill, { zIndex: 995 }]}>
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Animated content area — only this fades/slides */}
+      {/* Only the content animates — bottom bar stays static */}
       <Animated.View
         style={[
           styles.animatedContent,
-          {
-            opacity: pageOpacity,
-            transform: [{ translateY: pageTranslateY }],
-          },
+          { opacity: pageOpacity, transform: [{ translateY: pageTranslateY }] },
         ]}
       >
-        {/* Top Navbar matching Dashboard */}
+        {/* Navbar */}
         <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
           <DashboardNavbar
             user={user}
@@ -367,12 +385,12 @@ export default function HistoryPage({
           />
         </View>
 
-        {/* Body */}
-        {loading && !hasLoaded ? (
+        {/* Body — exactly ONE phase is visible at a time, zero flicker */}
+        {phase === 'loading' ? (
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color="#FF6B35" />
           </View>
-        ) : historyItems.length === 0 && hasLoaded ? (
+        ) : phase === 'empty' ? (
           <View style={styles.centerContainer}>
             <Image
               source={EMPTY_404_ILLUSTRATION}
@@ -383,11 +401,21 @@ export default function HistoryPage({
             <Text style={styles.emptySubtitle}>
               You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
             </Text>
+            <TouchableOpacity
+              style={styles.emptyScanBtn}
+              activeOpacity={0.85}
+              onPress={handleScanPress}
+            >
+              <Ionicons name="barcode-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.emptyScanBtnText}>Start Scanning</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
-            data={historyItems}
-            keyExtractor={(item, index) => item.barcode ? `${item.barcode}_${index}` : `hist_${index}`}
+            data={items}
+            keyExtractor={(item, index) =>
+              item.barcode ? `${item.barcode}_${index}` : `hist_${index}`
+            }
             renderItem={renderProductItem}
             numColumns={2}
             columnWrapperStyle={styles.columnWrapper}
@@ -409,15 +437,11 @@ export default function HistoryPage({
         )}
       </Animated.View>
 
-      {/* Bottom bar & backdrop are OUTSIDE the Animated.View — always static */}
+      {/* Bottom bar & backdrop — always static, never animated */}
       <View
-        style={[
-          styles.bottomNavBackdrop,
-          { height: insets.bottom > 0 ? insets.bottom : 0 },
-        ]}
+        style={[styles.bottomNavBackdrop, { height: insets.bottom > 0 ? insets.bottom : 0 }]}
         pointerEvents="none"
       />
-
       <DashboardBottomBar
         activeTab="recipes"
         onTabPress={handleBottomTabPress}
