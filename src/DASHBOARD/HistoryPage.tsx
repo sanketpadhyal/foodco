@@ -14,6 +14,7 @@ import {
   BackHandler,
   RefreshControl,
   InteractionManager,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -25,7 +26,6 @@ import {
   getMemoryHistory,
   setMemoryHistory,
 } from './productService';
-import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
 import { DashboardNavbar, DashboardBottomBar, DashboardTab } from './components';
 
 const EMPTY_404_ILLUSTRATION = require('../../assets/page-found-concept-illustration_114360-1869 (1).png');
@@ -369,14 +369,9 @@ export default function HistoryPage({
 
         {/* Body */}
         {loading && !hasLoaded ? (
-          <ProductGridSkeleton
-            count={6}
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingTop: 16,
-              paddingBottom: insets.bottom + 100,
-            }}
-          />
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#FF6B35" />
+          </View>
         ) : historyItems.length === 0 && hasLoaded ? (
           <View style={styles.centerContainer}>
             <Image
@@ -388,14 +383,6 @@ export default function HistoryPage({
             <Text style={styles.emptySubtitle}>
               You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
             </Text>
-            <TouchableOpacity
-              style={styles.emptyScanBtn}
-              activeOpacity={0.85}
-              onPress={handleScanPress}
-            >
-              <Ionicons name="barcode-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.emptyScanBtnText}>Start Scanning</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
@@ -448,6 +435,11 @@ const styles = StyleSheet.create({
   },
   animatedContent: {
     flex: 1,
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   navbarWrapper: {
     backgroundColor: '#FFFFFF',
