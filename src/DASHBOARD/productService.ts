@@ -94,8 +94,30 @@ export async function getCachedProduct(barcode: string): Promise<ScannedProduct 
   return null;
 }
 
+let memoryHistoryCache: ScannedProduct[] | null = null;
+
+export function getMemoryHistory(): ScannedProduct[] | null {
+  return memoryHistoryCache;
+}
+
+export function setMemoryHistory(items: ScannedProduct[]): void {
+  memoryHistoryCache = items;
+}
+
+export function prependScanToMemoryHistory(product: ScannedProduct): void {
+  if (!memoryHistoryCache) {
+    memoryHistoryCache = [product];
+  } else {
+    const filtered = memoryHistoryCache.filter(p => p.barcode !== product.barcode);
+    memoryHistoryCache = [product, ...filtered];
+  }
+}
+
 export async function recordScanToHistory(product: ScannedProduct): Promise<void> {
   try {
+    if (product) {
+      prependScanToMemoryHistory(product);
+    }
     const jwt = await getStoredJwtToken();
     if (!jwt || !product) return;
 

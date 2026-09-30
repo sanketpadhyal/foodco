@@ -554,6 +554,31 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           setHistoryPageVisible(false);
           setActiveTab('home');
         }}
+        onTabPress={(tab) => {
+          if (tab === 'home') {
+            setHistoryPageVisible(false);
+            setActiveTab('home');
+          } else if (tab === 'stats') {
+            setHistoryPageVisible(false);
+            setActiveTab('stats');
+            setFutureUpdateTitle('Insights & Health Analytics');
+            setFutureUpdatePanelVisible(true);
+          } else if (tab === 'scan') {
+            setHistoryPageVisible(false);
+            setScannerPageVisible(true);
+          } else if (tab === 'github') {
+            setHistoryPageVisible(false);
+            setGithubPanelVisible(true);
+          }
+        }}
+        onScanPress={() => {
+          setHistoryPageVisible(false);
+          setScannerPageVisible(true);
+        }}
+        onGithubPress={() => {
+          setHistoryPageVisible(false);
+          setGithubPanelVisible(true);
+        }}
         onSelectProduct={(product) => {
           setSelectedDetailProduct(product);
           setProductDetailVisible(true);
