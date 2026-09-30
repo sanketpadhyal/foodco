@@ -24,7 +24,7 @@ import {
   setMemoryHistory,
 } from './productService';
 import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
-import { DashboardBottomBar, DashboardTab } from './components';
+import { DashboardNavbar, DashboardBottomBar, DashboardTab } from './components';
 
 const EMPTY_404_ILLUSTRATION = require('../../assets/page-found-concept-illustration_114360-1869 (1).png');
 
@@ -48,6 +48,8 @@ export interface HistoryPageProps {
   onTabPress?: (tab: DashboardTab) => void;
   onScanPress?: () => void;
   onGithubPress?: () => void;
+  onProfilePress?: () => void;
+  onLogout?: () => void;
 }
 
 export default function HistoryPage({
@@ -58,6 +60,8 @@ export default function HistoryPage({
   onTabPress,
   onScanPress,
   onGithubPress,
+  onProfilePress,
+  onLogout,
 }: HistoryPageProps) {
   const insets = useSafeAreaInsets();
 
@@ -257,30 +261,13 @@ export default function HistoryPage({
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) + 6 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onClose}
-          activeOpacity={0.7}
-          accessibilityLabel="Go Back"
-        >
-          <Ionicons name="chevron-back" size={22} color="#1E1D25" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Scan History</Text>
-          <Text style={styles.headerSubtitle}>
-            {displayName} • {historyItems.length > 0 ? `${historyItems.length} scan${historyItems.length === 1 ? '' : 's'}` : hasLoaded ? '0 scans' : 'loading...'}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.refreshBtn}
-          onPress={() => loadUserHistory(true)}
-          activeOpacity={0.7}
-          accessibilityLabel="Refresh History"
-        >
-          <Ionicons name="refresh" size={20} color="#1E1D25" />
-        </TouchableOpacity>
+      {/* Top Navbar matching Dashboard */}
+      <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
+        <DashboardNavbar
+          user={user}
+          onProfilePress={onProfilePress}
+          onLogout={onLogout}
+        />
       </View>
 
       {/* Body */}
@@ -361,47 +348,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+  navbarWrapper: {
     backgroundColor: '#FFFFFF',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F7F8FA',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleWrap: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  headerTitle: {
-    fontFamily: serifFont,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E1D25',
-  },
-  headerSubtitle: {
-    fontFamily: sansFont,
-    fontSize: 12,
-    color: '#8E949D',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  refreshBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#F7F8FA',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   centerContainer: {
     flex: 1,

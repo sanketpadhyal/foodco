@@ -583,6 +583,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           setSelectedDetailProduct(product);
           setProductDetailVisible(true);
         }}
+        onProfilePress={() => setProfilePanelVisible(true)}
+        onLogout={onLogout}
       />
     </Animated.View>
   );
