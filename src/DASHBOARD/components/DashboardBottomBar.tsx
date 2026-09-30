@@ -141,12 +141,12 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
           onPress={() => handleTab('recipes')}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Recipes"
+          accessibilityLabel="Scan History"
         >
           <View style={styles.iconSlot}>
             <Ionicons
-              name={activeTab === 'recipes' ? 'document-text' : 'document-text-outline'}
-              size={27}
+              name={activeTab === 'recipes' ? 'time' : 'time-outline'}
+              size={26}
               color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
             />
           </View>

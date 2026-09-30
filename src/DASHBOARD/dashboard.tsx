@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -126,9 +126,33 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [futureUpdatePanelVisible, setFutureUpdatePanelVisible] = useState(false);
   const [futureUpdateTitle, setFutureUpdateTitle] = useState('Coming Soon');
 
+  const homeContentFade = useRef(new Animated.Value(1)).current;
+  const homeContentSlide = useRef(new Animated.Value(0)).current;
+
+  const triggerHomeTransition = useCallback(() => {
+    homeContentFade.setValue(0.75);
+    homeContentSlide.setValue(8);
+    Animated.parallel([
+      Animated.timing(homeContentFade, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(homeContentSlide, {
+        toValue: 0,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [homeContentFade, homeContentSlide]);
+
   const handleTabPress = (tab: DashboardTab) => {
     setActiveTab(tab);
-    if (tab === 'stats') {
+    if (tab === 'home') {
+      triggerHomeTransition();
+    } else if (tab === 'stats') {
       setFutureUpdateTitle('Insights & Health Analytics');
       setFutureUpdatePanelVisible(true);
     } else if (tab === 'recipes') {
@@ -219,180 +243,190 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         />
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[1]}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
+      <Animated.View
+        style={[
+          styles.mainContentWrapper,
+          {
+            opacity: homeContentFade,
+            transform: [{ translateY: homeContentSlide }],
+          },
+        ]}
       >
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          stickyHeaderIndices={[1]}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
+        >
 
-        <View style={styles.greetingContainer}>
-          <Text style={styles.greetingText}>Hello, {user.displayName || 'User'}</Text>
-          <Text style={styles.subtitleText}>
-            What would you like to <Text style={styles.subtitleHighlight}>scan</Text>?
-          </Text>
-        </View>
+          <View style={styles.greetingContainer}>
+            <Text style={styles.greetingText}>Hello, {user.displayName || 'User'}</Text>
+            <Text style={styles.subtitleText}>
+              What would you like to <Text style={styles.subtitleHighlight}>scan</Text>?
+            </Text>
+          </View>
 
-        <View style={styles.stickySearchContainer}>
-          <View style={styles.searchBarWrapper}>
-            <Ionicons name="search" size={18} color="#9CA3AF" style={styles.searchLeadingIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search for healthy food..."
-              placeholderTextColor="#B5B9BC"
-              underlineColorAndroid="transparent"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={() => {
-                if (searchQuery.trim().length > 0) {
-                  setSearchPageVisible(true);
-                }
-              }}
-              returnKeyType="search"
-              accessibilityRole="search"
-              accessibilityLabel="Search for healthy food"
-            />
-            <TouchableOpacity
-              style={styles.searchCameraBtn}
-              activeOpacity={0.8}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={() => {
-                if (searchQuery.trim().length > 0) {
-                  setSearchPageVisible(true);
-                } else {
-                  setScannerPageVisible(true);
-                }
-              }}
-              accessibilityLabel={searchQuery.trim().length > 0 ? "Search Mart Products" : "Scan Mart Barcode"}
+          <View style={styles.stickySearchContainer}>
+            <View style={styles.searchBarWrapper}>
+              <Ionicons name="search" size={18} color="#9CA3AF" style={styles.searchLeadingIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search for healthy food..."
+                placeholderTextColor="#B5B9BC"
+                underlineColorAndroid="transparent"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={() => {
+                  if (searchQuery.trim().length > 0) {
+                    setSearchPageVisible(true);
+                  }
+                }}
+                returnKeyType="search"
+                accessibilityRole="search"
+                accessibilityLabel="Search for healthy food"
+              />
+              <TouchableOpacity
+                style={styles.searchCameraBtn}
+                activeOpacity={0.8}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() => {
+                  if (searchQuery.trim().length > 0) {
+                    setSearchPageVisible(true);
+                  } else {
+                    setScannerPageVisible(true);
+                  }
+                }}
+                accessibilityLabel={searchQuery.trim().length > 0 ? "Search Mart Products" : "Scan Mart Barcode"}
+              >
+                <Ionicons
+                  name={searchQuery.trim().length > 0 ? "search" : "camera"}
+                  size={20}
+                  color="#FF6B35"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.categoriesWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesScrollContent}
             >
-              <Ionicons
-                name={searchQuery.trim().length > 0 ? "search" : "camera"}
-                size={20}
-                color="#FF6B35"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.categoriesWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesScrollContent}
-          >
-            {CATEGORIES.map(cat => (
-              <Animated.View
-                key={cat.id}
-                style={{ transform: [{ scale: cardScale }] }}
-              >
-                <TouchableOpacity
-                  style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
-                  activeOpacity={0.7}
-                  onPress={() => handleCategoryPress(cat)}
+              {CATEGORIES.map(cat => (
+                <Animated.View
+                  key={cat.id}
+                  style={{ transform: [{ scale: cardScale }] }}
                 >
-                  <Image
-                    source={cat.image}
-                    style={styles.categoryPopoutImage}
-                    resizeMode="contain"
-                  />
-                  <View style={styles.categoryTextContent}>
-                    <Text style={styles.categoryTitle} numberOfLines={1}>
-                      {cat.title}
-                    </Text>
-                    <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
-                  </View>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.categoriesRow2Wrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesScrollContent}
-          >
-            {CATEGORIES_ROW_2.map(cat => (
-              <Animated.View
-                key={cat.id}
-                style={{ transform: [{ scale: cardScale }] }}
-              >
-                <TouchableOpacity
-                  style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
-                  activeOpacity={0.7}
-                  onPress={() => handleCategoryPress(cat)}
-                >
-                  <Image
-                    source={cat.image}
-                    style={styles.categoryPopoutImage}
-                    resizeMode="contain"
-                  />
-                  <View style={styles.categoryTextContent}>
-                    <Text style={styles.categoryTitle} numberOfLines={1}>
-                      {cat.title}
-                    </Text>
-                    <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
-                  </View>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </ScrollView>
-        </View>
-
-        <TouchableOpacity
-          style={styles.bannerContainer}
-          activeOpacity={0.92}
-          onPress={() => setScannerPageVisible(true)}
-        >
-          <View style={styles.bannerCard}>
-            <View style={styles.bannerContent}>
-              <View style={styles.bannerTextCol}>
-                <Text style={styles.bannerHeading}>Health body comes with good nutrients</Text>
-                <Text style={styles.bannerSubheading}>
-                  Scan mart barcodes for instant AI nutrition info & score
-                </Text>
-                <View style={styles.bannerActionBtn}>
-                  <Text style={styles.bannerActionText}>Scan Product Now  ➔</Text>
-                </View>
-              </View>
-              <Image
-                source={require('../../assets/dashboard/avocado_3d.png')}
-                style={styles.bannerAvocadoImage}
-                resizeMode="contain"
-              />
-            </View>
+                  <TouchableOpacity
+                    style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
+                    activeOpacity={0.7}
+                    onPress={() => handleCategoryPress(cat)}
+                  >
+                    <Image
+                      source={cat.image}
+                      style={styles.categoryPopoutImage}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.categoryTextContent}>
+                      <Text style={styles.categoryTitle} numberOfLines={1}>
+                        {cat.title}
+                      </Text>
+                      <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </ScrollView>
           </View>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.bannerContainer, styles.aiBannerContainer]}
-          activeOpacity={0.92}
-          onPress={() => setScannerPageVisible(true)}
-        >
-          <View style={[styles.bannerCard, styles.aiBannerCard]}>
-            <View style={styles.bannerContent}>
-              <View style={styles.bannerTextCol}>
-                <Text style={styles.bannerHeading}>Foodco AI detects harmful additives</Text>
-                <Text style={styles.bannerSubheading}>
-                  Instant AI safety score, hidden palm oil, carcinogens & E-numbers
-                </Text>
-                <View style={[styles.bannerActionBtn, styles.aiBannerActionBtn]}>
-                  <Text style={[styles.bannerActionText, styles.aiBannerActionText]}>
-                    Scan With Foodco AI  ➔
+          <View style={styles.categoriesRow2Wrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesScrollContent}
+            >
+              {CATEGORIES_ROW_2.map(cat => (
+                <Animated.View
+                  key={cat.id}
+                  style={{ transform: [{ scale: cardScale }] }}
+                >
+                  <TouchableOpacity
+                    style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}
+                    activeOpacity={0.7}
+                    onPress={() => handleCategoryPress(cat)}
+                  >
+                    <Image
+                      source={cat.image}
+                      style={styles.categoryPopoutImage}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.categoryTextContent}>
+                      <Text style={styles.categoryTitle} numberOfLines={1}>
+                        {cat.title}
+                      </Text>
+                      <Text style={styles.categorySubtitle}>{cat.subtitle}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </ScrollView>
+          </View>
+
+          <TouchableOpacity
+            style={styles.bannerContainer}
+            activeOpacity={0.92}
+            onPress={() => setScannerPageVisible(true)}
+          >
+            <View style={styles.bannerCard}>
+              <View style={styles.bannerContent}>
+                <View style={styles.bannerTextCol}>
+                  <Text style={styles.bannerHeading}>Health body comes with good nutrients</Text>
+                  <Text style={styles.bannerSubheading}>
+                    Scan mart barcodes for instant AI nutrition info & score
                   </Text>
+                  <View style={styles.bannerActionBtn}>
+                    <Text style={styles.bannerActionText}>Scan Product Now  ➔</Text>
+                  </View>
                 </View>
+                <Image
+                  source={require('../../assets/dashboard/avocado_3d.png')}
+                  style={styles.bannerAvocadoImage}
+                  resizeMode="contain"
+                />
               </View>
-              <Image
-                source={require('../../assets/fodai.png')}
-                style={styles.bannerAiImage}
-                resizeMode="contain"
-              />
             </View>
-          </View>
-        </TouchableOpacity>
-      </ScrollView>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.bannerContainer, styles.aiBannerContainer]}
+            activeOpacity={0.92}
+            onPress={() => setScannerPageVisible(true)}
+          >
+            <View style={[styles.bannerCard, styles.aiBannerCard]}>
+              <View style={styles.bannerContent}>
+                <View style={styles.bannerTextCol}>
+                  <Text style={styles.bannerHeading}>Foodco AI detects harmful additives</Text>
+                  <Text style={styles.bannerSubheading}>
+                    Instant AI safety score, hidden palm oil, carcinogens & E-numbers
+                  </Text>
+                  <View style={[styles.bannerActionBtn, styles.aiBannerActionBtn]}>
+                    <Text style={[styles.bannerActionText, styles.aiBannerActionText]}>
+                      Scan With Foodco AI  ➔
+                    </Text>
+                  </View>
+                </View>
+                <Image
+                  source={require('../../assets/fodai.png')}
+                  style={styles.bannerAiImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
+      </Animated.View>
 
       <UniversalPanel
         visible={profilePanelVisible}
@@ -553,11 +587,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         onClose={() => {
           setHistoryPageVisible(false);
           setActiveTab('home');
+          triggerHomeTransition();
         }}
         onTabPress={(tab) => {
           if (tab === 'home') {
             setHistoryPageVisible(false);
             setActiveTab('home');
+            triggerHomeTransition();
           } else if (tab === 'stats') {
             setHistoryPageVisible(false);
             setActiveTab('stats');
@@ -594,6 +630,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.bg,
+  },
+  mainContentWrapper: {
+    flex: 1,
   },
   navbarWrapper: {
     backgroundColor: theme.white,

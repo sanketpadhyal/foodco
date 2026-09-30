@@ -6,6 +6,8 @@ import {
   StyleSheet,
   FlatList,
   Image,
+  Animated,
+  Easing,
   Platform,
   StatusBar as RNStatusBar,
   Dimensions,
@@ -70,6 +72,10 @@ export default function HistoryPage({
   const [hasLoaded, setHasLoaded] = useState<boolean>(() => !!getMemoryHistory());
   const [refreshing, setRefreshing] = useState(false);
   const isFetchingRef = useRef(false);
+
+  const pageOpacity = useRef(new Animated.Value(0)).current;
+  const pageTranslateY = useRef(new Animated.Value(10)).current;
+  const isClosingRef = useRef(false);
 
   useEffect(() => {
     if (Platform.OS === 'android' && visible) {
@@ -136,6 +142,25 @@ export default function HistoryPage({
 
   useEffect(() => {
     if (visible) {
+      isClosingRef.current = false;
+      pageOpacity.setValue(0);
+      pageTranslateY.setValue(10);
+
+      Animated.parallel([
+        Animated.timing(pageOpacity, {
+          toValue: 1,
+          duration: 170,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pageTranslateY, {
+          toValue: 0,
+          duration: 170,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
       const cached = getMemoryHistory();
       if (cached) {
         setHistoryItems(cached);
@@ -152,43 +177,107 @@ export default function HistoryPage({
 
       return () => task.cancel();
     }
-  }, [visible, loadUserHistory]);
+  }, [visible, loadUserHistory, pageOpacity, pageTranslateY]);
+
+  const handleClose = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    Animated.parallel([
+      Animated.timing(pageOpacity, {
+        toValue: 0,
+        duration: 130,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(pageTranslateY, {
+        toValue: 8,
+        duration: 130,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  }, [onClose, pageOpacity, pageTranslateY]);
 
   useEffect(() => {
     if (!visible) return;
     const onBackPress = () => {
-      onClose();
+      handleClose();
       return true;
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [visible, onClose]);
+  }, [visible, handleClose]);
 
   const handleBottomTabPress = (tab: DashboardTab) => {
     if (tab === 'recipes') {
       return;
     }
-    if (onTabPress) {
-      onTabPress(tab);
-    } else if (tab === 'home') {
-      onClose();
-    }
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    Animated.parallel([
+      Animated.timing(pageOpacity, {
+        toValue: 0,
+        duration: 130,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(pageTranslateY, {
+        toValue: 8,
+        duration: 130,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (onTabPress) {
+        onTabPress(tab);
+      } else if (tab === 'home') {
+        onClose();
+      }
+    });
   };
 
   const handleScanPress = () => {
-    if (onScanPress) {
-      onScanPress();
-    } else {
-      onClose();
-    }
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    Animated.parallel([
+      Animated.timing(pageOpacity, {
+        toValue: 0,
+        duration: 130,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (onScanPress) {
+        onScanPress();
+      } else {
+        onClose();
+      }
+    });
   };
 
   const handleGithubPress = () => {
-    if (onGithubPress) {
-      onGithubPress();
-    } else {
-      onClose();
-    }
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    Animated.parallel([
+      Animated.timing(pageOpacity, {
+        toValue: 0,
+        duration: 130,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (onGithubPress) {
+        onGithubPress();
+      } else {
+        onClose();
+      }
+    });
   };
 
   if (!visible) return null;
@@ -248,8 +337,6 @@ export default function HistoryPage({
     );
   };
 
-  const displayName = user?.displayName?.trim() || user?.email?.split('@')[0] || 'Member';
-
   return (
     <View
       style={[
@@ -261,70 +348,81 @@ export default function HistoryPage({
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Top Navbar matching Dashboard */}
-      <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
-        <DashboardNavbar
-          user={user}
-          onProfilePress={onProfilePress}
-          onLogout={onLogout}
-        />
-      </View>
-
-      {/* Body */}
-      {loading && !hasLoaded ? (
-        <ProductGridSkeleton
-          count={6}
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingTop: 16,
-            paddingBottom: insets.bottom + 100,
-          }}
-        />
-      ) : historyItems.length === 0 && hasLoaded ? (
-        <View style={styles.centerContainer}>
-          <Image
-            source={EMPTY_404_ILLUSTRATION}
-            style={styles.emptyIllustration}
-            resizeMode="contain"
+      {/* Animated content area — only this fades/slides */}
+      <Animated.View
+        style={[
+          styles.animatedContent,
+          {
+            opacity: pageOpacity,
+            transform: [{ translateY: pageTranslateY }],
+          },
+        ]}
+      >
+        {/* Top Navbar matching Dashboard */}
+        <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
+          <DashboardNavbar
+            user={user}
+            onProfilePress={onProfilePress}
+            onLogout={onLogout}
           />
-          <Text style={styles.emptyTitle}>No Scans Found</Text>
-          <Text style={styles.emptySubtitle}>
-            You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyScanBtn}
-            activeOpacity={0.85}
-            onPress={handleScanPress}
-          >
-            <Ionicons name="barcode-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={styles.emptyScanBtnText}>Start Scanning</Text>
-          </TouchableOpacity>
         </View>
-      ) : (
-        <FlatList
-          data={historyItems}
-          keyExtractor={(item, index) => item.barcode ? `${item.barcode}_${index}` : `hist_${index}`}
-          renderItem={renderProductItem}
-          numColumns={2}
-          columnWrapperStyle={styles.columnWrapper}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-          showsVerticalScrollIndicator={false}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          removeClippedSubviews={Platform.OS === 'android'}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => loadUserHistory(true)}
-              tintColor="#FF6B35"
-              colors={['#FF6B35']}
-            />
-          }
-        />
-      )}
 
-      {/* Solid White Panel Behind Android System Navigation Buttons */}
+        {/* Body */}
+        {loading && !hasLoaded ? (
+          <ProductGridSkeleton
+            count={6}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingTop: 16,
+              paddingBottom: insets.bottom + 100,
+            }}
+          />
+        ) : historyItems.length === 0 && hasLoaded ? (
+          <View style={styles.centerContainer}>
+            <Image
+              source={EMPTY_404_ILLUSTRATION}
+              style={styles.emptyIllustration}
+              resizeMode="contain"
+            />
+            <Text style={styles.emptyTitle}>No Scans Found</Text>
+            <Text style={styles.emptySubtitle}>
+              You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyScanBtn}
+              activeOpacity={0.85}
+              onPress={handleScanPress}
+            >
+              <Ionicons name="barcode-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.emptyScanBtnText}>Start Scanning</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={historyItems}
+            keyExtractor={(item, index) => item.barcode ? `${item.barcode}_${index}` : `hist_${index}`}
+            renderItem={renderProductItem}
+            numColumns={2}
+            columnWrapperStyle={styles.columnWrapper}
+            contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+            showsVerticalScrollIndicator={false}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={Platform.OS === 'android'}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => loadUserHistory(true)}
+                tintColor="#FF6B35"
+                colors={['#FF6B35']}
+              />
+            }
+          />
+        )}
+      </Animated.View>
+
+      {/* Bottom bar & backdrop are OUTSIDE the Animated.View — always static */}
       <View
         style={[
           styles.bottomNavBackdrop,
@@ -347,6 +445,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  animatedContent: {
+    flex: 1,
   },
   navbarWrapper: {
     backgroundColor: '#FFFFFF',
