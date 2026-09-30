@@ -28,6 +28,7 @@ import {
   PaginatedProducts,
 } from './productService';
 import { ProductDetailPage } from '../product-detail';
+import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
@@ -331,10 +332,7 @@ export default function CategoryProductsPage({
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B35" />
-          <Text style={styles.loadingText}>Loading {category.title} products...</Text>
-        </View>
+        <ProductGridSkeleton count={6} />
       ) : products.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Image

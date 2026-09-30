@@ -28,6 +28,7 @@ import {
   PaginatedProducts,
 } from './productService';
 import { ProductDetailPage } from '../product-detail';
+import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
@@ -365,10 +366,7 @@ export default function SearchResultsPage({
       </View>
 
       {loading ? (
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color="#FF6B35" />
-          <Text style={styles.loadingText}>Searching verified items...</Text>
-        </View>
+        <ProductGridSkeleton count={6} contentContainerStyle={{ paddingHorizontal: 16 }} />
       ) : products.length === 0 && hasSearched ? (
         <View style={styles.centerState}>
           <View style={styles.emptyIconCircle}>

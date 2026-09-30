@@ -22,6 +22,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getStoredJwtToken } from '../auth-page/authService';
 import { getBackendBaseUrl } from '../../api/universalbackendapi';
 import { ScannedProduct } from './productService';
+import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
 
 const EMPTY_404_ILLUSTRATION = require('../../assets/page-found-concept-illustration_114360-1869 (1).png');
 
@@ -221,10 +222,7 @@ export default function HistoryPage({
 
           {/* Body */}
           {loading && !refreshing ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#FF6B35" />
-              <Text style={styles.loadingText}>Fetching scan history...</Text>
-            </View>
+            <ProductGridSkeleton count={6} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16 }} />
           ) : historyItems.length === 0 ? (
             <View style={styles.centerContainer}>
               <Image
