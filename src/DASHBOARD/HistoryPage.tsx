@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, memo } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import {
 import { DashboardNavbar, DashboardTab } from './components';
 
 const EMPTY_404_ILLUSTRATION = require('../../assets/page-found-concept-illustration_114360-1869 (1).png');
+const NOT_FOUND_IMG = require('../../assets/notfound.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
@@ -313,61 +314,6 @@ export default function HistoryPage({
 
   if (!visible) return null;
 
-  const renderProductItem = ({ item }: { item: ScannedProduct }) => {
-    const isBeauty = item.productType === 'beauty';
-    const scoreColor = item.verdictColor || (item.aiHealthRating >= 60 ? '#58B84F' : '#E8502A');
-
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.88}
-        onPress={() => onSelectProduct?.(item)}
-      >
-        <View style={styles.cardImageContainer}>
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.cardImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.cardPlaceholder}>
-              {isBeauty ? (
-                <Ionicons name="sparkles" size={34} color="#C0C5CE" />
-              ) : (
-                <MaterialCommunityIcons name="food-apple-outline" size={38} color="#C0C5CE" />
-              )}
-            </View>
-          )}
-
-          <View style={[styles.badgePill, { backgroundColor: scoreColor }]}>
-            <Text style={styles.badgeText}>{item.aiHealthRating ?? 75}/100</Text>
-          </View>
-        </View>
-
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardBrand} numberOfLines={1}>
-            {item.brand || 'Foodco Verified'}
-          </Text>
-          <Text style={styles.cardName} numberOfLines={2}>
-            {item.name}
-          </Text>
-
-          <View style={styles.cardMetaRow}>
-            <View style={styles.categoryPill}>
-              <Text style={styles.categoryPillText} numberOfLines={1}>
-                {item.category || (isBeauty ? 'Beauty' : 'Grocery')}
-              </Text>
-            </View>
-            <Text style={[styles.verdictMiniText, { color: scoreColor }]} numberOfLines={1}>
-              {item.verdict || 'Good Choice'}
-            </Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <Animated.View
       style={[
@@ -421,7 +367,12 @@ export default function HistoryPage({
           keyExtractor={(item, index) =>
             item.barcode ? `${item.barcode}_${index}` : `hist_${index}`
           }
-          renderItem={renderProductItem}
+          renderItem={({ item }) => (
+            <HistoryProductCard
+              item={item}
+              onSelectProduct={onSelectProduct}
+            />
+          )}
           numColumns={2}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
@@ -443,6 +394,61 @@ export default function HistoryPage({
     </Animated.View>
   );
 }
+
+const HistoryProductCard = memo(({
+  item,
+  onSelectProduct,
+}: {
+  item: ScannedProduct;
+  onSelectProduct?: (product: ScannedProduct) => void;
+}) => {
+  const [imageError, setImageError] = useState(false);
+  const isBeauty = item.productType === 'beauty';
+  const scoreColor = item.verdictColor || (item.aiHealthRating >= 60 ? '#58B84F' : '#E8502A');
+  const hasImage = Boolean(item.imageUrl) && !imageError;
+
+  return (
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.88}
+      onPress={() => onSelectProduct?.(item)}
+    >
+      <View style={styles.cardImageContainer}>
+        <Image
+          source={hasImage ? { uri: item.imageUrl } : NOT_FOUND_IMG}
+          style={styles.cardImage}
+          resizeMode="contain"
+          onError={() => setImageError(true)}
+          defaultSource={NOT_FOUND_IMG}
+        />
+
+        <View style={[styles.badgePill, { backgroundColor: scoreColor }]}>
+          <Text style={styles.badgeText}>{item.aiHealthRating ?? 75}/100</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardBrand} numberOfLines={1}>
+          {item.brand || 'Foodco Verified'}
+        </Text>
+        <Text style={styles.cardName} numberOfLines={2}>
+          {item.name}
+        </Text>
+
+        <View style={styles.cardMetaRow}>
+          <View style={styles.categoryPill}>
+            <Text style={styles.categoryPillText} numberOfLines={1}>
+              {item.category || (isBeauty ? 'Beauty' : 'Grocery')}
+            </Text>
+          </View>
+          <Text style={[styles.verdictMiniText, { color: scoreColor }]} numberOfLines={1}>
+            {item.verdict || 'Good Choice'}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 const styles = StyleSheet.create({
   container: {
