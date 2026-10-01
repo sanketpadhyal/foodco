@@ -56,117 +56,80 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
     <View style={styles.outerWrapper} pointerEvents="box-none">
 
       <View style={[styles.barContainer, { paddingBottom: bottomInset }]}>
-
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => handleTab('home')}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Home"
-        >
-          <View style={styles.iconSlot}>
-            <View style={styles.gridIconWrap}>
-              <View
-                style={[
-                  styles.gridBlock,
-                  { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
-                ]}
-              />
-              <View
-                style={[
-                  styles.gridBlock,
-                  { backgroundColor: activeTab === 'home' ? THEME.activeAccent : THEME.inactiveAccent },
-                ]}
-              />
-              <View
-                style={[
-                  styles.gridBlock,
-                  { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
-                ]}
-              />
-              <View
-                style={[
-                  styles.gridBlock,
-                  { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
-                ]}
-              />
+        <View style={styles.sideGroupLeft}>
+          <TouchableOpacity
+            style={styles.tabButton}
+            onPress={() => handleTab('home')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Home"
+          >
+            <View style={styles.iconSlot}>
+              <View style={styles.gridIconWrap}>
+                <View
+                  style={[
+                    styles.gridBlock,
+                    { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.gridBlock,
+                    { backgroundColor: activeTab === 'home' ? THEME.activeAccent : THEME.inactiveAccent },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.gridBlock,
+                    { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.gridBlock,
+                    { backgroundColor: activeTab === 'home' ? THEME.active : THEME.inactive },
+                  ]}
+                />
+              </View>
             </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => handleTab('stats')}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Stats"
-        >
-          <View style={styles.iconSlot}>
-            <View style={styles.chartIconWrap}>
-              <View
-                style={[
-                  styles.chartBar,
-                  {
-                    height: 12,
-                    backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.chartBar,
-                  {
-                    height: 20,
-                    backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.chartBar,
-                  {
-                    height: 15,
-                    backgroundColor: activeTab === 'stats' ? THEME.active : THEME.inactive,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.centerSpace} />
 
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => handleTab('recipes')}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Scan History"
-        >
-          <View style={styles.iconSlot}>
-            <Ionicons
-              name={activeTab === 'recipes' ? 'time' : 'time-outline'}
-              size={26}
-              color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
-            />
-          </View>
-        </TouchableOpacity>
+        <View style={styles.sideGroupRight}>
+          <TouchableOpacity
+            style={styles.tabButton}
+            onPress={() => handleTab('recipes')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Scan History"
+          >
+            <View style={styles.iconSlot}>
+              <Ionicons
+                name={activeTab === 'recipes' ? 'time' : 'time-outline'}
+                size={26}
+                color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
+              />
+            </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => handleTab('github')}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="GitHub Repository"
-        >
-          <View style={styles.iconSlot}>
-            <Ionicons
-              name="logo-github"
-              size={26}
-              color={activeTab === 'github' ? THEME.active : THEME.inactive}
-            />
-          </View>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabButton}
+            onPress={() => handleTab('github')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="GitHub Repository"
+          >
+            <View style={styles.iconSlot}>
+              <Ionicons
+                name="logo-github"
+                size={26}
+                color={activeTab === 'github' ? THEME.active : THEME.inactive}
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TouchableOpacity
@@ -242,17 +205,20 @@ const styles = StyleSheet.create({
     height: 9.8,
     borderRadius: 3.2,
   },
-  chartIconWrap: {
-    width: 22,
-    height: 22,
+  sideGroupLeft: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    gap: 3,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingLeft: 8,
   },
-  chartBar: {
-    width: 4.8,
-    borderRadius: 2.4,
+  sideGroupRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 24,
+    paddingRight: 8,
   },
   centerSpace: {
     width: 60,

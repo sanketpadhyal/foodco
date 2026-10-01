@@ -72,6 +72,8 @@ const PROD_KEY_PREFIX = '@foodco_prod_v2_';
 const CAT_KEY_PREFIX = '@foodco_cat_v2_';
 const SEARCH_KEY_PREFIX = '@foodco_search_v2_';
 
+const CATEGORY_LOCAL_DATA = require('./categoryProductsData.json');
+
 export async function getCachedProduct(barcode: string): Promise<ScannedProduct | null> {
   const cleanBarcode = barcode.trim();
   if (!cleanBarcode) return null;
@@ -228,9 +230,41 @@ export async function setCachedSearchResults(
 
 const getBackendBase = () => getBackendBaseUrl();
 
+export function isNonSupportedProduct(barcode: string, name?: string, category?: string): { isUnsupported: boolean; reason?: string } {
+  const cleanBarcode = barcode.replace(/[^0-9]/g, '');
+  // ISBN-13 book prefixes: 978 and 979
+  if ((cleanBarcode.length === 13 || cleanBarcode.length === 10) && (cleanBarcode.startsWith('978') || cleanBarcode.startsWith('979'))) {
+    return {
+      isUnsupported: true,
+      reason: 'This item appears to be a book (ISBN barcode). Foodco only supports food, beauty, perfume, chocolate, biscuit, and cold drink products.',
+    };
+  }
+
+  const combined = `${name || ''} ${category || ''}`.toLowerCase();
+  const nonSupportedRegex = /\b(book|books|novel|textbook|author|isbn|hardcover|paperback|magazine|comic|comics|stationery|notebook|pen|pencil|electronics|charger|cable|battery|phone|headphone|earphone|laptop|clothing|shirt|pants|dress|shoes|toy|toys|game|board game|furniture|hardware|tool|tools)\b/i;
+  if (nonSupportedRegex.test(combined)) {
+    return {
+      isUnsupported: true,
+      reason: 'This item is not supported. Foodco only supports food, beauty, perfume, chocolate, biscuit, and cold drink products.',
+    };
+  }
+
+  return { isUnsupported: false };
+}
+
+export function isAllowedCategory(category: string, name: string, productType?: string): boolean {
+  if (productType === 'beauty') return true;
+  const combined = `${category || ''} ${name || ''}`.toLowerCase();
+  const allowedRegex = /\b(food|grocery|groceries|snack|snacks|atta|flour|rice|dal|lentil|masala|spice|spices|curry|sauce|ketchup|pickle|chutney|oil|ghee|butter|paneer|cheese|milk|dairy|dairies|pasta|noodles|cereal|oats|muesli|bread|roti|biscuit|biscuits|cookie|cookies|wafer|wafers|cracker|crackers|rusk|toast|bourbon|chocolate|chocolates|choco|cacao|cocoa|candies|candy|sweets|drink|drinks|soda|sodas|cola|juice|juices|beverage|beverages|cold drink|water|tea|coffee|energy drink|lassi|beauty|cosmetic|cosmetics|skincare|skin care|haircare|hair care|shampoo|conditioner|soap|body wash|face wash|cleanser|moisturizer|lotion|cream|serum|sunscreen|spf|makeup|lipstick|lip balm|perfume|fragrance|deodorant|deo|eau de parfum|eau de toilette)\b/i;
+  return allowedRegex.test(combined);
+}
+
 export function isBeautyCategory(category: string, name: string): boolean {
   const combined = `${category || ''} ${name || ''}`.toLowerCase();
-  return /\b(beauty|cosmetic|cosmetics|skincare|skin care|haircare|hair care|shampoo|conditioner|soap|body wash|face wash|cleanser|moisturizer|lotion|cream|serum|sunscreen|sunblock|spf|makeup|lipstick|lip balm|mascara|eyeliner|foundation|deodorant|perfume|fragrance|eau de parfum|eau de toilette|nail polish|hair oil|shaving|aftershave|toothpaste|mouthwash|hygiene|personal care)\b/i.test(combined);
+  if (/\b(biscuit|biscuits|cookie|cookies|cracker|chocolate|chocolates|choco|wafer|snack|chips|noodles|rice|atta|flour|dal|paneer|butter|ghee|cheese|ice cream|tea|coffee|juice|soda|drink|cola)\b/i.test(combined)) {
+    return false;
+  }
+  return /\b(beauty|cosmetic|cosmetics|skincare|skin care|haircare|hair care|shampoo|conditioner|soap|body wash|face wash|cleanser|moisturizer|lotion|face cream|eye cream|night cream|day cream|hand cream|serum|sunscreen|sunblock|spf|makeup|lipstick|lip balm|mascara|eyeliner|foundation|deodorant|perfume|fragrance|eau de parfum|eau de toilette|nail polish|hair oil|shaving|aftershave|toothpaste|mouthwash|hygiene|personal care)\b/i.test(combined);
 }
 
 const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
@@ -776,6 +810,12 @@ export function parseBeautyIngredients(rawIngredients: string) {
 export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: boolean = false): Promise<ScannedProduct> {
   const barcode = barcodeRaw.trim();
 
+  // 1. Immediately validate if barcode is an ISBN book or unsupported product
+  const earlyCheck = isNonSupportedProduct(barcode);
+  if (earlyCheck.isUnsupported) {
+    throw new Error(earlyCheck.reason);
+  }
+
   if (!forceRefresh) {
     const cached = await getCachedProduct(barcode);
     if (cached) {
@@ -783,6 +823,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     }
   }
 
+  // 2. Check Curated Products
   if (CURATED_PRODUCTS[barcode]) {
     const cur = CURATED_PRODUCTS[barcode];
     const nutri = (cur.nutriScore || 'C') as ScannedProduct['nutriScore'];
@@ -821,6 +862,44 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     return curatedProduct;
   }
 
+  // 3. Check verified local database catalog (categoryProductsData)
+  for (const catKey of Object.keys(CATEGORY_LOCAL_DATA)) {
+    const list = (CATEGORY_LOCAL_DATA as Record<string, any[]>)[catKey] || [];
+    const found = list.find((p: any) => p.barcode === barcode);
+    if (found) {
+      const isBeauty = found.productType === 'beauty' || isBeautyCategory(found.category || '', found.name || '');
+      const validNutriScores = ['A', 'B', 'C', 'D', 'E'];
+      const scoreCandidate = (found.nutriScore || 'C').toString().toUpperCase();
+      const safeNutriScore: ScannedProduct['nutriScore'] = validNutriScores.includes(scoreCandidate)
+        ? (scoreCandidate as ScannedProduct['nutriScore'])
+        : 'C';
+      const m = found.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 };
+
+      const localProduct: ScannedProduct = {
+        barcode,
+        name: found.name,
+        brand: found.brand,
+        category: found.category,
+        imageUrl: found.imageUrl,
+        productType: isBeauty ? 'beauty' : 'food',
+        nutriScore: safeNutriScore,
+        novaGroup: found.novaGroup || (isBeauty ? 1 : 3),
+        aiHealthRating: typeof found.aiHealthRating === 'number' ? found.aiHealthRating : 75,
+        verdict: found.verdict || 'Good Choice',
+        verdictColor: found.verdictColor || '#58B84F',
+        metrics: isBeauty ? { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 } : m,
+        additives: Array.isArray(found.additives) ? found.additives : [],
+        hasPalmOil: Boolean(found.hasPalmOil),
+        isUltraProcessed: Boolean(found.isUltraProcessed),
+        ingredientsSummary: found.ingredientsSummary,
+        insight: found.insight,
+        formulationProfile: found.formulationProfile || null,
+      };
+      await setCachedProductFromScan(barcode, localProduct);
+      return localProduct;
+    }
+  }
+
   try {
     const jwt = await getStoredJwtToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -837,6 +916,14 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       const backendJson = await backendRes.json();
       if (backendJson.success && backendJson.product) {
         const prod = backendJson.product;
+        const unsup = isNonSupportedProduct(barcode, prod.product_name || prod.name, prod.category);
+        if (unsup.isUnsupported) {
+          throw new Error(unsup.reason);
+        }
+        if (!isAllowedCategory(prod.category || '', prod.product_name || prod.name || '', prod.productType)) {
+          throw new Error('This item is not a supported food, drink, or beauty product.');
+        }
+
         const isBeauty = prod.productType === 'beauty' || isBeautyCategory(prod.category || '', prod.product_name || prod.name || '');
         const validNutriScores = ['A', 'B', 'C', 'D', 'E'];
         const scoreCandidate = (prod.nutriScore || prod.nutriscore_grade || 'C').toString().toUpperCase();
@@ -914,6 +1001,17 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       const data = await offRes.json();
       if (data.status === 1 && data.product) {
         const p = data.product;
+        const name = p.product_name || p.product_name_en || '';
+        const cat = p.categories || '';
+
+        const unsup = isNonSupportedProduct(barcode, name, cat);
+        if (unsup.isUnsupported) {
+          throw new Error(unsup.reason);
+        }
+        if (!isAllowedCategory(cat, name, 'food')) {
+          throw new Error('This item is not a supported food, drink, or beauty product.');
+        }
+
         const gradeRaw = (p.nutriscore_grade || 'c').toUpperCase();
         const nutriScore: ScannedProduct['nutriScore'] = ['A', 'B', 'C', 'D', 'E'].includes(gradeRaw)
           ? (gradeRaw as ScannedProduct['nutriScore'])
@@ -948,9 +1046,9 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
 
         const offProduct: ScannedProduct = {
           barcode,
-          name: p.product_name || p.product_name_en || 'Packaged Mart Item',
+          name: name || 'Packaged Mart Item',
           brand: p.brands || 'Mart Brand',
-          category: p.categories?.split(',')[0] || 'Packaged Food',
+          category: cat.split(',')[0] || 'Packaged Food',
           imageUrl: p.image_url || p.image_front_url || p.image_small_url,
           productType: 'food',
           nutriScore,
@@ -977,8 +1075,10 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
         return offProduct;
       }
     }
-  } catch (_) {
-
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('Foodco only supports') || err.message.includes('not a supported'))) {
+      throw err;
+    }
   }
 
   try {
@@ -989,14 +1089,25 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
       const data = await obfRes.json();
       if (data.status === 1 && data.product) {
         const p = data.product;
+        const name = p.product_name || p.product_name_en || '';
+        const cat = p.categories || '';
+
+        const unsup = isNonSupportedProduct(barcode, name, cat);
+        if (unsup.isUnsupported) {
+          throw new Error(unsup.reason);
+        }
+        if (!isAllowedCategory(cat, name, 'beauty')) {
+          throw new Error('This item is not a supported food, drink, or beauty product.');
+        }
+
         const ingredientsText: string = p.ingredients_text || p.ingredients_text_en || '';
         const beautyEval = parseBeautyIngredients(ingredientsText);
 
         const obfProduct: ScannedProduct = {
           barcode,
-          name: p.product_name || p.product_name_en || 'Cosmetic / Personal Care Item',
+          name: name || 'Cosmetic / Personal Care Item',
           brand: p.brands || 'Personal Care Brand',
-          category: p.categories?.split(',')[0] || 'Beauty & Cosmetics',
+          category: cat.split(',')[0] || 'Beauty & Cosmetics',
           imageUrl: p.image_url || p.image_front_url || p.image_small_url,
           productType: 'beauty',
           nutriScore: beautyEval.grade,
@@ -1024,95 +1135,14 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
         return obfProduct;
       }
     }
-  } catch (_) {
-
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('Foodco only supports') || err.message.includes('not a supported'))) {
+      throw err;
+    }
   }
 
-  const lastDigit = parseInt(barcode.slice(-1) || '5', 10);
-  const isBeauty = lastDigit % 4 === 0;
-
-  if (isBeauty) {
-    const estBeauty: ScannedProduct = {
-      barcode,
-      name: `Beauty Formulation #${barcode.slice(-6)}`,
-      brand: 'Botanical Care Selection',
-      category: 'Cosmetics & Personal Care',
-      imageUrl: 'https://images.openbeautyfacts.org/images/products/400/580/881/1120/front_en.18.400.jpg',
-      productType: 'beauty',
-      nutriScore: 'A',
-      novaGroup: 1,
-      aiHealthRating: 84,
-      verdict: 'Clean & Safe',
-      verdictColor: '#10B981',
-      metrics: {
-        calories: 0,
-        carbs: 0,
-        sugars: 0,
-        fat: 0,
-        saturatedFat: 0,
-        protein: 0,
-        fiber: 0,
-        salt: 0,
-      },
-      additives: ['Plant Glycerin', 'Vitamin E'],
-      hasPalmOil: false,
-      isUltraProcessed: false,
-      ingredientsSummary: 'Aqua, Glycerin, Niacinamide, Tocopherol, Natural Plant Extracts, Gentle Stabilizers.',
-      formulationProfile: {
-        activePct: 65,
-        emollientPct: 22,
-        stabilizerPct: 13,
-        isParabenFree: true,
-        isSulfateFree: true,
-        isSiliconeFree: true,
-        isFragranceFree: true,
-        highRiskCount: 0,
-        moderateRiskCount: 0,
-        activesCount: 2,
-        detectedActives: [
-          { name: 'Niacinamide', benefit: 'Skin Barrier Shield' },
-          { name: 'Glycerin', benefit: 'Biomimetic Humectant' },
-        ],
-      }
-    };
-    await setCachedProductFromScan(barcode, estBeauty);
-    return estBeauty;
-  }
-
-  const grades: ScannedProduct['nutriScore'][] = ['B', 'C', 'D', 'C', 'B', 'D', 'C', 'A', 'E', 'B'];
-  const nutriScore = grades[lastDigit % grades.length];
-  const nova = (lastDigit % 3) + 2;
-  const analysis = calculateAiHealthScore(nutriScore, nova, 14, 4.2, false, 2);
-
-  const fallbackProduct: ScannedProduct = {
-    barcode,
-    name: `Mart Product #${barcode.slice(-6)}`,
-    brand: 'Supermarket Selection',
-    category: 'Packaged Mart Item',
-    imageUrl: 'https://images.openfoodfacts.org/images/products/301/762/042/2003/front_en.514.400.jpg',
-    productType: 'food',
-    nutriScore,
-    novaGroup: nova,
-    aiHealthRating: analysis.score,
-    verdict: analysis.verdict,
-    verdictColor: analysis.color,
-    metrics: {
-      calories: 310 + (lastDigit * 15),
-      carbs: 42.0,
-      sugars: 12.5,
-      fat: 11.2,
-      saturatedFat: 3.8,
-      protein: 7.2,
-      fiber: 3.1,
-      salt: 0.85,
-    },
-    additives: ['E322 (Emulsifier)', 'E330 (Citric Acid)'],
-    hasPalmOil: false,
-    isUltraProcessed: nova === 4,
-    ingredientsSummary: 'Grains, plant oils, mineral salts, natural flavorings and emulsifiers.',
-  };
-  await setCachedProductFromScan(barcode, fallbackProduct);
-  return fallbackProduct;
+  // Not found in database or verified external registers — NEVER show fake ratings or fake products
+  throw new Error('Product not found in database. This barcode is not in our verified food, drink, or beauty records.');
 }
 
 export async function fetchRandomProductFromDatabase(): Promise<string | null> {
@@ -1137,8 +1167,6 @@ export async function fetchRandomProductFromDatabase(): Promise<string | null> {
   } catch (_) {}
   return null;
 }
-
-const CATEGORY_LOCAL_DATA = require('./categoryProductsData.json');
 
 export async function fetchProductsByCategory(
   categoryKey: string,
@@ -1428,3 +1456,70 @@ export async function searchAllProducts(
   };
   return fallbackResult;
 }
+
+export async function fetchTopRatedProducts(
+  categoryKey: string = 'all',
+  search: string = '',
+  limit: number = 60
+): Promise<ScannedProduct[]> {
+  const normCategory = categoryKey.toLowerCase().trim();
+  const searchLower = search.toLowerCase().trim();
+
+  let allItems: ScannedProduct[] = [];
+  const localData = CATEGORY_LOCAL_DATA as Record<string, any[]>;
+
+  if (normCategory === 'all') {
+    Object.keys(localData).forEach(cat => {
+      const items = localData[cat] || [];
+      items.forEach(p => {
+        allItems.push({
+          ...p,
+          productType: p.productType || (cat === 'beauty' || cat === 'perfume' ? 'beauty' : 'food'),
+          nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
+          verdict: p.verdict || 'Good Choice',
+          aiHealthRating: typeof p.aiHealthRating === 'number' ? p.aiHealthRating : 50,
+          metrics: p.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+          additives: p.additives || [],
+          hasPalmOil: Boolean(p.hasPalmOil),
+          isUltraProcessed: Boolean(p.isUltraProcessed),
+        });
+      });
+    });
+  } else {
+    const items = localData[normCategory] || [];
+    items.forEach(p => {
+      allItems.push({
+        ...p,
+        productType: p.productType || (normCategory === 'beauty' || normCategory === 'perfume' ? 'beauty' : 'food'),
+        nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
+        verdict: p.verdict || 'Good Choice',
+        aiHealthRating: typeof p.aiHealthRating === 'number' ? p.aiHealthRating : 50,
+        metrics: p.metrics || { calories: 0, carbs: 0, sugars: 0, fat: 0, saturatedFat: 0, protein: 0, fiber: 0, salt: 0 },
+        additives: p.additives || [],
+        hasPalmOil: Boolean(p.hasPalmOil),
+        isUltraProcessed: Boolean(p.isUltraProcessed),
+      });
+    });
+  }
+
+  const seenBarcodes = new Set<string>();
+  let deduped = allItems.filter(p => {
+    if (!p.barcode || seenBarcodes.has(p.barcode)) return false;
+    seenBarcodes.add(p.barcode);
+    return true;
+  });
+
+  if (searchLower) {
+    deduped = deduped.filter(p =>
+      (p.name && p.name.toLowerCase().includes(searchLower)) ||
+      (p.brand && p.brand.toLowerCase().includes(searchLower)) ||
+      (p.category && p.category.toLowerCase().includes(searchLower)) ||
+      (p.ingredientsSummary && p.ingredientsSummary.toLowerCase().includes(searchLower))
+    );
+  }
+
+  deduped.sort((a, b) => (b.aiHealthRating || 0) - (a.aiHealthRating || 0));
+
+  return deduped.slice(0, limit);
+}
+

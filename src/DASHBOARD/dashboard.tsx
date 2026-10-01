@@ -152,10 +152,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     if (tab === 'home') {
       setActiveTab('home');
       triggerHomeTransition();
-    } else if (tab === 'stats') {
-      setFutureUpdateTitle('Insights & Health Analytics');
-      setFutureUpdatePanelVisible(true);
     } else if (tab === 'recipes') {
+      setActiveTab('recipes');
       setHistoryPageVisible(true);
     } else if (tab === 'scan') {
       setScannerPageVisible(true);
@@ -594,11 +592,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             setHistoryPageVisible(false);
             setActiveTab('home');
             triggerHomeTransition();
-          } else if (tab === 'stats') {
-            setHistoryPageVisible(false);
-            setActiveTab('stats');
-            setFutureUpdateTitle('Insights & Health Analytics');
-            setFutureUpdatePanelVisible(true);
           } else if (tab === 'scan') {
             setHistoryPageVisible(false);
             setScannerPageVisible(true);

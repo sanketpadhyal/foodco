@@ -1,4 +1,4 @@
-export const PRIMARY_HOST = 'foodco.heymimi.app';
+export const PRIMARY_HOST = 'database.heymimi.app';
 export const FALLBACK_HOST = 'database.heymimi.app';
 
 export const PRIMARY_BASE_URL = `https://${PRIMARY_HOST}/api`;

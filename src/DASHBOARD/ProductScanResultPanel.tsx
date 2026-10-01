@@ -100,7 +100,8 @@ export default function ProductScanResultPanel({
       actions={
         loading
           ? []
-          : [
+          : product
+          ? [
               {
                 label: 'Get More Info',
                 variant: 'secondary',
@@ -125,6 +126,18 @@ export default function ProductScanResultPanel({
               },
               {
                 label: 'Done',
+                variant: 'blue',
+                onPress: onClose,
+              },
+            ]
+          : [
+              {
+                label: 'Scan Another',
+                variant: 'secondary',
+                onPress: onScanAnother,
+              },
+              {
+                label: 'Close',
                 variant: 'blue',
                 onPress: onClose,
               },
