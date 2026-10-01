@@ -298,7 +298,7 @@ export default function SearchResultsPage({
         styles.container,
         StyleSheet.absoluteFill,
         {
-          zIndex: 999,
+          zIndex: 1006,
           opacity: popupOpacity,
           transform: [
             { scale: popupScale },

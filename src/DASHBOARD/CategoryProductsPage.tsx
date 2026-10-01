@@ -273,7 +273,7 @@ export default function CategoryProductsPage({
         styles.container,
         StyleSheet.absoluteFill,
         {
-          zIndex: 998,
+          zIndex: 1005,
           opacity: popupOpacity,
           transform: [
             { scale: popupScale },
