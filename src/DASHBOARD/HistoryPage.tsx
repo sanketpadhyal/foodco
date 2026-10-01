@@ -26,7 +26,7 @@ import {
   getMemoryHistory,
   setMemoryHistory,
 } from './productService';
-import { DashboardNavbar, DashboardBottomBar, DashboardTab } from './components';
+import { DashboardNavbar, DashboardTab } from './components';
 
 const EMPTY_404_ILLUSTRATION = require('../../assets/page-found-concept-illustration_114360-1869 (1).png');
 
@@ -369,83 +369,78 @@ export default function HistoryPage({
   };
 
   return (
-    <View style={[styles.container, StyleSheet.absoluteFill, { zIndex: 995 }]}>
+    <Animated.View
+      style={[
+        styles.container,
+        StyleSheet.absoluteFill,
+        {
+          zIndex: 995,
+          opacity: pageOpacity,
+          transform: [{ translateY: pageTranslateY }],
+        },
+      ]}
+    >
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Only the content animates — bottom bar stays static */}
-      <Animated.View
-        style={[
-          styles.animatedContent,
-          { opacity: pageOpacity, transform: [{ translateY: pageTranslateY }] },
-        ]}
-      >
-        {/* Navbar */}
-        <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
-          <DashboardNavbar
-            user={user}
-            onProfilePress={onProfilePress}
-            onLogout={onLogout}
+      {/* Navbar */}
+      <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
+        <DashboardNavbar
+          user={user}
+          onProfilePress={onProfilePress}
+          onLogout={onLogout}
+        />
+      </View>
+
+      {/* Page heading — same theme as Dashboard */}
+      <View style={styles.headingContainer}>
+        <Text style={styles.headingLabel}>Your Scans</Text>
+        <Text style={styles.headingTitle}>History</Text>
+      </View>
+
+      {/* Body — exactly ONE phase is visible at a time, zero flicker */}
+      {phase === 'loading' ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#FF6B35" />
+        </View>
+      ) : phase === 'empty' ? (
+        <View style={styles.centerContainer}>
+          <Image
+            source={EMPTY_404_ILLUSTRATION}
+            style={styles.emptyIllustration}
+            resizeMode="contain"
           />
+          <Text style={styles.emptyTitle}>No Scans Found</Text>
+          <Text style={styles.emptySubtitle}>
+            You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
+          </Text>
         </View>
-
-        {/* Page heading — same theme as Dashboard */}
-        <View style={styles.headingContainer}>
-          <Text style={styles.headingLabel}>Your Scans</Text>
-          <Text style={styles.headingTitle}>History</Text>
-        </View>
-
-        {/* Body — exactly ONE phase is visible at a time, zero flicker */}
-        {phase === 'loading' ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#FF6B35" />
-          </View>
-        ) : phase === 'empty' ? (
-          <View style={styles.centerContainer}>
-            <Image
-              source={EMPTY_404_ILLUSTRATION}
-              style={styles.emptyIllustration}
-              resizeMode="contain"
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item, index) =>
+            item.barcode ? `${item.barcode}_${index}` : `hist_${index}`
+          }
+          renderItem={renderProductItem}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadUserHistory(true)}
+              tintColor="#FF6B35"
+              colors={['#FF6B35']}
             />
-            <Text style={styles.emptyTitle}>No Scans Found</Text>
-            <Text style={styles.emptySubtitle}>
-              You haven't scanned any products yet. Scan food, drink, or skincare barcodes to see your history logged here.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={items}
-            keyExtractor={(item, index) =>
-              item.barcode ? `${item.barcode}_${index}` : `hist_${index}`
-            }
-            renderItem={renderProductItem}
-            numColumns={2}
-            columnWrapperStyle={styles.columnWrapper}
-            contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-            showsVerticalScrollIndicator={false}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
-            removeClippedSubviews={Platform.OS === 'android'}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => loadUserHistory(true)}
-                tintColor="#FF6B35"
-                colors={['#FF6B35']}
-              />
-            }
-          />
-        )}
-      </Animated.View>
-
-      {/* Bottom bar — always static, never animated */}
-      <DashboardBottomBar
-        activeTab={bottomTab}
-        onTabPress={handleBottomTabPress}
-        onScanPress={handleScanPress}
-      />
-    </View>
+          }
+        />
+      )}
+    </Animated.View>
   );
 }
 

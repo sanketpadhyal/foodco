@@ -151,6 +151,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const handleTabPress = (tab: DashboardTab) => {
     if (tab === 'home') {
       setActiveTab('home');
+      setHistoryPageVisible(false);
       triggerHomeTransition();
     } else if (tab === 'recipes') {
       setActiveTab('recipes');
@@ -505,13 +506,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </View>
       </UniversalPanel>
 
-      <DashboardBottomBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        onScanPress={() => setScannerPageVisible(true)}
-        onGithubPress={() => setGithubPanelVisible(true)}
-      />
-
       <UniversalPanel
         visible={futureUpdatePanelVisible}
         title={futureUpdateTitle}
@@ -587,33 +581,20 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           setActiveTab('home');
           triggerHomeTransition();
         }}
-        onTabPress={(tab) => {
-          if (tab === 'home') {
-            setHistoryPageVisible(false);
-            setActiveTab('home');
-            triggerHomeTransition();
-          } else if (tab === 'scan') {
-            setHistoryPageVisible(false);
-            setScannerPageVisible(true);
-          } else if (tab === 'github') {
-            setHistoryPageVisible(false);
-            setGithubPanelVisible(true);
-          }
-        }}
-        onScanPress={() => {
-          setHistoryPageVisible(false);
-          setScannerPageVisible(true);
-        }}
-        onGithubPress={() => {
-          setHistoryPageVisible(false);
-          setGithubPanelVisible(true);
-        }}
         onSelectProduct={(product) => {
           setSelectedDetailProduct(product);
           setProductDetailVisible(true);
         }}
         onProfilePress={() => setProfilePanelVisible(true)}
         onLogout={onLogout}
+      />
+
+      {/* Unified, single persistent bottom bar — 100% stationary across Dashboard and History */}
+      <DashboardBottomBar
+        activeTab={historyPageVisible ? 'recipes' : activeTab}
+        onTabPress={handleTabPress}
+        onScanPress={() => setScannerPageVisible(true)}
+        onGithubPress={() => setGithubPanelVisible(true)}
       />
     </Animated.View>
   );
