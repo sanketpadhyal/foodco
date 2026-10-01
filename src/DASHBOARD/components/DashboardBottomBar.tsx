@@ -19,7 +19,6 @@ export interface DashboardBottomBarProps {
 }
 
 const scannerBtnSource = require('../../../assets/orange-scanner-btn.png');
-const fodaiSource = require('../../../assets/fodai.png');
 
 const THEME = {
   active: '#FF6B35',
@@ -103,29 +102,13 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
             onPress={() => handleTab('recipes')}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Scan History"
+            accessibilityLabel="Recent Scans"
           >
             <View style={styles.iconSlot}>
               <Ionicons
                 name={activeTab === 'recipes' ? 'time' : 'time-outline'}
                 size={26}
                 color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
-              />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tabButton}
-            onPress={() => handleTab('github')}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="GitHub Repository"
-          >
-            <View style={styles.iconSlot}>
-              <Ionicons
-                name="logo-github"
-                size={26}
-                color={activeTab === 'github' ? THEME.active : THEME.inactive}
               />
             </View>
           </TouchableOpacity>
@@ -209,16 +192,13 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingLeft: 8,
+    justifyContent: 'center',
   },
   sideGroupRight: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 24,
-    paddingRight: 8,
+    justifyContent: 'center',
   },
   centerSpace: {
     width: 60,
@@ -241,15 +221,5 @@ const styles = StyleSheet.create({
   scannerImage: {
     width: 60,
     height: 60,
-  },
-  aiIconSlot: {
-    width: 30,
-    height: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fodaiImage: {
-    width: 20,
-    height: 31,
   },
 });
