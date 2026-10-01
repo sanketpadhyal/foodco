@@ -314,10 +314,42 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     }
   };
 
+  const pendingBarcodeRef = useRef<string>('');
+  const matchCountRef = useRef<number>(0);
+  const resetTimerRef = useRef<any>(null);
+
   const handleBarcodeScanned = (result: { type: string; data: string }) => {
     if (resultVisible || fetchingProduct || isCooldownRef.current) return;
-    if (result && result.data) {
-      processBarcode(result.data);
+    if (!result || !result.data) return;
+
+    const scannedData = result.data.trim();
+    if (!scannedData) return;
+
+    // Multi-reading consensus verification: Require 3 consistent readings
+    if (pendingBarcodeRef.current === scannedData) {
+      matchCountRef.current += 1;
+    } else {
+      pendingBarcodeRef.current = scannedData;
+      matchCountRef.current = 1;
+    }
+
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+    }
+    // If scanning stops or moves away for >1200ms, reset counter
+    resetTimerRef.current = setTimeout(() => {
+      pendingBarcodeRef.current = '';
+      matchCountRef.current = 0;
+    }, 1200);
+
+    if (matchCountRef.current >= 3) {
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+        resetTimerRef.current = null;
+      }
+      pendingBarcodeRef.current = '';
+      matchCountRef.current = 0;
+      processBarcode(scannedData);
     }
   };
 
