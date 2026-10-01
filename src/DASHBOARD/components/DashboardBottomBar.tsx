@@ -7,7 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export type DashboardTab = 'home' | 'stats' | 'scan' | 'recipes' | 'ai' | 'cart' | 'github';
 
@@ -105,9 +105,9 @@ export const DashboardBottomBar: React.FC<DashboardBottomBarProps> = memo(({
             accessibilityLabel="Recent Scans"
           >
             <View style={styles.iconSlot}>
-              <Ionicons
-                name={activeTab === 'recipes' ? 'time' : 'time-outline'}
-                size={26}
+              <MaterialCommunityIcons
+                name="history"
+                size={27}
                 color={activeTab === 'recipes' ? THEME.active : THEME.inactive}
               />
             </View>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useReducer } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import {
   View,
   Text,
@@ -123,6 +123,7 @@ export default function HistoryPage({
 
   const [state, dispatch] = useReducer(historyReducer, undefined, initState);
   const { items, phase, refreshing } = state;
+  const [bottomTab, setBottomTab] = useState<DashboardTab>('recipes');
 
   const pageOpacity = useRef(new Animated.Value(0)).current;
   const pageTranslateY = useRef(new Animated.Value(10)).current;
@@ -188,6 +189,7 @@ export default function HistoryPage({
   useEffect(() => {
     if (!visible) return;
 
+    setBottomTab('recipes');
     isClosingRef.current = false;
     pageOpacity.setValue(0);
     pageTranslateY.setValue(10);
@@ -229,6 +231,7 @@ export default function HistoryPage({
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
+    setBottomTab('home');
 
     Animated.parallel([
       Animated.timing(pageOpacity, {
@@ -259,6 +262,7 @@ export default function HistoryPage({
     if (tab === 'recipes') return;
     if (isClosingRef.current) return;
     isClosingRef.current = true;
+    setBottomTab(tab);
 
     Animated.parallel([
       Animated.timing(pageOpacity, {
@@ -435,16 +439,11 @@ export default function HistoryPage({
         )}
       </Animated.View>
 
-      {/* Bottom bar & backdrop — always static, never animated */}
-      <View
-        style={[styles.bottomNavBackdrop, { height: insets.bottom > 0 ? insets.bottom : 0 }]}
-        pointerEvents="none"
-      />
+      {/* Bottom bar — always static, never animated */}
       <DashboardBottomBar
-        activeTab="recipes"
+        activeTab={bottomTab}
         onTabPress={handleBottomTabPress}
         onScanPress={handleScanPress}
-        onGithubPress={handleGithubPress}
       />
     </View>
   );
@@ -624,15 +623,5 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '800',
     maxWidth: '42%',
-  },
-  bottomNavBackdrop: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F2F5',
-    zIndex: 99,
   },
 });
