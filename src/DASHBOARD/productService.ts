@@ -684,43 +684,195 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
   },
 };
 
-function calculateAiHealthScore(
-  nutriScore: 'A' | 'B' | 'C' | 'D' | 'E',
-  novaGroup?: number,
-  sugars: number = 0,
-  saturatedFat: number = 0,
+// ─── Nutri-Score 2023 negative-point tables ─────────────────────────────────
+
+function _nutriNegEnergy(kcal: number, isBev: boolean): number {
+  if (isBev) {
+    if (kcal <= 0) return 0; if (kcal <= 30) return 1; if (kcal <= 60) return 2;
+    if (kcal <= 90) return 3; if (kcal <= 120) return 4; if (kcal <= 150) return 5;
+    if (kcal <= 180) return 6; if (kcal <= 210) return 7; if (kcal <= 240) return 8;
+    if (kcal <= 270) return 9; return 10;
+  }
+  if (kcal <= 335) return 0; if (kcal <= 670) return 1; if (kcal <= 1005) return 2;
+  if (kcal <= 1340) return 3; if (kcal <= 1675) return 4; if (kcal <= 2010) return 5;
+  if (kcal <= 2345) return 6; if (kcal <= 2680) return 7; if (kcal <= 3015) return 8;
+  if (kcal <= 3350) return 9; return 10;
+}
+
+function _nutriNegSugars(g: number, isBev: boolean): number {
+  if (isBev) {
+    if (g <= 0) return 0; if (g <= 1.5) return 1; if (g <= 3) return 2;
+    if (g <= 4.5) return 3; if (g <= 6) return 4; if (g <= 7.5) return 5;
+    if (g <= 9) return 6; if (g <= 10.5) return 7; if (g <= 12) return 8;
+    if (g <= 13.5) return 9; return 10;
+  }
+  if (g <= 4.5) return 0; if (g <= 9) return 1; if (g <= 13.5) return 2;
+  if (g <= 18) return 3; if (g <= 22.5) return 4; if (g <= 27) return 5;
+  if (g <= 31) return 6; if (g <= 36) return 7; if (g <= 40) return 8;
+  if (g <= 45) return 9; return 10;
+}
+
+function _nutriNegSatFat(g: number): number {
+  if (g <= 1) return 0; if (g <= 2) return 1; if (g <= 3) return 2;
+  if (g <= 4) return 3; if (g <= 5) return 4; if (g <= 6) return 5;
+  if (g <= 7) return 6; if (g <= 8) return 7; if (g <= 9) return 8;
+  if (g <= 10) return 9; return 10;
+}
+
+function _nutriNegSodium(mgSodium: number): number {
+  const s = mgSodium;
+  if (s <= 90) return 0; if (s <= 180) return 1; if (s <= 270) return 2;
+  if (s <= 360) return 3; if (s <= 450) return 4; if (s <= 540) return 5;
+  if (s <= 630) return 6; if (s <= 720) return 7; if (s <= 810) return 8;
+  if (s <= 900) return 9; return 10;
+}
+
+function _nutriPosFiber(g: number): number {
+  if (g <= 0.9) return 0; if (g <= 1.9) return 1; if (g <= 2.8) return 2;
+  if (g <= 3.7) return 3; if (g <= 4.7) return 4; return 5;
+}
+
+function _nutriPosProtein(g: number): number {
+  if (g <= 1.6) return 0; if (g <= 3.2) return 1; if (g <= 4.8) return 2;
+  if (g <= 6.4) return 3; if (g <= 8.0) return 4; return 5;
+}
+
+function _nutriGradeFood(pts: number): 'A' | 'B' | 'C' | 'D' | 'E' {
+  if (pts <= -1) return 'A';
+  if (pts <= 2)  return 'B';
+  if (pts <= 10) return 'C';
+  if (pts <= 18) return 'D';
+  return 'E';
+}
+
+function _nutriGradeBev(pts: number): 'A' | 'B' | 'C' | 'D' | 'E' {
+  if (pts <= 1)  return 'A';
+  if (pts <= 5)  return 'B';
+  if (pts <= 9)  return 'C';
+  if (pts <= 12) return 'D';
+  return 'E';
+}
+
+// ─── Public types ──────────────────────────────────────────────────────────
+
+export interface NutrientInput {
+  calories: number | null;
+  sugars: number | null;
+  saturatedFat: number | null;
+  salt: number | null;
+  fiber: number | null;
+  protein: number | null;
+  isBeverage?: boolean;
+  isSugaryDrink?: boolean;
+  isJuice?: boolean;
+  is100PctJuice?: boolean;
+}
+
+export interface HealthRatingResult {
+  score: number;
+  nutriScoreGrade: 'A' | 'B' | 'C' | 'D' | 'E';
+  verdict: ScannedProduct['verdict'];
+  color: string;
+  insufficientData: boolean;
+}
+
+// ─── Main exported scorer — used by tests and OFQ path ────────────────────
+
+export function computeHealthRating(
+  nutrients: NutrientInput,
+  novaGroup: number = 3,
   hasPalmOil: boolean = false,
-  additivesCount: number = 0
+  additives: string[] = []
+): HealthRatingResult {
+  const { calories, sugars, saturatedFat, salt, fiber, protein,
+          isBeverage, isSugaryDrink, isJuice, is100PctJuice } = nutrients;
+
+  const keysMissing = calories === null || sugars === null || saturatedFat === null;
+  if (keysMissing) {
+    return { score: 0, nutriScoreGrade: 'E', verdict: 'Avoid / Unhealthy', color: '#EF4444', insufficientData: true };
+  }
+
+  const cal    = calories as number;
+  const sug    = sugars as number;
+  const sf     = saturatedFat as number;
+  const saltG  = salt ?? 0;
+  const fib    = fiber ?? 0;
+  const prot   = protein ?? 0;
+  const sodMg  = saltG * 400;
+  const isBev  = isBeverage ?? false;
+
+  const negTotal = _nutriNegEnergy(cal, isBev) + _nutriNegSugars(sug, isBev)
+                 + _nutriNegSatFat(sf) + _nutriNegSodium(sodMg);
+  const pFib   = _nutriPosFiber(fib);
+  const pProt  = _nutriPosProtein(prot);
+  const posTotal = pFib + pProt;
+
+  const nutriPts = negTotal >= 11 ? negTotal - pFib : negTotal - posTotal;
+  const grade = isBev ? _nutriGradeBev(nutriPts) : _nutriGradeFood(nutriPts);
+
+  let base: number;
+  switch (grade) {
+    case 'A': base = 88; break;
+    case 'B': base = 72; break;
+    case 'C': base = 52; break;
+    case 'D': base = 35; break;
+    default:  base = 18; break;
+  }
+
+  if (novaGroup === 1) base += 8;
+  else if (novaGroup === 2) base += 3;
+  else if (novaGroup === 4) base -= 10;
+
+  if (hasPalmOil) base -= 6;
+
+  const HIGH_RISK = /E1[0-9]{2}[a-z]?|E2[0-9]{2}|E6[23][0-9]|E9[0-9]{2}|E950|E951|E952|E954|E955|E961/i;
+  const highRiskCount = additives.filter(a => HIGH_RISK.test(a)).length;
+  base -= Math.min(highRiskCount * 4, 12);
+
+  // Hard caps
+  if (novaGroup === 4) base = Math.min(base, 60);
+  if (grade === 'D')   base = Math.min(base, 45);
+  if (grade === 'E')   base = Math.min(base, 30);
+  if (isBev && isSugaryDrink && sug >= 5) base = Math.min(base, 35);
+  if (isJuice) base = Math.min(base, is100PctJuice ? 65 : 50);
+
+  const score = Math.max(8, Math.min(98, Math.round(base)));
+
+  let verdict: ScannedProduct['verdict'];
+  let color: string;
+  if (score >= 80)      { verdict = 'Excellent Choice'; color = '#10B981'; }
+  else if (score >= 60) { verdict = 'Good Choice';      color = '#58B84F'; }
+  else if (score >= 40) { verdict = 'Moderate';         color = '#F59E0B'; }
+  else                  { verdict = 'Avoid / Unhealthy'; color = '#EF4444'; }
+
+  return { score, nutriScoreGrade: grade, verdict, color, insufficientData: false };
+}
+
+// ─── Internal helper used by the OFQ/OBF fallback path ────────────────────
+
+function calculateAiHealthScore(
+  _nutriScore: 'A' | 'B' | 'C' | 'D' | 'E',
+  novaGroup: number = 3,
+  sugars: number | null = null,
+  saturatedFat: number | null = null,
+  hasPalmOil: boolean = false,
+  _additivesCount: number = 0,
+  calories: number | null = null,
+  salt: number | null = null,
+  fiber: number | null = null,
+  protein: number | null = null,
+  isBeverage: boolean = false,
+  isSugaryDrink: boolean = false,
+  isJuice: boolean = false,
+  is100PctJuice: boolean = false,
+  additivesList: string[] = []
 ): { score: number; verdict: ScannedProduct['verdict']; color: string } {
-  let baseScore = 50;
-
-  switch (nutriScore) {
-    case 'A': baseScore = 90; break;
-    case 'B': baseScore = 75; break;
-    case 'C': baseScore = 55; break;
-    case 'D': baseScore = 38; break;
-    case 'E': baseScore = 20; break;
-  }
-
-  if (novaGroup === 4) baseScore -= 12;
-  else if (novaGroup === 1) baseScore += 6;
-
-  if (sugars > 22) baseScore -= 10;
-  if (saturatedFat > 10) baseScore -= 8;
-  if (hasPalmOil) baseScore -= 8;
-  if (additivesCount > 3) baseScore -= 6;
-
-  const score = Math.max(12, Math.min(98, Math.round(baseScore)));
-
-  if (score >= 80) {
-    return { score, verdict: 'Excellent Choice', color: '#10B981' };
-  } else if (score >= 60) {
-    return { score, verdict: 'Good Choice', color: '#58B84F' };
-  } else if (score >= 40) {
-    return { score, verdict: 'Moderate', color: '#F59E0B' };
-  } else {
-    return { score, verdict: 'Avoid / Unhealthy', color: '#EF4444' };
-  }
+  const r = computeHealthRating(
+    { calories, sugars, saturatedFat, salt, fiber, protein,
+      isBeverage, isSugaryDrink, isJuice, is100PctJuice },
+    novaGroup, hasPalmOil, additivesList
+  );
+  return { score: r.score, verdict: r.verdict, color: r.color };
 }
 
 export function parseBeautyIngredients(rawIngredients: string) {
@@ -1019,21 +1171,38 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
         const nova = typeof p.nova_group === 'number' ? p.nova_group : 3;
 
         const nutriments = p.nutriments || {};
-        const calories = Math.round(nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'] ?? 250);
-        const carbs = Number((nutriments['carbohydrates_100g'] ?? 30).toFixed(1));
-        const sugars = Number((nutriments['sugars_100g'] ?? 10).toFixed(1));
-        const fat = Number((nutriments['fat_100g'] ?? 8).toFixed(1));
-        const saturatedFat = Number((nutriments['saturated-fat_100g'] ?? 2.5).toFixed(1));
-        const protein = Number((nutriments['proteins_100g'] ?? 5).toFixed(1));
-        const fiber = Number((nutriments['fiber_100g'] ?? 2).toFixed(1));
-        const salt = Number((nutriments['salt_100g'] ?? 0.5).toFixed(2));
+        // Use null for truly missing values — never default to fake nutrition data
+        const rawCal  = nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'] ?? null;
+        const rawSug  = nutriments['sugars_100g'] ?? null;
+        const rawSF   = nutriments['saturated-fat_100g'] ?? null;
+        const rawFat  = nutriments['fat_100g'] ?? null;
+        const rawCarb = nutriments['carbohydrates_100g'] ?? null;
+        const rawProt = nutriments['proteins_100g'] ?? null;
+        const rawFib  = nutriments['fiber_100g'] ?? null;
+        const rawSalt = nutriments['salt_100g'] ?? null;
+
+        const calories     = rawCal  !== null ? Math.round(Number(rawCal))  : null;
+        const carbs        = rawCarb !== null ? Number(Number(rawCarb).toFixed(1)) : 0;
+        const sugars       = rawSug  !== null ? Number(Number(rawSug).toFixed(1))  : null;
+        const fat          = rawFat  !== null ? Number(Number(rawFat).toFixed(1))  : 0;
+        const saturatedFat = rawSF   !== null ? Number(Number(rawSF).toFixed(1))   : null;
+        const protein      = rawProt !== null ? Number(Number(rawProt).toFixed(1)) : null;
+        const fiber        = rawFib  !== null ? Number(Number(rawFib).toFixed(1))  : null;
+        const salt         = rawSalt !== null ? Number(Number(rawSalt).toFixed(2)) : null;
 
         const additivesTags: string[] = p.additives_tags || [];
-        const additives = additivesTags.map(tag => tag.replace('en:', '').toUpperCase());
+        const additives = additivesTags.map((tag: string) => tag.replace('en:', '').toUpperCase());
         const ingredientsText: string = p.ingredients_text || '';
         const hasPalmOil =
           p.ingredients_from_palm_oil_n > 0 ||
           /palm oil|palmolein|palm fat/i.test(ingredientsText);
+
+        // Detect beverage / juice from OFQ category tags
+        const catLower = cat.toLowerCase();
+        const isBeverage = /\b(beverage|drink|soda|cola|juice|water|nectar|smoothie|energy.drink|sports.drink)\b/.test(catLower);
+        const isJuice = /\b(juice|nectar|smoothie|fruit.drink)\b/.test(catLower);
+        const is100PctJuice = isJuice && /100.?%/.test(catLower) && !/added.?sugar|sweetened/.test(ingredientsText.toLowerCase());
+        const isSugaryDrink = isBeverage && !isJuice && (sugars ?? 0) >= 5;
 
         const analysis = calculateAiHealthScore(
           nutriScore,
@@ -1041,7 +1210,16 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
           sugars,
           saturatedFat,
           hasPalmOil,
-          additives.length
+          additives.length,
+          calories,
+          salt,
+          fiber,
+          protein,
+          isBeverage,
+          isSugaryDrink,
+          isJuice,
+          is100PctJuice,
+          additives
         );
 
         const offProduct: ScannedProduct = {
@@ -1057,14 +1235,14 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
           verdict: analysis.verdict,
           verdictColor: analysis.color,
           metrics: {
-            calories,
+            calories: calories ?? 0,
             carbs,
-            sugars,
+            sugars: sugars ?? 0,
             fat,
-            saturatedFat,
-            protein,
-            fiber,
-            salt,
+            saturatedFat: saturatedFat ?? 0,
+            protein: protein ?? 0,
+            fiber: fiber ?? 0,
+            salt: salt ?? 0,
           },
           additives: additives.slice(0, 5),
           hasPalmOil,
