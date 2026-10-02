@@ -36,10 +36,10 @@ export interface ProductDetailPageProps {
 function CircularGauge({
   value,
   max = 100,
-  size = 110,
+  size = 114,
   strokeWidth = 10,
   color,
-  bgColor = '#F1F3F5',
+  bgColor = '#F3F4F6',
   children,
 }: {
   value: number;
@@ -51,11 +51,10 @@ function CircularGauge({
   children?: React.ReactNode;
 }) {
   const pct = Math.max(0, Math.min(1, value / max));
-  const r = (size - strokeWidth) / 2;
   const halfSize = size / 2;
+  const innerSize = size - strokeWidth * 2;
 
   // We approximate an arc using half-circle clips rotated proportionally.
-  // Full circle = two 180° halves. We show pct * 360° total.
   const deg = pct * 360;
   const firstHalfDeg = Math.min(deg, 180);
   const secondHalfDeg = Math.max(0, deg - 180);
@@ -70,7 +69,7 @@ function CircularGauge({
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Background circle */}
+      {/* Background track circle */}
       <View
         style={{
           position: 'absolute',
@@ -118,12 +117,12 @@ function CircularGauge({
         </View>
       )}
 
-      {/* Center content */}
+      {/* Inner white circle */}
       <View
         style={{
-          width: size - strokeWidth * 2 - 4,
-          height: size - strokeWidth * 2 - 4,
-          borderRadius: (size - strokeWidth * 2 - 4) / 2,
+          width: innerSize,
+          height: innerSize,
+          borderRadius: innerSize / 2,
           backgroundColor: '#FFFFFF',
           alignItems: 'center',
           justifyContent: 'center',
@@ -592,11 +591,11 @@ export default function ProductDetailPage({
           style={styles.scrollArea}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavPadding }]}
           showsVerticalScrollIndicator={false}
-          bounces={false}
-          overScrollMode="never"
+          bounces={true}
+          overScrollMode="always"
           scrollEventThrottle={16}
           decelerationRate="normal"
-          removeClippedSubviews={Platform.OS === 'android'}
+          removeClippedSubviews={false}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.heroImageWrapper}>
@@ -613,7 +612,7 @@ export default function ProductDetailPage({
             />
           </View>
 
-          <View style={styles.identityCard} renderToHardwareTextureAndroid={true}>
+          <View style={styles.identityCard}>
             <Text style={styles.productName}>{product.name}</Text>
             <Text style={styles.productBrandCategory}>
               {product.brand} • <Text style={styles.productCategory}>{product.category}</Text>
@@ -625,7 +624,7 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          <View style={styles.scoreCard} renderToHardwareTextureAndroid={true}>
+          <View style={styles.scoreCard}>
             <View style={styles.scoreTopRow}>
               <View style={styles.logoRow}>
                 <Image
