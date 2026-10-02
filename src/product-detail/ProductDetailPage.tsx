@@ -31,6 +31,110 @@ export interface ProductDetailPageProps {
   onClose: () => void;
 }
 
+// ─── Circular arc gauge (pure RN, no SVG library) ──────────────────────────
+
+function CircularGauge({
+  value,
+  max = 100,
+  size = 110,
+  strokeWidth = 10,
+  color,
+  bgColor = '#F1F3F5',
+  children,
+}: {
+  value: number;
+  max?: number;
+  size?: number;
+  strokeWidth?: number;
+  color: string;
+  bgColor?: string;
+  children?: React.ReactNode;
+}) {
+  const pct = Math.max(0, Math.min(1, value / max));
+  const r = (size - strokeWidth) / 2;
+  const halfSize = size / 2;
+
+  // We approximate an arc using half-circle clips rotated proportionally.
+  // Full circle = two 180° halves. We show pct * 360° total.
+  const deg = pct * 360;
+  const firstHalfDeg = Math.min(deg, 180);
+  const secondHalfDeg = Math.max(0, deg - 180);
+
+  const clipStyle = {
+    width: size,
+    height: size,
+    borderRadius: halfSize,
+    overflow: 'hidden' as const,
+    position: 'absolute' as const,
+  };
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Background circle */}
+      <View
+        style={{
+          position: 'absolute',
+          width: size,
+          height: size,
+          borderRadius: halfSize,
+          borderWidth: strokeWidth,
+          borderColor: bgColor,
+        }}
+      />
+
+      {/* First half arc (0–180°) */}
+      <View style={clipStyle}>
+        <View
+          style={{
+            position: 'absolute',
+            width: size,
+            height: size,
+            borderRadius: halfSize,
+            borderWidth: strokeWidth,
+            borderColor: 'transparent',
+            borderRightColor: firstHalfDeg > 0 ? color : 'transparent',
+            borderBottomColor: firstHalfDeg > 90 ? color : 'transparent',
+            transform: [{ rotate: '-90deg' }],
+          }}
+        />
+      </View>
+
+      {/* Second half arc (180–360°) */}
+      {secondHalfDeg > 0 && (
+        <View style={clipStyle}>
+          <View
+            style={{
+              position: 'absolute',
+              width: size,
+              height: size,
+              borderRadius: halfSize,
+              borderWidth: strokeWidth,
+              borderColor: 'transparent',
+              borderLeftColor: color,
+              borderTopColor: secondHalfDeg > 90 ? color : 'transparent',
+              transform: [{ rotate: '-90deg' }],
+            }}
+          />
+        </View>
+      )}
+
+      {/* Center content */}
+      <View
+        style={{
+          width: size - strokeWidth * 2 - 4,
+          height: size - strokeWidth * 2 - 4,
+          borderRadius: (size - strokeWidth * 2 - 4) / 2,
+          backgroundColor: '#FFFFFF',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {children}
+      </View>
+    </View>
+  );
+}
+
 const NUTRI_COLORS: Record<string, string> = {
   A: '#038141',
   B: '#85BB2F',
@@ -535,48 +639,59 @@ export default function ProductDetailPage({
               </View>
             </View>
 
+            {/* ── Circular Arc Gauge ── */}
             <View style={styles.scoreDisplayRow}>
-              <View
-                style={[
-                  styles.scoreCircleBadge,
-                  {
-                    backgroundColor: `${product.verdictColor}10`,
-                    borderColor: `${product.verdictColor}28`,
-                  },
-                ]}
+              <CircularGauge
+                value={product.aiHealthRating}
+                size={118}
+                strokeWidth={11}
+                color={product.verdictColor}
+                bgColor={`${product.verdictColor}1A`}
               >
                 <Text style={[styles.scoreBigNum, { color: product.verdictColor }]}>
                   {product.aiHealthRating}
                 </Text>
                 <Text style={[styles.scoreMaxSub, { color: product.verdictColor }]}>/100</Text>
-              </View>
+              </CircularGauge>
 
-              <View style={styles.meterContainer}>
-                <View style={styles.meterHeader}>
-                  <Text style={styles.meterLabel}>
-                    {isBeauty ? 'Clean Safety Rating' : 'Nutritional Rating'}
-                  </Text>
-                  <Text style={[styles.meterPctText, { color: product.verdictColor }]}>
-                    {product.aiHealthRating}%
-                  </Text>
+              <View style={styles.scoreRightMeta}>
+                <Text style={styles.meterLabel}>
+                  {isBeauty ? 'Clean Safety Rating' : 'Nutritional Rating'}
+                </Text>
+
+                {/* Segmented spectrum bar */}
+                <View style={styles.spectrumBarRow}>
+                  {[
+                    { label: 'Poor', from: 0, to: 39, color: '#EF4444' },
+                    { label: 'Moderate', from: 40, to: 59, color: '#F59E0B' },
+                    { label: 'Good', from: 60, to: 79, color: '#85BB2F' },
+                    { label: 'Optimal', from: 80, to: 100, color: '#10B981' },
+                  ].map((seg) => {
+                    const active = product.aiHealthRating >= seg.from && product.aiHealthRating <= seg.to;
+                    return (
+                      <View key={seg.label} style={styles.spectrumSegWrap}>
+                        <View
+                          style={[
+                            styles.spectrumSeg,
+                            {
+                              backgroundColor: active ? seg.color : `${seg.color}28`,
+                              height: active ? 8 : 5,
+                            },
+                          ]}
+                        />
+                        <Text style={[styles.spectrumSegLabel, { color: active ? seg.color : '#9CA3AF' }]}>
+                          {seg.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
 
-                <View style={styles.meterTrack}>
-                  <View
-                    style={[
-                      styles.meterFill,
-                      {
-                        width: `${Math.max(6, Math.min(100, product.aiHealthRating))}%`,
-                        backgroundColor: product.verdictColor,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View style={styles.meterSpectrumRow}>
-                  <Text style={styles.spectrumText}>Poor</Text>
-                  <Text style={styles.spectrumText}>Moderate</Text>
-                  <Text style={styles.spectrumText}>Optimal</Text>
+                <View style={[styles.verdictBadge, { backgroundColor: `${product.verdictColor}15`, borderColor: `${product.verdictColor}30` }]}>
+                  <View style={[styles.verdictDot, { backgroundColor: product.verdictColor }]} />
+                  <Text style={[styles.verdictBadgeText, { color: product.verdictColor }]}>
+                    {product.verdict}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -613,39 +728,51 @@ export default function ProductDetailPage({
             </View>
           </View>
 
+          {/* ── Nutri-Score + NOVA upgraded cards ── */}
           <View style={styles.standardsRow}>
+            {/* Nutri-Score card — slanted letter scale */}
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
                 {isBeauty ? 'Clean Safety Grade' : 'Nutri-Score'}
               </Text>
-              <View style={styles.nutriPillRow}>
-                {['A', 'B', 'C', 'D', 'E'].map((grade) => {
+              <View style={styles.nutriScaleRow}>
+                {(['A', 'B', 'C', 'D', 'E'] as const).map((grade, idx) => {
                   const isActive = product.nutriScore === grade;
-                  const color = NUTRI_COLORS[grade] || '#9CA3AF';
+                  const col = NUTRI_COLORS[grade];
+                  const heights = [28, 30, 32, 34, 36];
                   return (
-                    <View
-                      key={grade}
-                      style={[
-                        styles.nutriLetterPill,
-                        isActive
-                          ? { backgroundColor: color, transform: [{ scale: 1.15 }], zIndex: 2 }
-                          : { backgroundColor: '#ECEEF2', opacity: 0.6 },
-                      ]}
-                    >
-                      <Text
+                    <View key={grade} style={styles.nutriBarWrap}>
+                      <View
                         style={[
-                          styles.nutriLetterText,
-                          { color: isActive ? '#FFFFFF' : '#6B7280' },
+                          styles.nutriBarPill,
+                          {
+                            height: heights[idx],
+                            backgroundColor: isActive ? col : `${col}30`,
+                            borderColor: isActive ? col : 'transparent',
+                            borderWidth: isActive ? 1.5 : 0,
+                          },
                         ]}
                       >
-                        {grade}
-                      </Text>
+                        <Text style={[styles.nutriLetterText, { color: isActive ? '#FFF' : col }]}>
+                          {grade}
+                        </Text>
+                      </View>
+                      {isActive && <View style={[styles.nutriActiveDot, { backgroundColor: col }]} />}
                     </View>
                   );
                 })}
               </View>
+              <Text style={[styles.nutriGradeDesc, { color: NUTRI_COLORS[product.nutriScore] }]}>
+                Grade {product.nutriScore} —{' '}
+                {product.nutriScore === 'A' ? 'Excellent'
+                  : product.nutriScore === 'B' ? 'Good'
+                  : product.nutriScore === 'C' ? 'Fair'
+                  : product.nutriScore === 'D' ? 'Poor'
+                  : 'Very Poor'}
+              </Text>
             </View>
 
+            {/* NOVA card — big ring with number inside */}
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
                 {isBeauty ? 'Skin Compatibility' : 'Processing Grade'}
@@ -666,86 +793,96 @@ export default function ProductDetailPage({
                   </Text>
                 </View>
               ) : (
-                <View style={styles.novaIndicatorRow}>
-                  <View
-                    style={[
-                      styles.novaNumberCircle,
-                      { backgroundColor: `${activeNova.color}15`, borderColor: activeNova.color },
-                    ]}
+                <View style={styles.novaRingWrap}>
+                  <CircularGauge
+                    value={(product.novaGroup || 3)}
+                    max={4}
+                    size={62}
+                    strokeWidth={6}
+                    color={activeNova.color}
+                    bgColor={`${activeNova.color}20`}
                   >
-                    <Text style={[styles.novaNumberText, { color: activeNova.color }]}>
+                    <Text style={[styles.novaRingNum, { color: activeNova.color }]}>
                       {product.novaGroup || 3}
                     </Text>
-                  </View>
-                  <View style={styles.novaTextWrap}>
-                    <Text style={[styles.novaStatusText, { color: activeNova.color }]}>
-                      {activeNova.title}
-                    </Text>
-                  </View>
+                  </CircularGauge>
+                  <Text style={[styles.novaRingLabel, { color: activeNova.color }]} numberOfLines={2}>
+                    {activeNova.title}
+                  </Text>
                 </View>
               )}
             </View>
           </View>
 
+          {/* ── Macro Nutrient Balance — pill segments with mini circles ── */}
           <View style={styles.detailSectionCard}>
             <Text style={styles.sectionHeaderTitle}>
               {isBeauty ? 'Formulation Balance' : 'Macro Nutrient Balance'}
             </Text>
             {isBeauty ? (
               <>
-                <View style={styles.macroProportionBar}>
-                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.activePct || 62, backgroundColor: '#10B981' }]} />
-                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.emollientPct || 24, backgroundColor: '#3B82F6' }]} />
-                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.stabilizerPct || 14, backgroundColor: '#F59E0B' }]} />
+                <View style={styles.macroPillBar}>
+                  {[
+                    { flex: product.formulationProfile?.activePct || 62, color: '#10B981', label: 'Actives', pct: product.formulationProfile?.activePct || 62 },
+                    { flex: product.formulationProfile?.emollientPct || 24, color: '#3B82F6', label: 'Emollients', pct: product.formulationProfile?.emollientPct || 24 },
+                    { flex: product.formulationProfile?.stabilizerPct || 14, color: '#F59E0B', label: 'Stabilizers', pct: product.formulationProfile?.stabilizerPct || 14 },
+                  ].map((seg, i) => (
+                    <View key={i} style={[styles.macroPillSeg, { flex: seg.flex, backgroundColor: seg.color }]}>
+                      {seg.pct >= 18 && (
+                        <Text style={styles.macroPillPct}>{seg.pct}%</Text>
+                      )}
+                    </View>
+                  ))}
                 </View>
-
-                <View style={styles.macroLegendRow}>
-                  <View style={styles.macroLegendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-                    <Text style={styles.legendLabel}>
-                      Actives {product.formulationProfile?.activePct || 62}%
-                    </Text>
-                  </View>
-                  <View style={styles.macroLegendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
-                    <Text style={styles.legendLabel}>
-                      Emollients {product.formulationProfile?.emollientPct || 24}%
-                    </Text>
-                  </View>
-                  <View style={styles.macroLegendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
-                    <Text style={styles.legendLabel}>
-                      Stabilizers {product.formulationProfile?.stabilizerPct || 14}%
-                    </Text>
-                  </View>
+                <View style={styles.macroCircleLegend}>
+                  {[
+                    { color: '#10B981', label: 'Actives', pct: product.formulationProfile?.activePct || 62 },
+                    { color: '#3B82F6', label: 'Emollients', pct: product.formulationProfile?.emollientPct || 24 },
+                    { color: '#F59E0B', label: 'Stabilizers', pct: product.formulationProfile?.stabilizerPct || 14 },
+                  ].map((item, i) => (
+                    <View key={i} style={styles.macroCircleLegendItem}>
+                      <View style={[styles.macroCircleDot, { backgroundColor: item.color }]}>
+                        <Text style={styles.macroCirclePct}>{item.pct}</Text>
+                      </View>
+                      <Text style={styles.macroCircleLabel}>{item.label}</Text>
+                    </View>
+                  ))}
                 </View>
               </>
             ) : (
               <>
-                <View style={styles.macroProportionBar}>
-                  <View style={[styles.macroBarSegment, { flex: carbPct || 1, backgroundColor: '#3B82F6' }]} />
-                  <View style={[styles.macroBarSegment, { flex: fatPct || 1, backgroundColor: '#EF4444' }]} />
-                  <View style={[styles.macroBarSegment, { flex: proteinPct || 1, backgroundColor: '#10B981' }]} />
+                <View style={styles.macroPillBar}>
+                  {[
+                    { flex: carbPct || 1, color: '#3B82F6', label: 'Carbs', pct: carbPct },
+                    { flex: fatPct || 1, color: '#EF4444', label: 'Fat', pct: fatPct },
+                    { flex: proteinPct || 1, color: '#10B981', label: 'Protein', pct: proteinPct },
+                  ].map((seg, i) => (
+                    <View key={i} style={[styles.macroPillSeg, { flex: seg.flex, backgroundColor: seg.color }]}>
+                      {seg.pct >= 15 && (
+                        <Text style={styles.macroPillPct}>{seg.pct}%</Text>
+                      )}
+                    </View>
+                  ))}
                 </View>
-
-                <View style={styles.macroLegendRow}>
-                  <View style={styles.macroLegendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
-                    <Text style={styles.legendLabel}>Carbs {carbPct}%</Text>
-                  </View>
-                  <View style={styles.macroLegendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-                    <Text style={styles.legendLabel}>Fat {fatPct}%</Text>
-                  </View>
-                  <View style={styles.macroLegendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-                    <Text style={styles.legendLabel}>Protein {proteinPct}%</Text>
-                  </View>
+                <View style={styles.macroCircleLegend}>
+                  {[
+                    { color: '#3B82F6', label: 'Carbs', pct: carbPct },
+                    { color: '#EF4444', label: 'Fat', pct: fatPct },
+                    { color: '#10B981', label: 'Protein', pct: proteinPct },
+                  ].map((item, i) => (
+                    <View key={i} style={styles.macroCircleLegendItem}>
+                      <View style={[styles.macroCircleDot, { backgroundColor: item.color }]}>
+                        <Text style={styles.macroCirclePct}>{item.pct}</Text>
+                      </View>
+                      <Text style={styles.macroCircleLabel}>{item.label}</Text>
+                    </View>
+                  ))}
                 </View>
               </>
             )}
           </View>
 
+          {/* ── Nutrient Profile — enhanced bars with daily reference ── */}
           <View style={styles.detailSectionCard}>
             <Text style={styles.sectionHeaderTitle}>
               {isBeauty ? 'Toxicological Safety Standards' : 'Nutrient Profile (per 100g)'}
@@ -753,196 +890,68 @@ export default function ProductDetailPage({
 
             {isBeauty ? (
               <View style={styles.beautyBenchmarkColumn}>
-                <View style={styles.beautyBenchmarkRow}>
-                  <Text style={styles.beautyBenchmarkName}>Paraben Screening</Text>
-                  <View style={styles.beautyStatusWrap}>
-                    <View
-                      style={[
-                        styles.beautyStatusDot,
-                        { backgroundColor: product.formulationProfile?.isParabenFree !== false ? '#10B981' : '#EF4444' },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.beautyStatusText,
-                        { color: product.formulationProfile?.isParabenFree !== false ? '#10B981' : '#EF4444' },
-                      ]}
-                    >
-                      {product.formulationProfile?.isParabenFree !== false ? 'Verified Free (0 detected)' : 'Parabens Present'}
-                    </Text>
+                {[
+                  { label: 'Paraben Screening', ok: product.formulationProfile?.isParabenFree !== false, okText: 'Verified Free (0 detected)', failText: 'Parabens Present' },
+                  { label: 'Surfactant Gentleness', ok: product.formulationProfile?.isSulfateFree !== false, okText: 'Sulfate-Safe Base', failText: 'Harsh Sulfates (SLS/SLES)', warnColor: '#F59E0B' },
+                  { label: 'Silicone & Occlusives', ok: product.formulationProfile?.isSiliconeFree !== false, okText: 'Lightweight / Silicone-Free', failText: 'Synthetic Silicones', warnColor: '#6B7280' },
+                  { label: 'Sensitizing Fragrance', ok: product.formulationProfile?.isFragranceFree === true, okText: 'Fragrance-Free', failText: 'Contains Aroma / Sensitizers', warnColor: '#F59E0B' },
+                ].map((row, i) => (
+                  <View key={i} style={styles.beautyBenchmarkRow}>
+                    <Text style={styles.beautyBenchmarkName}>{row.label}</Text>
+                    <View style={styles.beautyStatusWrap}>
+                      <View style={[styles.beautyStatusDot, { backgroundColor: row.ok ? '#10B981' : (row.warnColor || '#EF4444') }]} />
+                      <Text style={[styles.beautyStatusText, { color: row.ok ? '#10B981' : (row.warnColor || '#EF4444') }]}>
+                        {row.ok ? row.okText : row.failText}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-
-                <View style={styles.beautyBenchmarkRow}>
-                  <Text style={styles.beautyBenchmarkName}>Surfactant Gentleness</Text>
-                  <View style={styles.beautyStatusWrap}>
-                    <View
-                      style={[
-                        styles.beautyStatusDot,
-                        { backgroundColor: product.formulationProfile?.isSulfateFree !== false ? '#10B981' : '#F59E0B' },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.beautyStatusText,
-                        { color: product.formulationProfile?.isSulfateFree !== false ? '#10B981' : '#F59E0B' },
-                      ]}
-                    >
-                      {product.formulationProfile?.isSulfateFree !== false ? 'Sulfate-Safe Base' : 'Harsh Sulfates (SLS/SLES)'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.beautyBenchmarkRow}>
-                  <Text style={styles.beautyBenchmarkName}>Silicone & Occlusives</Text>
-                  <View style={styles.beautyStatusWrap}>
-                    <View
-                      style={[
-                        styles.beautyStatusDot,
-                        { backgroundColor: product.formulationProfile?.isSiliconeFree !== false ? '#10B981' : '#6B7280' },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.beautyStatusText,
-                        { color: product.formulationProfile?.isSiliconeFree !== false ? '#10B981' : '#6B7280' },
-                      ]}
-                    >
-                      {product.formulationProfile?.isSiliconeFree !== false ? 'Lightweight / Silicone-Free' : 'Synthetic Silicones'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.beautyBenchmarkRow}>
-                  <Text style={styles.beautyBenchmarkName}>Sensitizing Fragrance</Text>
-                  <View style={styles.beautyStatusWrap}>
-                    <View
-                      style={[
-                        styles.beautyStatusDot,
-                        { backgroundColor: product.formulationProfile?.isFragranceFree ? '#10B981' : '#F59E0B' },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.beautyStatusText,
-                        { color: product.formulationProfile?.isFragranceFree ? '#10B981' : '#F59E0B' },
-                      ]}
-                    >
-                      {product.formulationProfile?.isFragranceFree ? 'Fragrance-Free' : 'Contains Aroma / Sensitizers'}
-                    </Text>
-                  </View>
-                </View>
+                ))}
               </View>
             ) : (
               <>
+                {[
+                  { label: 'Energy / Calories', value: metrics.calories, unit: 'kcal', max: 900, negThresh: 450, warnThresh: 300, positive: false },
+                  { label: 'Sugars', value: metrics.sugars, unit: 'g', max: 50, negThresh: 22, warnThresh: 10, positive: false },
+                  { label: 'Saturated Fat', value: metrics.saturatedFat, unit: 'g', max: 20, negThresh: 8, warnThresh: 4, positive: false },
+                  { label: 'Dietary Fiber', value: metrics.fiber, unit: 'g', max: 15, negThresh: 0, warnThresh: 0, positive: true },
+                  { label: 'Protein', value: metrics.protein, unit: 'g', max: 35, negThresh: 0, warnThresh: 0, positive: true },
+                  { label: 'Salt / Sodium', value: metrics.salt, unit: 'g', max: 3, negThresh: 1.5, warnThresh: 0.8, positive: false },
+                ].map((row, i) => {
+                  const fillPct = Math.min(100, Math.round((row.value / row.max) * 100));
+                  const barColor = row.positive
+                    ? '#10B981'
+                    : row.value > row.negThresh
+                    ? '#EF4444'
+                    : row.value > row.warnThresh
+                    ? '#F59E0B'
+                    : '#10B981';
 
-                <View style={styles.graphRow}>
-                  <View style={styles.graphHeader}>
-                    <Text style={styles.graphMetricName}>Energy / Calories</Text>
-                    <Text style={styles.graphValueText}>{metrics.calories} kcal</Text>
-                  </View>
-                  <View style={styles.graphTrack}>
-                    <View
-                      style={[
-                        styles.graphFill,
-                        {
-                          width: `${Math.min(100, Math.round((metrics.calories / 800) * 100))}%`,
-                          backgroundColor: metrics.calories > 450 ? '#EF4444' : '#10B981',
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.graphRow}>
-                  <View style={styles.graphHeader}>
-                    <Text style={styles.graphMetricName}>Sugars</Text>
-                    <Text style={styles.graphValueText}>{metrics.sugars}g</Text>
-                  </View>
-                  <View style={styles.graphTrack}>
-                    <View
-                      style={[
-                        styles.graphFill,
-                        {
-                          width: `${Math.min(100, Math.round((metrics.sugars / 50) * 100))}%`,
-                          backgroundColor: metrics.sugars > 22 ? '#EF4444' : metrics.sugars > 10 ? '#F59E0B' : '#10B981',
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.graphRow}>
-                  <View style={styles.graphHeader}>
-                    <Text style={styles.graphMetricName}>Saturated Fat</Text>
-                    <Text style={styles.graphValueText}>{metrics.saturatedFat}g</Text>
-                  </View>
-                  <View style={styles.graphTrack}>
-                    <View
-                      style={[
-                        styles.graphFill,
-                        {
-                          width: `${Math.min(100, Math.round((metrics.saturatedFat / 20) * 100))}%`,
-                          backgroundColor: metrics.saturatedFat > 8 ? '#EF4444' : metrics.saturatedFat > 4 ? '#F59E0B' : '#10B981',
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.graphRow}>
-                  <View style={styles.graphHeader}>
-                    <Text style={styles.graphMetricName}>Dietary Fiber</Text>
-                    <Text style={styles.graphValueText}>{metrics.fiber}g</Text>
-                  </View>
-                  <View style={styles.graphTrack}>
-                    <View
-                      style={[
-                        styles.graphFill,
-                        {
-                          width: `${Math.min(100, Math.round((metrics.fiber / 10) * 100))}%`,
-                          backgroundColor: '#10B981',
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.graphRow}>
-                  <View style={styles.graphHeader}>
-                    <Text style={styles.graphMetricName}>Protein</Text>
-                    <Text style={styles.graphValueText}>{metrics.protein}g</Text>
-                  </View>
-                  <View style={styles.graphTrack}>
-                    <View
-                      style={[
-                        styles.graphFill,
-                        {
-                          width: `${Math.min(100, Math.round((metrics.protein / 25) * 100))}%`,
-                          backgroundColor: '#3B82F6',
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.graphRow}>
-                  <View style={styles.graphHeader}>
-                    <Text style={styles.graphMetricName}>Salt / Sodium</Text>
-                    <Text style={styles.graphValueText}>{metrics.salt}g</Text>
-                  </View>
-                  <View style={styles.graphTrack}>
-                    <View
-                      style={[
-                        styles.graphFill,
-                        {
-                          width: `${Math.min(100, Math.round((metrics.salt / 3) * 100))}%`,
-                          backgroundColor: metrics.salt > 1.5 ? '#EF4444' : metrics.salt > 0.8 ? '#F59E0B' : '#10B981',
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
+                  return (
+                    <View key={i} style={styles.nutriBarRow}>
+                      <View style={styles.nutriBarHeader}>
+                        <Text style={styles.nutriBarLabel}>{row.label}</Text>
+                        <Text style={[styles.nutriBarValue, { color: barColor }]}>
+                          {row.value}{row.unit}
+                        </Text>
+                      </View>
+                      <View style={styles.nutriBarTrack}>
+                        <View
+                          style={[
+                            styles.nutriBarFill,
+                            { width: `${Math.max(3, fillPct)}%`, backgroundColor: barColor },
+                          ]}
+                        />
+                        {/* Daily reference marker at 50% of max */}
+                        <View style={styles.nutriRefLine} />
+                      </View>
+                      <View style={styles.nutriBarFooter}>
+                        <Text style={styles.nutriBarFooterText}>0</Text>
+                        <Text style={styles.nutriBarFooterText}>Daily Ref</Text>
+                        <Text style={styles.nutriBarFooterText}>{row.max}{row.unit}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
               </>
             )}
           </View>
@@ -1360,6 +1369,50 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 16,
   },
+  scoreRightMeta: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  spectrumBarRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+    marginVertical: 8,
+  },
+  spectrumSegWrap: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  spectrumSeg: {
+    width: '100%',
+    borderRadius: 4,
+  },
+  spectrumSegLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  verdictBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  verdictDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  verdictBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
   scoreCircleBadge: {
     width: 82,
     height: 82,
@@ -1456,6 +1509,34 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 12,
   },
+  nutriScaleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 42,
+  },
+  nutriBarWrap: {
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  nutriBarPill: {
+    width: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nutriActiveDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  nutriGradeDesc: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    marginTop: 8,
+    textAlign: 'center',
+  },
   nutriPillRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1469,8 +1550,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nutriLetterText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
+  },
+  novaRingWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+    gap: 8,
+  },
+  novaRingNum: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  novaRingLabel: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 15,
   },
   novaIndicatorRow: {
     flexDirection: 'row',
@@ -1496,6 +1593,104 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     lineHeight: 16,
+  },
+  macroPillBar: {
+    height: 14,
+    borderRadius: 7,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    marginBottom: 14,
+  },
+  macroPillSeg: {
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  macroPillPct: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  macroCircleLegend: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingTop: 2,
+  },
+  macroCircleLegendItem: {
+    alignItems: 'center',
+    gap: 5,
+  },
+  macroCircleDot: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  macroCirclePct: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  macroCircleLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  nutriBarRow: {
+    marginBottom: 14,
+  },
+  nutriBarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  nutriBarLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  nutriBarValue: {
+    fontSize: 13.5,
+    fontWeight: '900',
+  },
+  nutriBarTrack: {
+    height: 9,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 5,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  nutriBarFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  nutriRefLine: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1.5,
+    backgroundColor: '#D1D5DB',
+  },
+  nutriBarFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  nutriBarFooterText: {
+    fontSize: 9.5,
+    fontWeight: '600',
+    color: '#9CA3AF',
   },
   detailSectionCard: {
     backgroundColor: '#FFFFFF',
