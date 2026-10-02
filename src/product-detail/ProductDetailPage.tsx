@@ -515,6 +515,7 @@ export default function ProductDetailPage({
   }, [visible]);
 
   const isBeauty = product?.productType === 'beauty' || (product ? isBeautyCategory(product.category, product.name) : false);
+  const isPerfume = Boolean(product && /\b(perfume|fragrance|eau de parfum|eau de toilette)\b/i.test(`${product.category} ${product.name}`));
 
   const metrics = product?.metrics || {
     calories: 0,
@@ -633,7 +634,7 @@ export default function ProductDetailPage({
                   resizeMode="contain"
                 />
                 <Text style={styles.indexTitle}>
-                  {isBeauty ? 'FOODCO CLEAN FORMULATION INDEX' : 'FOODCO HEALTH INDEX'}
+                  {isPerfume ? 'FOODCO INGREDIENT SCREEN' : isBeauty ? 'FOODCO CLEAN FORMULATION INDEX' : 'FOODCO HEALTH INDEX'}
                 </Text>
               </View>
             </View>
@@ -655,7 +656,7 @@ export default function ProductDetailPage({
 
               <View style={styles.scoreRightMeta}>
                 <Text style={styles.meterLabel}>
-                  {isBeauty ? 'Clean Safety Rating' : 'Nutritional Rating'}
+                  {isPerfume ? 'Ingredient Screening Score' : isBeauty ? 'Clean Safety Rating' : 'Nutritional Rating'}
                 </Text>
 
                 {/* Segmented spectrum bar */}
@@ -727,12 +728,16 @@ export default function ProductDetailPage({
             </View>
           </View>
 
+          {product.ratingBasis ? (
+            <Text style={styles.sectionHeaderSubtitle}>{product.ratingBasis}</Text>
+          ) : null}
+
           {/* ── Nutri-Score + Processing Grade Cards ── */}
           <View style={styles.standardsRow}>
             {/* Nutri-Score card */}
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
-                {isBeauty ? 'Clean Safety Grade' : 'Nutri-Score'}
+                {isPerfume ? 'Ingredient Screen Grade' : isBeauty ? 'Clean Safety Grade' : 'Nutri-Score'}
               </Text>
               <View style={styles.nutriPillRow}>
                 {(['A', 'B', 'C', 'D', 'E'] as const).map((grade) => {
@@ -783,7 +788,9 @@ export default function ProductDetailPage({
                     color={product.verdictColor}
                   />
                   <Text style={[styles.beautyCompatText, { color: product.verdictColor }]}>
-                    {product.aiHealthRating >= 75
+                    {isPerfume
+                      ? 'Fragrance Sensitivity'
+                      : product.aiHealthRating >= 75
                       ? 'Gentle & Non-Toxic'
                       : product.aiHealthRating >= 50
                       ? 'Mild Formulation'
@@ -898,13 +905,23 @@ export default function ProductDetailPage({
             ) : (
               <>
                 {[
-                  { label: 'Energy / Calories', value: metrics.calories, unit: 'kcal', max: 900, negThresh: 450, warnThresh: 300, positive: false },
-                  { label: 'Sugars', value: metrics.sugars, unit: 'g', max: 50, negThresh: 22, warnThresh: 10, positive: false },
-                  { label: 'Saturated Fat', value: metrics.saturatedFat, unit: 'g', max: 20, negThresh: 8, warnThresh: 4, positive: false },
-                  { label: 'Dietary Fiber', value: metrics.fiber, unit: 'g', max: 15, negThresh: 0, warnThresh: 0, positive: true },
-                  { label: 'Protein', value: metrics.protein, unit: 'g', max: 35, negThresh: 0, warnThresh: 0, positive: true },
-                  { label: 'Salt / Sodium', value: metrics.salt, unit: 'g', max: 3, negThresh: 1.5, warnThresh: 0.8, positive: false },
+                  { metric: 'calories', label: 'Energy / Calories', value: metrics.calories, unit: 'kcal', max: 900, negThresh: 450, warnThresh: 300, positive: false },
+                  { metric: 'sugars', label: 'Sugars', value: metrics.sugars, unit: 'g', max: 50, negThresh: 22, warnThresh: 10, positive: false },
+                  { metric: 'saturatedFat', label: 'Saturated Fat', value: metrics.saturatedFat, unit: 'g', max: 20, negThresh: 8, warnThresh: 4, positive: false },
+                  { metric: 'fiber', label: 'Dietary Fiber', value: metrics.fiber, unit: 'g', max: 15, negThresh: 0, warnThresh: 0, positive: true },
+                  { metric: 'protein', label: 'Protein', value: metrics.protein, unit: 'g', max: 35, negThresh: 0, warnThresh: 0, positive: true },
+                  { metric: 'salt', label: 'Salt / Sodium', value: metrics.salt, unit: 'g', max: 3, negThresh: 1.5, warnThresh: 0.8, positive: false },
                 ].map((row, i) => {
+                  if (product.nutritionMissing?.includes(row.metric)) {
+                    return (
+                      <View key={i} style={styles.nutriBarRow}>
+                        <View style={styles.nutriBarHeader}>
+                          <Text style={styles.nutriBarLabel}>{row.label}</Text>
+                          <Text style={[styles.nutriBarValue, { color: '#6B7280' }]}>Not reported on label</Text>
+                        </View>
+                      </View>
+                    );
+                  }
                   const fillPct = Math.min(100, Math.round((row.value / row.max) * 100));
                   const barColor = row.positive
                     ? '#10B981'
@@ -953,7 +970,9 @@ export default function ProductDetailPage({
                 <Text style={styles.sectionHeaderSubtitle}>
                   {parsedIngredients.length > 0
                     ? (isBeauty
-                        ? `${parsedIngredients.length} cosmetic ingredients • Certified formulation`
+                        ? (isPerfume
+                            ? `${parsedIngredients.length} label-listed ingredients • fragrance blend not itemized`
+                            : `${parsedIngredients.length} cosmetic label ingredients`)
                         : `${parsedIngredients.length} ingredients • ${product.additives?.length || 0} additives`)
                     : 'Manufacturer Formulation'}
                 </Text>

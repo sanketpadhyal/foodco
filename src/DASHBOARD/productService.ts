@@ -47,6 +47,8 @@ export interface ScannedProduct {
   isUltraProcessed: boolean;
   ingredientsSummary?: string;
   insight?: string;
+  ratingBasis?: string;
+  nutritionMissing?: string[];
   formulationProfile?: FormulationProfile | null;
 }
 
@@ -68,11 +70,28 @@ const memoryProductCache = new Map<string, { data: ScannedProduct; timestamp: nu
 const memoryCategoryCache = new Map<string, { data: PaginatedProducts; timestamp: number }>();
 const memorySearchCache = new Map<string, { data: PaginatedProducts; timestamp: number }>();
 
-const PROD_KEY_PREFIX = '@foodco_prod_v2_';
-const CAT_KEY_PREFIX = '@foodco_cat_v2_';
-const SEARCH_KEY_PREFIX = '@foodco_search_v2_';
+const PROD_KEY_PREFIX = '@foodco_prod_v3_';
+const CAT_KEY_PREFIX = '@foodco_cat_v3_';
+const SEARCH_KEY_PREFIX = '@foodco_search_v3_';
 
 const CATEGORY_LOCAL_DATA = require('./categoryProductsData.json');
+
+function normalizeProductIdentityPart(value: string): string {
+  return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function deduplicateProducts<T extends Pick<ScannedProduct, 'barcode' | 'brand' | 'name'>>(products: T[]): T[] {
+  const seenBarcodes = new Set<string>();
+  const seenNames = new Set<string>();
+  return products.filter(product => {
+    const barcode = String(product.barcode || '').trim();
+    const identity = `${normalizeProductIdentityPart(product.brand)}|${normalizeProductIdentityPart(product.name)}`;
+    if (!barcode || !product.brand?.trim() || !product.name?.trim() || seenBarcodes.has(barcode) || seenNames.has(identity)) return false;
+    seenBarcodes.add(barcode);
+    seenNames.add(identity);
+    return true;
+  });
+}
 
 export async function getCachedProduct(barcode: string): Promise<ScannedProduct | null> {
   const cleanBarcode = barcode.trim();
@@ -1045,6 +1064,8 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
         isUltraProcessed: Boolean(found.isUltraProcessed),
         ingredientsSummary: found.ingredientsSummary,
         insight: found.insight,
+        ratingBasis: found.ratingBasis,
+        nutritionMissing: Array.isArray(found.nutritionMissing) ? found.nutritionMissing : [],
         formulationProfile: found.formulationProfile || null,
       };
       await setCachedProductFromScan(barcode, localProduct);
@@ -1121,6 +1142,8 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
           verdict: backendVerdict,
           verdictColor: backendVerdictColor,
           insight: prod.insight,
+          ratingBasis: prod.ratingBasis,
+          nutritionMissing: Array.isArray(prod.nutritionMissing) ? prod.nutritionMissing : [],
           metrics: {
             calories,
             carbs,
@@ -1366,7 +1389,7 @@ export async function fetchProductsByCategory(
   let baseProducts: ScannedProduct[] = [];
   const localItems = (CATEGORY_LOCAL_DATA as Record<string, any[]>)[normKey] || [];
   if (localItems.length > 0) {
-    baseProducts = localItems.map(p => ({
+    baseProducts = deduplicateProducts(localItems.map(p => ({
       ...p,
       productType: p.productType || (normKey === 'beauty' || normKey === 'perfume' ? 'beauty' : 'food'),
       nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
@@ -1375,7 +1398,7 @@ export async function fetchProductsByCategory(
       additives: p.additives || [],
       hasPalmOil: Boolean(p.hasPalmOil),
       isUltraProcessed: Boolean(p.isUltraProcessed),
-    }));
+    })));
   }
 
   let filteredLocal = baseProducts;
@@ -1416,7 +1439,7 @@ export async function fetchProductsByCategory(
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.products)) {
-        const liveProducts: ScannedProduct[] = data.products.map((p: any) => ({
+        const liveProducts: ScannedProduct[] = deduplicateProducts(data.products.map((p: any) => ({
           ...p,
           productType: p.productType || (normKey === 'beauty' || normKey === 'perfume' ? 'beauty' : 'food'),
           nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
@@ -1425,7 +1448,7 @@ export async function fetchProductsByCategory(
           additives: p.additives || [],
           hasPalmOil: Boolean(p.hasPalmOil),
           isUltraProcessed: Boolean(p.isUltraProcessed),
-        }));
+        })));
 
         let finalProducts = liveProducts;
         let total = typeof data.total === 'number' ? data.total : liveProducts.length;
@@ -1519,6 +1542,8 @@ export async function searchAllProducts(
     isUltraProcessed: Boolean(p.isUltraProcessed),
     ingredientsSummary: p.ingredientsSummary,
     insight: p.insight,
+    ratingBasis: p.ratingBasis,
+    nutritionMissing: p.nutritionMissing,
     formulationProfile: p.formulationProfile || null,
   }));
 
@@ -1541,14 +1566,7 @@ export async function searchAllProducts(
       isUltraProcessed: Boolean(p.isUltraProcessed),
     }));
 
-  const seenLocal = new Set<string>();
-  const deduplicatedLocal: ScannedProduct[] = [];
-  for (const p of matchedLocal) {
-    if (!seenLocal.has(p.barcode)) {
-      seenLocal.add(p.barcode);
-      deduplicatedLocal.push(p);
-    }
-  }
+  const deduplicatedLocal = deduplicateProducts(matchedLocal);
 
   const localTotal = deduplicatedLocal.length;
   const localStart = (page - 1) * limit;
@@ -1578,7 +1596,7 @@ export async function searchAllProducts(
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.products)) {
-        const liveProducts: ScannedProduct[] = data.products.map((p: any) => ({
+        const liveProducts: ScannedProduct[] = deduplicateProducts(data.products.map((p: any) => ({
           ...p,
           productType: p.productType || 'food',
           nutriScore: (p.nutriScore || 'B') as ScannedProduct['nutriScore'],
@@ -1587,7 +1605,7 @@ export async function searchAllProducts(
           additives: p.additives || [],
           hasPalmOil: Boolean(p.hasPalmOil),
           isUltraProcessed: Boolean(p.isUltraProcessed),
-        }));
+        })));
 
         let finalProducts = liveProducts;
         let total = typeof data.total === 'number' ? data.total : liveProducts.length;
@@ -1680,12 +1698,7 @@ export async function fetchTopRatedProducts(
     });
   }
 
-  const seenBarcodes = new Set<string>();
-  let deduped = allItems.filter(p => {
-    if (!p.barcode || seenBarcodes.has(p.barcode)) return false;
-    seenBarcodes.add(p.barcode);
-    return true;
-  });
+  let deduped = deduplicateProducts(allItems);
 
   if (searchLower) {
     deduped = deduped.filter(p =>
@@ -1700,4 +1713,3 @@ export async function fetchTopRatedProducts(
 
   return deduped.slice(0, limit);
 }
-
