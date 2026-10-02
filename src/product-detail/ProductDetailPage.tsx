@@ -728,51 +728,50 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          {/* ── Nutri-Score + NOVA upgraded cards ── */}
+          {/* ── Nutri-Score + Processing Grade Cards ── */}
           <View style={styles.standardsRow}>
-            {/* Nutri-Score card — slanted letter scale */}
+            {/* Nutri-Score card */}
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
                 {isBeauty ? 'Clean Safety Grade' : 'Nutri-Score'}
               </Text>
-              <View style={styles.nutriScaleRow}>
-                {(['A', 'B', 'C', 'D', 'E'] as const).map((grade, idx) => {
+              <View style={styles.nutriPillRow}>
+                {(['A', 'B', 'C', 'D', 'E'] as const).map((grade) => {
                   const isActive = product.nutriScore === grade;
-                  const col = NUTRI_COLORS[grade];
-                  const heights = [28, 30, 32, 34, 36];
+                  const color = NUTRI_COLORS[grade] || '#9CA3AF';
                   return (
-                    <View key={grade} style={styles.nutriBarWrap}>
-                      <View
+                    <View
+                      key={grade}
+                      style={[
+                        styles.nutriLetterPill,
+                        isActive
+                          ? { backgroundColor: color, transform: [{ scale: 1.15 }], zIndex: 2, shadowColor: color, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 3, elevation: 3 }
+                          : { backgroundColor: '#ECEEF2', opacity: 0.65 },
+                      ]}
+                    >
+                      <Text
                         style={[
-                          styles.nutriBarPill,
-                          {
-                            height: heights[idx],
-                            backgroundColor: isActive ? col : `${col}30`,
-                            borderColor: isActive ? col : 'transparent',
-                            borderWidth: isActive ? 1.5 : 0,
-                          },
+                          styles.nutriLetterText,
+                          { color: isActive ? '#FFFFFF' : '#6B7280' },
                         ]}
                       >
-                        <Text style={[styles.nutriLetterText, { color: isActive ? '#FFF' : col }]}>
-                          {grade}
-                        </Text>
-                      </View>
-                      {isActive && <View style={[styles.nutriActiveDot, { backgroundColor: col }]} />}
+                        {grade}
+                      </Text>
                     </View>
                   );
                 })}
               </View>
               <Text style={[styles.nutriGradeDesc, { color: NUTRI_COLORS[product.nutriScore] }]}>
-                Grade {product.nutriScore} —{' '}
+                Grade {product.nutriScore} •{' '}
                 {product.nutriScore === 'A' ? 'Excellent'
                   : product.nutriScore === 'B' ? 'Good'
-                  : product.nutriScore === 'C' ? 'Fair'
+                  : product.nutriScore === 'C' ? 'Moderate'
                   : product.nutriScore === 'D' ? 'Poor'
                   : 'Very Poor'}
               </Text>
             </View>
 
-            {/* NOVA card — big ring with number inside */}
+            {/* Processing Grade Card */}
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
                 {isBeauty ? 'Skin Compatibility' : 'Processing Grade'}
@@ -781,7 +780,7 @@ export default function ProductDetailPage({
                 <View style={styles.beautyCompatibilityRow}>
                   <Ionicons
                     name={product.aiHealthRating >= 65 ? 'shield-checkmark' : 'alert-circle'}
-                    size={20}
+                    size={22}
                     color={product.verdictColor}
                   />
                   <Text style={[styles.beautyCompatText, { color: product.verdictColor }]}>
@@ -793,47 +792,41 @@ export default function ProductDetailPage({
                   </Text>
                 </View>
               ) : (
-                <View style={styles.novaRingWrap}>
-                  <CircularGauge
-                    value={(product.novaGroup || 3)}
-                    max={4}
-                    size={62}
-                    strokeWidth={6}
-                    color={activeNova.color}
-                    bgColor={`${activeNova.color}20`}
+                <View style={styles.novaIndicatorRow}>
+                  <View
+                    style={[
+                      styles.novaNumberCircle,
+                      { borderColor: activeNova.color, backgroundColor: `${activeNova.color}14` },
+                    ]}
                   >
-                    <Text style={[styles.novaRingNum, { color: activeNova.color }]}>
+                    <Text style={[styles.novaNumberText, { color: activeNova.color }]}>
                       {product.novaGroup || 3}
                     </Text>
-                  </CircularGauge>
-                  <Text style={[styles.novaRingLabel, { color: activeNova.color }]} numberOfLines={2}>
-                    {activeNova.title}
-                  </Text>
+                  </View>
+                  <View style={styles.novaTextWrap}>
+                    <Text style={[styles.novaStatusText, { color: activeNova.color }]} numberOfLines={2}>
+                      {activeNova.title}
+                    </Text>
+                  </View>
                 </View>
               )}
             </View>
           </View>
 
-          {/* ── Macro Nutrient Balance — pill segments with mini circles ── */}
+          {/* ── Macro Nutrient Balance ── */}
           <View style={styles.detailSectionCard}>
             <Text style={styles.sectionHeaderTitle}>
               {isBeauty ? 'Formulation Balance' : 'Macro Nutrient Balance'}
             </Text>
+
             {isBeauty ? (
               <>
-                <View style={styles.macroPillBar}>
-                  {[
-                    { flex: product.formulationProfile?.activePct || 62, color: '#10B981', label: 'Actives', pct: product.formulationProfile?.activePct || 62 },
-                    { flex: product.formulationProfile?.emollientPct || 24, color: '#3B82F6', label: 'Emollients', pct: product.formulationProfile?.emollientPct || 24 },
-                    { flex: product.formulationProfile?.stabilizerPct || 14, color: '#F59E0B', label: 'Stabilizers', pct: product.formulationProfile?.stabilizerPct || 14 },
-                  ].map((seg, i) => (
-                    <View key={i} style={[styles.macroPillSeg, { flex: seg.flex, backgroundColor: seg.color }]}>
-                      {seg.pct >= 18 && (
-                        <Text style={styles.macroPillPct}>{seg.pct}%</Text>
-                      )}
-                    </View>
-                  ))}
+                <View style={styles.macroProportionBar}>
+                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.activePct || 62, backgroundColor: '#10B981' }]} />
+                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.emollientPct || 24, backgroundColor: '#3B82F6' }]} />
+                  <View style={[styles.macroBarSegment, { flex: product.formulationProfile?.stabilizerPct || 14, backgroundColor: '#F59E0B' }]} />
                 </View>
+
                 <View style={styles.macroCircleLegend}>
                   {[
                     { color: '#10B981', label: 'Actives', pct: product.formulationProfile?.activePct || 62 },
@@ -841,8 +834,8 @@ export default function ProductDetailPage({
                     { color: '#F59E0B', label: 'Stabilizers', pct: product.formulationProfile?.stabilizerPct || 14 },
                   ].map((item, i) => (
                     <View key={i} style={styles.macroCircleLegendItem}>
-                      <View style={[styles.macroCircleDot, { backgroundColor: item.color }]}>
-                        <Text style={styles.macroCirclePct}>{item.pct}</Text>
+                      <View style={[styles.macroCircleRing, { borderColor: item.color }]}>
+                        <Text style={[styles.macroCircleRingText, { color: item.color }]}>{item.pct}%</Text>
                       </View>
                       <Text style={styles.macroCircleLabel}>{item.label}</Text>
                     </View>
@@ -851,30 +844,26 @@ export default function ProductDetailPage({
               </>
             ) : (
               <>
-                <View style={styles.macroPillBar}>
-                  {[
-                    { flex: carbPct || 1, color: '#3B82F6', label: 'Carbs', pct: carbPct },
-                    { flex: fatPct || 1, color: '#EF4444', label: 'Fat', pct: fatPct },
-                    { flex: proteinPct || 1, color: '#10B981', label: 'Protein', pct: proteinPct },
-                  ].map((seg, i) => (
-                    <View key={i} style={[styles.macroPillSeg, { flex: seg.flex, backgroundColor: seg.color }]}>
-                      {seg.pct >= 15 && (
-                        <Text style={styles.macroPillPct}>{seg.pct}%</Text>
-                      )}
-                    </View>
-                  ))}
+                {/* Horizontal Segmented Bar */}
+                <View style={styles.macroProportionBar}>
+                  <View style={[styles.macroBarSegment, { flex: carbPct || 1, backgroundColor: '#3B82F6' }]} />
+                  <View style={[styles.macroBarSegment, { flex: fatPct || 1, backgroundColor: '#EF4444' }]} />
+                  <View style={[styles.macroBarSegment, { flex: proteinPct || 1, backgroundColor: '#10B981' }]} />
                 </View>
+
+                {/* Macro Circular Badges Legend */}
                 <View style={styles.macroCircleLegend}>
                   {[
-                    { color: '#3B82F6', label: 'Carbs', pct: carbPct },
-                    { color: '#EF4444', label: 'Fat', pct: fatPct },
-                    { color: '#10B981', label: 'Protein', pct: proteinPct },
+                    { color: '#3B82F6', label: 'Carbs', pct: carbPct, grams: metrics.carbs },
+                    { color: '#EF4444', label: 'Fat', pct: fatPct, grams: metrics.fat },
+                    { color: '#10B981', label: 'Protein', pct: proteinPct, grams: metrics.protein },
                   ].map((item, i) => (
                     <View key={i} style={styles.macroCircleLegendItem}>
-                      <View style={[styles.macroCircleDot, { backgroundColor: item.color }]}>
-                        <Text style={styles.macroCirclePct}>{item.pct}</Text>
+                      <View style={[styles.macroCircleRing, { borderColor: item.color }]}>
+                        <Text style={[styles.macroCircleRingText, { color: item.color }]}>{item.pct}%</Text>
                       </View>
                       <Text style={styles.macroCircleLabel}>{item.label}</Text>
+                      <Text style={styles.macroCircleSubText}>{item.grams}g</Text>
                     </View>
                   ))}
                 </View>
@@ -1616,11 +1605,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingTop: 2,
+    paddingTop: 4,
   },
   macroCircleLegendItem: {
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
+  },
+  macroCircleRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  macroCircleRingText: {
+    fontSize: 12,
+    fontWeight: '900',
   },
   macroCircleDot: {
     width: 34,
@@ -1640,9 +1647,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   macroCircleLabel: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#4B5563',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#374151',
+  },
+  macroCircleSubText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9CA3AF',
   },
   nutriBarRow: {
     marginBottom: 14,
