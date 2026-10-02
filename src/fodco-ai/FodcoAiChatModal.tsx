@@ -13,6 +13,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -193,15 +194,17 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.topHeader}>
-          <TouchableOpacity
-            style={styles.closeCircleBtn}
-            onPress={onClose}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="chevron-down" size={24} color="#1E1D25" />
-          </TouchableOpacity>
+      <View style={styles.container}>
+        <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+          <View style={styles.topHeader}>
+            <TouchableOpacity
+              style={styles.closeCircleBtn}
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="chevron-down" size={24} color="#1E1D25" />
+            </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
             <Image
@@ -218,6 +221,7 @@ export function FodcoAiChatModal({ visible, product, onClose }: FodcoAiChatModal
           </View>
 
           <View style={styles.placeholderBtn} />
+        </View>
         </View>
 
         <KeyboardAvoidingView
@@ -337,6 +341,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  headerContainer: {
+    backgroundColor: '#FFFFFF',
   },
   topHeader: {
     flexDirection: 'row',
