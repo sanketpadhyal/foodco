@@ -14,25 +14,28 @@ import {
   BackHandler,
   RefreshControl,
   InteractionManager,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getStoredJwtToken } from '../auth-page/authService';
 import { getBackendBaseUrl } from '../../api/universalbackendapi';
 import {
   ScannedProduct,
   getMemoryHistory,
+  getPersistedHistory,
   setMemoryHistory,
 } from './productService';
 import { DashboardNavbar, DashboardTab } from './components';
+import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
 
 const EMPTY_404_ILLUSTRATION = require('../../assets/page-found-concept-illustration_114360-1869 (1).png');
 const NOT_FOUND_IMG = require('../../assets/notfound.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
+const CARD_HEIGHT = 236;
+const CARD_MARGIN_BOTTOM = 16;
+const ROW_TOTAL_HEIGHT = CARD_HEIGHT + CARD_MARGIN_BOTTOM;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const sansFont = Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' });
@@ -58,19 +61,26 @@ function historyReducer(state: HistoryState, action: HistoryAction): HistoryStat
     case 'SHOW_CACHED':
       return { items: action.items, phase: 'ready', refreshing: false };
     case 'SHOW_LOADING':
+      if (state.items.length > 0) return state;
       return { items: [], phase: 'loading', refreshing: false };
     case 'SHOW_EMPTY':
       return { items: [], phase: 'empty', refreshing: false };
     case 'START_REFRESH':
       return { ...state, refreshing: true };
-    case 'FETCH_SUCCESS':
+    case 'FETCH_SUCCESS': {
+      const isSame =
+        state.items.length === action.items.length &&
+        state.items.every((it, idx) => it.barcode === action.items[idx]?.barcode);
+      if (isSame && state.phase === (action.items.length > 0 ? 'ready' : 'empty')) {
+        return state.refreshing ? { ...state, refreshing: false } : state;
+      }
       return {
         items: action.items,
         phase: action.items.length > 0 ? 'ready' : 'empty',
         refreshing: false,
       };
+    }
     case 'FETCH_ERROR':
-
       return {
         ...state,
         refreshing: false,
@@ -84,7 +94,7 @@ function historyReducer(state: HistoryState, action: HistoryAction): HistoryStat
 function initState(): HistoryState {
   const cached = getMemoryHistory();
   if (cached && cached.length > 0) return { items: cached, phase: 'ready', refreshing: false };
-  if (cached) return { items: [], phase: 'empty', refreshing: false };
+  if (cached && cached.length === 0) return { items: [], phase: 'empty', refreshing: false };
   return { items: [], phase: 'loading', refreshing: false };
 }
 
@@ -120,10 +130,9 @@ export default function HistoryPage({
 
   const [state, dispatch] = useReducer(historyReducer, undefined, initState);
   const { items, phase, refreshing } = state;
-  const [bottomTab, setBottomTab] = useState<DashboardTab>('recipes');
 
   const pageOpacity = useRef(new Animated.Value(0)).current;
-  const pageTranslateY = useRef(new Animated.Value(10)).current;
+  const pageTranslateY = useRef(new Animated.Value(8)).current;
   const isClosingRef = useRef(false);
   const isFetchingRef = useRef(false);
 
@@ -147,9 +156,16 @@ export default function HistoryPage({
     }
 
     try {
+      const persisted = await getPersistedHistory();
+      if (persisted && persisted.length > 0) {
+        dispatch({ type: 'SHOW_CACHED', items: persisted });
+      }
+
       const jwt = await getStoredJwtToken();
       if (!jwt) {
-        dispatch({ type: 'SHOW_EMPTY' });
+        if (!persisted || persisted.length === 0) {
+          dispatch({ type: 'SHOW_EMPTY' });
+        }
         return;
       }
 
@@ -183,21 +199,20 @@ export default function HistoryPage({
   useEffect(() => {
     if (!visible) return;
 
-    setBottomTab('recipes');
     isClosingRef.current = false;
     pageOpacity.setValue(0);
-    pageTranslateY.setValue(10);
+    pageTranslateY.setValue(8);
 
     Animated.parallel([
       Animated.timing(pageOpacity, {
         toValue: 1,
-        duration: 170,
+        duration: 160,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(pageTranslateY, {
         toValue: 0,
-        duration: 170,
+        duration: 160,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
@@ -206,10 +221,12 @@ export default function HistoryPage({
     const cached = getMemoryHistory();
     if (cached && cached.length > 0) {
       dispatch({ type: 'SHOW_CACHED', items: cached });
-    } else if (cached) {
-      dispatch({ type: 'SHOW_EMPTY' });
     } else {
-      dispatch({ type: 'SHOW_LOADING' });
+      getPersistedHistory().then((diskCache) => {
+        if (diskCache && diskCache.length > 0) {
+          dispatch({ type: 'SHOW_CACHED', items: diskCache });
+        }
+      });
     }
 
     const task = InteractionManager.runAfterInteractions(() => {
@@ -222,18 +239,17 @@ export default function HistoryPage({
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
-    setBottomTab('home');
 
     Animated.parallel([
       Animated.timing(pageOpacity, {
         toValue: 0,
-        duration: 130,
+        duration: 120,
         easing: Easing.in(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(pageTranslateY, {
         toValue: 8,
-        duration: 130,
+        duration: 120,
         easing: Easing.in(Easing.quad),
         useNativeDriver: true,
       }),
@@ -249,58 +265,26 @@ export default function HistoryPage({
     return () => sub.remove();
   }, [visible, handleClose]);
 
-  const handleBottomTabPress = (tab: DashboardTab) => {
-    if (tab === 'recipes') return;
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    setBottomTab(tab);
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: ROW_TOTAL_HEIGHT,
+      offset: ROW_TOTAL_HEIGHT * Math.floor(index / 2),
+      index,
+    }),
+    []
+  );
 
-    Animated.parallel([
-      Animated.timing(pageOpacity, {
-        toValue: 0,
-        duration: 130,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(pageTranslateY, {
-        toValue: 8,
-        duration: 130,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (onTabPress) onTabPress(tab);
-      else if (tab === 'home') onClose();
-    });
-  };
+  const keyExtractor = useCallback(
+    (item: ScannedProduct, index: number) => (item.barcode ? `hist_${item.barcode}` : `hist_idx_${index}`),
+    []
+  );
 
-  const handleScanPress = () => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    Animated.timing(pageOpacity, {
-      toValue: 0,
-      duration: 130,
-      easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
-    }).start(() => {
-      if (onScanPress) onScanPress();
-      else onClose();
-    });
-  };
-
-  const handleGithubPress = () => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    Animated.timing(pageOpacity, {
-      toValue: 0,
-      duration: 130,
-      easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
-    }).start(() => {
-      if (onGithubPress) onGithubPress();
-      else onClose();
-    });
-  };
+  const renderItem = useCallback(
+    ({ item }: { item: ScannedProduct }) => (
+      <HistoryProductCard item={item} onSelectProduct={onSelectProduct} />
+    ),
+    [onSelectProduct]
+  );
 
   if (!visible) return null;
 
@@ -333,8 +317,8 @@ export default function HistoryPage({
       </View>
 
       {phase === 'loading' ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#FF6B35" />
+        <View style={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}>
+          <ProductGridSkeleton count={6} />
         </View>
       ) : phase === 'empty' ? (
         <View style={styles.centerContainer}>
@@ -351,23 +335,17 @@ export default function HistoryPage({
       ) : (
         <FlatList
           data={items}
-          keyExtractor={(item, index) =>
-            item.barcode ? `${item.barcode}_${index}` : `hist_${index}`
-          }
-          renderItem={({ item }) => (
-            <HistoryProductCard
-              item={item}
-              onSelectProduct={onSelectProduct}
-            />
-          )}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          getItemLayout={getItemLayout}
           numColumns={2}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          removeClippedSubviews={Platform.OS === 'android'}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -382,73 +360,75 @@ export default function HistoryPage({
   );
 }
 
-const HistoryProductCard = memo(({
-  item,
-  onSelectProduct,
-}: {
-  item: ScannedProduct;
-  onSelectProduct?: (product: ScannedProduct) => void;
-}) => {
-  const [imageError, setImageError] = useState(false);
-  const isBeauty = item.productType === 'beauty';
-  const scoreColor = item.verdictColor || (item.aiHealthRating >= 60 ? '#58B84F' : '#E8502A');
-  const hasImage = Boolean(item.imageUrl) && !imageError;
+const HistoryProductCard = memo(
+  ({
+    item,
+    onSelectProduct,
+  }: {
+    item: ScannedProduct;
+    onSelectProduct?: (product: ScannedProduct) => void;
+  }) => {
+    const [imageError, setImageError] = useState(false);
+    const isBeauty = item.productType === 'beauty';
+    const scoreColor = item.verdictColor || (item.aiHealthRating >= 60 ? '#58B84F' : '#E8502A');
+    const hasImage = Boolean(item.imageUrl) && !imageError;
 
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.88}
-      onPress={() => onSelectProduct?.(item)}
-    >
-      <View style={styles.cardImageContainer}>
-        <Image
-          source={hasImage ? { uri: item.imageUrl } : NOT_FOUND_IMG}
-          style={styles.cardImage}
-          resizeMode="contain"
-          onError={() => setImageError(true)}
-          defaultSource={NOT_FOUND_IMG}
-        />
+    const handlePress = useCallback(() => {
+      onSelectProduct?.(item);
+    }, [item, onSelectProduct]);
 
-        <View style={[styles.badgePill, { backgroundColor: scoreColor }]}>
-          <Text style={styles.badgeText}>{item.aiHealthRating ?? 75}/100</Text>
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.88}
+        onPress={handlePress}
+      >
+        <View style={styles.cardImageContainer}>
+          <Image
+            source={hasImage ? { uri: item.imageUrl } : NOT_FOUND_IMG}
+            style={styles.cardImage}
+            resizeMode="contain"
+            onError={() => setImageError(true)}
+          />
+
+          <View style={[styles.badgePill, { backgroundColor: scoreColor }]}>
+            <Text style={styles.badgeText}>{item.aiHealthRating ?? 75}/100</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardBrand} numberOfLines={1}>
-          {item.brand || 'Foodco Verified'}
-        </Text>
-        <Text style={styles.cardName} numberOfLines={2}>
-          {item.name}
-        </Text>
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardBrand} numberOfLines={1}>
+            {item.brand || 'Foodco Verified'}
+          </Text>
+          <Text style={styles.cardName} numberOfLines={2}>
+            {item.name}
+          </Text>
 
-        <View style={styles.cardMetaRow}>
-          <View style={styles.categoryPill}>
-            <Text style={styles.categoryPillText} numberOfLines={1}>
-              {item.category || (isBeauty ? 'Beauty' : 'Grocery')}
+          <View style={styles.cardMetaRow}>
+            <View style={styles.categoryPill}>
+              <Text style={styles.categoryPillText} numberOfLines={1}>
+                {item.category || (isBeauty ? 'Beauty' : 'Grocery')}
+              </Text>
+            </View>
+            <Text style={[styles.verdictMiniText, { color: scoreColor }]} numberOfLines={1}>
+              {item.verdict || 'Good Choice'}
             </Text>
           </View>
-          <Text style={[styles.verdictMiniText, { color: scoreColor }]} numberOfLines={1}>
-            {item.verdict || 'Good Choice'}
-          </Text>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  },
+  (prev, next) =>
+    prev.item.barcode === next.item.barcode &&
+    prev.item.aiHealthRating === next.item.aiHealthRating &&
+    prev.item.imageUrl === next.item.imageUrl &&
+    prev.onSelectProduct === next.onSelectProduct
+);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  animatedContent: {
-    flex: 1,
-  },
-  loaderContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   navbarWrapper: {
     backgroundColor: '#FFFFFF',
@@ -506,35 +486,17 @@ const styles = StyleSheet.create({
     maxWidth: 290,
     marginBottom: 20,
   },
-  emptyScanBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF6B35',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 22,
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  emptyScanBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
   },
   columnWrapper: {
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: CARD_MARGIN_BOTTOM,
   },
   card: {
     width: CARD_WIDTH,
+    height: CARD_HEIGHT,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
@@ -542,7 +504,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardImageContainer: {
-    height: 135,
+    height: 132,
     backgroundColor: '#F8F9FB',
     alignItems: 'center',
     justifyContent: 'center',
@@ -552,10 +514,6 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: '100%',
-  },
-  cardPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   badgePill: {
     position: 'absolute',
@@ -572,6 +530,8 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     padding: 12,
+    flex: 1,
+    justifyContent: 'space-between',
   },
   cardBrand: {
     fontSize: 11,
@@ -590,7 +550,7 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
   cardMetaRow: {
-    marginTop: 8,
+    marginTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

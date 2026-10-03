@@ -115,23 +115,48 @@ export async function getCachedProduct(barcode: string): Promise<ScannedProduct 
   return null;
 }
 
+const HISTORY_CACHE_STORAGE_KEY = 'FOODCO_SCAN_HISTORY_CACHE_V1';
 let memoryHistoryCache: ScannedProduct[] | null = null;
 
 export function getMemoryHistory(): ScannedProduct[] | null {
   return memoryHistoryCache;
 }
 
+export async function getPersistedHistory(): Promise<ScannedProduct[] | null> {
+  if (memoryHistoryCache && memoryHistoryCache.length > 0) {
+    return memoryHistoryCache;
+  }
+  try {
+    const raw = await AsyncStorage.getItem(HISTORY_CACHE_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        memoryHistoryCache = parsed;
+        return parsed;
+      }
+    }
+  } catch (_) {}
+  return memoryHistoryCache;
+}
+
 export function setMemoryHistory(items: ScannedProduct[]): void {
   memoryHistoryCache = items;
+  try {
+    AsyncStorage.setItem(HISTORY_CACHE_STORAGE_KEY, JSON.stringify(items)).catch(() => {});
+  } catch (_) {}
 }
 
 export function prependScanToMemoryHistory(product: ScannedProduct): void {
+  if (!product) return;
   if (!memoryHistoryCache) {
     memoryHistoryCache = [product];
   } else {
     const filtered = memoryHistoryCache.filter(p => p.barcode !== product.barcode);
     memoryHistoryCache = [product, ...filtered];
   }
+  try {
+    AsyncStorage.setItem(HISTORY_CACHE_STORAGE_KEY, JSON.stringify(memoryHistoryCache)).catch(() => {});
+  } catch (_) {}
 }
 
 export async function recordScanToHistory(product: ScannedProduct): Promise<void> {
