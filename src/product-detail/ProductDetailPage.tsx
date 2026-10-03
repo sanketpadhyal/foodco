@@ -678,13 +678,6 @@ export default function ProductDetailPage({
                     );
                   })}
                 </View>
-
-                <View style={[styles.verdictBadge, { backgroundColor: `${product.verdictColor}15`, borderColor: `${product.verdictColor}30` }]}>
-                  <View style={[styles.verdictDot, { backgroundColor: product.verdictColor }]} />
-                  <Text style={[styles.verdictBadgeText, { color: product.verdictColor }]}>
-                    {product.verdict}
-                  </Text>
-                </View>
               </View>
             </View>
 
