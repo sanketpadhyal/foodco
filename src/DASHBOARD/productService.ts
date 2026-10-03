@@ -153,7 +153,6 @@ export async function recordScanToHistory(product: ScannedProduct): Promise<void
   } catch (_) {}
 }
 
-// Cache-only — used when pre-caching browsed/category products (does NOT record to history)
 export async function setCachedProduct(barcode: string, product: ScannedProduct): Promise<void> {
   const cleanBarcode = barcode.trim();
   if (!cleanBarcode || !product) return;
@@ -165,7 +164,6 @@ export async function setCachedProduct(barcode: string, product: ScannedProduct)
   // NOTE: intentionally NOT recording to history here — only actual barcode scans should appear
 }
 
-// Cache + history — used ONLY when the user actually scans a barcode
 export async function setCachedProductFromScan(barcode: string, product: ScannedProduct): Promise<void> {
   await setCachedProduct(barcode, product);
   recordScanToHistory(product).catch(() => {});
@@ -251,7 +249,7 @@ const getBackendBase = () => getBackendBaseUrl();
 
 export function isNonSupportedProduct(barcode: string, name?: string, category?: string): { isUnsupported: boolean; reason?: string } {
   const cleanBarcode = barcode.replace(/[^0-9]/g, '');
-  // ISBN-13 book prefixes: 978 and 979
+
   if ((cleanBarcode.length === 13 || cleanBarcode.length === 10) && (cleanBarcode.startsWith('978') || cleanBarcode.startsWith('979'))) {
     return {
       isUnsupported: true,
@@ -703,8 +701,6 @@ const CURATED_PRODUCTS: Record<string, Partial<ScannedProduct>> = {
   },
 };
 
-// ─── Nutri-Score 2023 negative-point tables ─────────────────────────────────
-
 function _nutriNegEnergy(kcal: number, isBev: boolean): number {
   if (isBev) {
     if (kcal <= 0) return 0; if (kcal <= 30) return 1; if (kcal <= 60) return 2;
@@ -772,8 +768,6 @@ function _nutriGradeBev(pts: number): 'A' | 'B' | 'C' | 'D' | 'E' {
   return 'E';
 }
 
-// ─── Public types ──────────────────────────────────────────────────────────
-
 export interface NutrientInput {
   calories: number | null;
   sugars: number | null;
@@ -794,8 +788,6 @@ export interface HealthRatingResult {
   color: string;
   insufficientData: boolean;
 }
-
-// ─── Main exported scorer — used by tests and OFQ path ────────────────────
 
 export function computeHealthRating(
   nutrients: NutrientInput,
@@ -848,7 +840,6 @@ export function computeHealthRating(
   const highRiskCount = additives.filter(a => HIGH_RISK.test(a)).length;
   base -= Math.min(highRiskCount * 4, 12);
 
-  // Hard caps
   if (novaGroup === 4) base = Math.min(base, 60);
   if (grade === 'D')   base = Math.min(base, 45);
   if (grade === 'E')   base = Math.min(base, 30);
@@ -866,8 +857,6 @@ export function computeHealthRating(
 
   return { score, nutriScoreGrade: grade, verdict, color, insufficientData: false };
 }
-
-// ─── Internal helper used by the OFQ/OBF fallback path ────────────────────
 
 function calculateAiHealthScore(
   _nutriScore: 'A' | 'B' | 'C' | 'D' | 'E',
@@ -981,7 +970,6 @@ export function parseBeautyIngredients(rawIngredients: string) {
 export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: boolean = false): Promise<ScannedProduct> {
   const barcode = barcodeRaw.trim();
 
-  // 1. Immediately validate if barcode is an ISBN book or unsupported product
   const earlyCheck = isNonSupportedProduct(barcode);
   if (earlyCheck.isUnsupported) {
     throw new Error(earlyCheck.reason);
@@ -994,7 +982,6 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     }
   }
 
-  // 2. Check Curated Products
   if (CURATED_PRODUCTS[barcode]) {
     const cur = CURATED_PRODUCTS[barcode];
     const nutri = (cur.nutriScore || 'C') as ScannedProduct['nutriScore'];
@@ -1033,7 +1020,6 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     return curatedProduct;
   }
 
-  // 3. Check verified local database catalog (categoryProductsData)
   for (const catKey of Object.keys(CATEGORY_LOCAL_DATA)) {
     const list = (CATEGORY_LOCAL_DATA as Record<string, any[]>)[catKey] || [];
     const found = list.find((p: any) => p.barcode === barcode);
@@ -1194,7 +1180,7 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
         const nova = typeof p.nova_group === 'number' ? p.nova_group : 3;
 
         const nutriments = p.nutriments || {};
-        // Use null for truly missing values — never default to fake nutrition data
+
         const rawCal  = nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'] ?? null;
         const rawSug  = nutriments['sugars_100g'] ?? null;
         const rawSF   = nutriments['saturated-fat_100g'] ?? null;
@@ -1220,7 +1206,6 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
           p.ingredients_from_palm_oil_n > 0 ||
           /palm oil|palmolein|palm fat/i.test(ingredientsText);
 
-        // Detect beverage / juice from OFQ category tags
         const catLower = cat.toLowerCase();
         const isBeverage = /\b(beverage|drink|soda|cola|juice|water|nectar|smoothie|energy.drink|sports.drink)\b/.test(catLower);
         const isJuice = /\b(juice|nectar|smoothie|fruit.drink)\b/.test(catLower);
@@ -1342,7 +1327,6 @@ export async function fetchProductByBarcode(barcodeRaw: string, forceRefresh: bo
     }
   }
 
-  // Not found in database or verified external registers — NEVER show fake ratings or fake products
   throw new Error('Product not found in database. This barcode is not in our verified food, drink, or beauty records.');
 }
 

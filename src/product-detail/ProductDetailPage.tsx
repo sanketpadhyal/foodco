@@ -31,8 +31,6 @@ export interface ProductDetailPageProps {
   onClose: () => void;
 }
 
-// ─── Circular arc gauge (pure RN, no SVG library) ──────────────────────────
-
 function CircularGauge({
   value,
   max = 100,
@@ -54,7 +52,6 @@ function CircularGauge({
   const halfSize = size / 2;
   const innerSize = size - strokeWidth * 2;
 
-  // We approximate an arc using half-circle clips rotated proportionally.
   const deg = pct * 360;
   const firstHalfDeg = Math.min(deg, 180);
   const secondHalfDeg = Math.max(0, deg - 180);
@@ -69,7 +66,7 @@ function CircularGauge({
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Background track circle */}
+
       <View
         style={{
           position: 'absolute',
@@ -81,7 +78,6 @@ function CircularGauge({
         }}
       />
 
-      {/* First half arc (0–180°) */}
       <View style={clipStyle}>
         <View
           style={{
@@ -98,7 +94,6 @@ function CircularGauge({
         />
       </View>
 
-      {/* Second half arc (180–360°) */}
       {secondHalfDeg > 0 && (
         <View style={clipStyle}>
           <View
@@ -117,7 +112,6 @@ function CircularGauge({
         </View>
       )}
 
-      {/* Inner white circle */}
       <View
         style={{
           width: innerSize,
@@ -639,7 +633,6 @@ export default function ProductDetailPage({
               </View>
             </View>
 
-            {/* ── Circular Arc Gauge ── */}
             <View style={styles.scoreDisplayRow}>
               <CircularGauge
                 value={product.aiHealthRating}
@@ -659,7 +652,6 @@ export default function ProductDetailPage({
                   {isPerfume ? 'Ingredient Screening Score' : isBeauty ? 'Clean Safety Rating' : 'Nutritional Rating'}
                 </Text>
 
-                {/* Segmented spectrum bar */}
                 <View style={styles.spectrumBarRow}>
                   {[
                     { label: 'Poor', from: 0, to: 39, color: '#EF4444' },
@@ -732,9 +724,8 @@ export default function ProductDetailPage({
             <Text style={styles.sectionHeaderSubtitle}>{product.ratingBasis}</Text>
           ) : null}
 
-          {/* ── Nutri-Score + Processing Grade Cards ── */}
           <View style={styles.standardsRow}>
-            {/* Nutri-Score card */}
+
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
                 {isPerfume ? 'Ingredient Screen Grade' : isBeauty ? 'Clean Safety Grade' : 'Nutri-Score'}
@@ -775,7 +766,6 @@ export default function ProductDetailPage({
               </Text>
             </View>
 
-            {/* Processing Grade Card */}
             <View style={styles.standardCard}>
               <Text style={styles.standardCardTitle}>
                 {isBeauty ? 'Skin Compatibility' : 'Processing Grade'}
@@ -819,7 +809,6 @@ export default function ProductDetailPage({
             </View>
           </View>
 
-          {/* ── Macro Nutrient Balance ── */}
           <View style={styles.detailSectionCard}>
             <Text style={styles.sectionHeaderTitle}>
               {isBeauty ? 'Formulation Balance' : 'Macro Nutrient Balance'}
@@ -850,14 +839,13 @@ export default function ProductDetailPage({
               </>
             ) : (
               <>
-                {/* Horizontal Segmented Bar */}
+
                 <View style={styles.macroProportionBar}>
                   <View style={[styles.macroBarSegment, { flex: carbPct || 1, backgroundColor: '#3B82F6' }]} />
                   <View style={[styles.macroBarSegment, { flex: fatPct || 1, backgroundColor: '#EF4444' }]} />
                   <View style={[styles.macroBarSegment, { flex: proteinPct || 1, backgroundColor: '#10B981' }]} />
                 </View>
 
-                {/* Macro Circular Badges Legend */}
                 <View style={styles.macroCircleLegend}>
                   {[
                     { color: '#3B82F6', label: 'Carbs', pct: carbPct, grams: metrics.carbs },
@@ -877,7 +865,6 @@ export default function ProductDetailPage({
             )}
           </View>
 
-          {/* ── Nutrient Profile — enhanced bars with daily reference ── */}
           <View style={styles.detailSectionCard}>
             <Text style={styles.sectionHeaderTitle}>
               {isBeauty ? 'Toxicological Safety Standards' : 'Nutrient Profile (per 100g)'}
@@ -946,7 +933,7 @@ export default function ProductDetailPage({
                             { width: `${Math.max(3, fillPct)}%`, backgroundColor: barColor },
                           ]}
                         />
-                        {/* Daily reference marker at 50% of max */}
+
                         <View style={styles.nutriRefLine} />
                       </View>
                       <View style={styles.nutriBarFooter}>

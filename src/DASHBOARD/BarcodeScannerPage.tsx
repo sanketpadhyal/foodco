@@ -325,7 +325,6 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     const scannedData = result.data.trim();
     if (!scannedData) return;
 
-    // Multi-reading consensus verification: Require 3 consistent readings
     if (pendingBarcodeRef.current === scannedData) {
       matchCountRef.current += 1;
     } else {
@@ -336,7 +335,7 @@ export default function BarcodeScannerPage({ visible, onClose }: BarcodeScannerP
     if (resetTimerRef.current) {
       clearTimeout(resetTimerRef.current);
     }
-    // If scanning stops or moves away for >1200ms, reset counter
+
     resetTimerRef.current = setTimeout(() => {
       pendingBarcodeRef.current = '';
       matchCountRef.current = 0;

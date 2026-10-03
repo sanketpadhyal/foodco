@@ -68,25 +68,22 @@ export function SkeletonBox({
 export function ProductCardSkeleton() {
   return (
     <View style={styles.card}>
-      {/* Top badges */}
+
       <View style={styles.badgeRow}>
         <SkeletonBox width={54} height={18} borderRadius={8} />
         <SkeletonBox width={20} height={20} borderRadius={6} />
       </View>
 
-      {/* Product Image Area */}
       <View style={styles.imageWrapper}>
         <SkeletonBox width={80} height={80} borderRadius={12} />
       </View>
 
-      {/* Info Section */}
       <View style={styles.infoSection}>
         <SkeletonBox width="45%" height={10} borderRadius={4} style={{ marginBottom: 6 }} />
         <SkeletonBox width="90%" height={13} borderRadius={4} style={{ marginBottom: 4 }} />
         <SkeletonBox width="65%" height={13} borderRadius={4} />
       </View>
 
-      {/* Footer Verdict Row */}
       <View style={styles.footerRow}>
         <SkeletonBox width={7} height={7} borderRadius={3.5} />
         <SkeletonBox width="55%" height={10} borderRadius={4} />

@@ -19,6 +19,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.sanket.foodco",
+      "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false
     },
     "androidStatusBar": {
@@ -44,7 +45,9 @@
         }
       ],
       "expo-web-browser",
-      "expo-video"
+      "expo-video",
+      "@react-native-firebase/app",
+      "@react-native-google-signin/google-signin"
     ]
   }
 }

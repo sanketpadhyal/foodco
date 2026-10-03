@@ -421,7 +421,7 @@ export default function SearchResultsPage({
               activeOpacity={0.75}
               onPress={() => handleProductPress(item)}
             >
-              {/* Score & Nutri-Score Top Badges */}
+
               <View style={styles.cardBadgeRow}>
                 <View
                   style={[
@@ -457,7 +457,6 @@ export default function SearchResultsPage({
                 )}
               </View>
 
-              {/* Image */}
               <View style={styles.thumbnailWrapper}>
                 {item.imageUrl ? (
                   <Image
@@ -474,7 +473,6 @@ export default function SearchResultsPage({
                 )}
               </View>
 
-              {/* Info */}
               <View style={styles.cardInfo}>
                 <Text style={styles.productBrand} numberOfLines={1}>
                   {item.brand || 'Mart Selection'}
@@ -484,7 +482,6 @@ export default function SearchResultsPage({
                 </Text>
               </View>
 
-              {/* Bottom Verdict Row */}
               <View style={styles.cardFooter}>
                 <View
                   style={[
@@ -504,7 +501,6 @@ export default function SearchResultsPage({
         />
       )}
 
-      {/* Fallback Internal Product Detail Page if not using dashboard top-level */}
       {!onSelectProduct && (
         <ProductDetailPage
           visible={internalDetailVisible}
@@ -513,7 +509,6 @@ export default function SearchResultsPage({
         />
       )}
 
-      {/* Solid White Panel Behind Android System Navigation Buttons */}
       <View
         style={[
           styles.bottomNavBackdrop,

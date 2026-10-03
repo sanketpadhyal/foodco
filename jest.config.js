@@ -14,7 +14,7 @@ module.exports = {
     }],
   },
   moduleNameMapper: {
-    // Stub native / asset imports that would fail in Node
+
     '\\.(png|jpg|jpeg|gif|webp|svg|mp4)$': '<rootDir>/__mocks__/fileMock.js',
     '^react-native$': '<rootDir>/__mocks__/reactNativeMock.js',
     '^@react-native-async-storage/async-storage$': '<rootDir>/__mocks__/asyncStorageMock.js',

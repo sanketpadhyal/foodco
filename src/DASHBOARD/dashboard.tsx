@@ -589,7 +589,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         onLogout={onLogout}
       />
 
-      {/* Unified, single persistent bottom bar — 100% stationary across Dashboard and History */}
       <DashboardBottomBar
         activeTab={historyPageVisible ? 'recipes' : activeTab}
         onTabPress={handleTabPress}

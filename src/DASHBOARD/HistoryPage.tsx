@@ -37,9 +37,6 @@ const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const sansFont = Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' });
 
-// ---------------------------------------------------------------------------
-// Atomic state machine — all transitions happen in ONE dispatch (no flicker)
-// ---------------------------------------------------------------------------
 type Phase = 'loading' | 'ready' | 'empty';
 
 type HistoryState = {
@@ -73,7 +70,7 @@ function historyReducer(state: HistoryState, action: HistoryAction): HistoryStat
         refreshing: false,
       };
     case 'FETCH_ERROR':
-      // keep existing items visible; just stop refreshing
+
       return {
         ...state,
         refreshing: false,
@@ -90,7 +87,6 @@ function initState(): HistoryState {
   if (cached) return { items: [], phase: 'empty', refreshing: false };
   return { items: [], phase: 'loading', refreshing: false };
 }
-// ---------------------------------------------------------------------------
 
 export interface HistoryPageProps {
   visible: boolean;
@@ -131,7 +127,6 @@ export default function HistoryPage({
   const isClosingRef = useRef(false);
   const isFetchingRef = useRef(false);
 
-  // Android nav bar colour
   useEffect(() => {
     if (Platform.OS === 'android' && visible) {
       try {
@@ -143,7 +138,6 @@ export default function HistoryPage({
     }
   }, [visible]);
 
-  // Fetch from network — dispatches a single action, never multiple setState calls
   const loadUserHistory = useCallback(async (isRefresh = false) => {
     if (isFetchingRef.current && !isRefresh) return;
     isFetchingRef.current = true;
@@ -186,7 +180,6 @@ export default function HistoryPage({
     }
   }, []);
 
-  // Page open/close animation + initial data gate
   useEffect(() => {
     if (!visible) return;
 
@@ -210,7 +203,6 @@ export default function HistoryPage({
       }),
     ]).start();
 
-    // Seed from cache first (single atomic dispatch → no flicker)
     const cached = getMemoryHistory();
     if (cached && cached.length > 0) {
       dispatch({ type: 'SHOW_CACHED', items: cached });
@@ -220,7 +212,6 @@ export default function HistoryPage({
       dispatch({ type: 'SHOW_LOADING' });
     }
 
-    // Defer network fetch until after interactions/animation
     const task = InteractionManager.runAfterInteractions(() => {
       loadUserHistory();
     });
@@ -228,7 +219,6 @@ export default function HistoryPage({
     return () => task.cancel();
   }, [visible, loadUserHistory, pageOpacity, pageTranslateY]);
 
-  // Android hardware back
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
@@ -329,7 +319,6 @@ export default function HistoryPage({
       <StatusBar style="dark" />
       <RNStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Navbar */}
       <View style={[styles.navbarWrapper, { paddingTop: insets.top }]}>
         <DashboardNavbar
           user={user}
@@ -338,13 +327,11 @@ export default function HistoryPage({
         />
       </View>
 
-      {/* Page heading — same theme as Dashboard */}
       <View style={styles.headingContainer}>
         <Text style={styles.headingLabel}>Your Scans</Text>
         <Text style={styles.headingTitle}>History</Text>
       </View>
 
-      {/* Body — exactly ONE phase is visible at a time, zero flicker */}
       {phase === 'loading' ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#FF6B35" />
