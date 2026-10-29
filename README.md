@@ -5,7 +5,7 @@
 <h1 align="center">Foodco</h1>
 
 <p align="center">
-  A cross-platform mobile intelligence and barcode scanning application engineered to provide instant nutritional breakdowns, NOVA food classification, additive risk detection, cosmetic formulation analysis, and AI health ratings for mart groceries and personal care items.
+  A cross-platform mobile intelligence and barcode scanning application engineered to provide instant nutritional breakdowns, NOVA food classification, additive risk detection, cosmetic formulation analysis, and AI health ratings for mart groceries and personal care items..
 </p>
 
 <p align="center">
